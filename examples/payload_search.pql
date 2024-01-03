@@ -1,0 +1,5 @@
+select tcp.payload
+from source
+where (tcp.dport == 23 and eth.vlan == 61) and tcp.payload == "password"
+interval 2022-03-15 15:50:00 and 2022-03-15 15:59:00
+top 5
