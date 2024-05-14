@@ -1,0 +1,5 @@
+select a
+from 
+where ((udp.sport == DNS or udp.dport == DNS) and eth.vlan == 51)
+interval now now - 15m 
+top 5
