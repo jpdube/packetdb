@@ -45,10 +45,8 @@ impl DbEngine {
             match self.get_index_files() {
                 Ok(pkt_list) => {
                     for file_id in pkt_list {
-                        // println!("Looking at index: {}", file_id);
                         file_count += 1;
                         let interpreter = Interpreter::new(expr.clone());
-                        // println!("Before index search: {}", file_id);
                         let ptr = pkt_index.search_index(&expr, file_id);
 
                         let result = interpreter.run_pgm_seek(&ptr, top_limit);
