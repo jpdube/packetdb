@@ -129,7 +129,7 @@ fn ipv4_str(address: &u32) -> String {
 }
 
 fn timestamp_str(ts: &usize) -> String {
-    let naive = NaiveDateTime::from_timestamp_opt(*ts as i64, 0).unwrap();
+    let naive = DateTime::from_timestamp(*ts as i64, 0).unwrap();
     let timestamp = naive.format("%Y-%m-%d %H:%M:%S");
     format!("{}", timestamp)
 }

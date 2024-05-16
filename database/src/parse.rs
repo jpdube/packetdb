@@ -603,9 +603,7 @@ impl Parse {
 
     fn parse_timestamp(&mut self) -> Option<Expression> {
         if let Some(tok) = self.accept(Keyword::Timestamp) {
-            let ts = Local
-                .datetime_from_str(&tok.value, "%Y-%m-%d %H:%M:%S")
-                .unwrap();
+            let ts = DateTime::parse_from_str(&tok.value, "%Y-%m-%d %H:%M:%S").unwrap();
 
             Some(Expression::Timestamp(ts.timestamp() as u32))
         } else {
