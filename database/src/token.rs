@@ -31,6 +31,7 @@ pub fn get_token_one(str_token: &str) -> Option<Keyword> {
         "(" => Some(Keyword::Lparen),
         ")" => Some(Keyword::Rparen),
         "," => Some(Keyword::Comma),
+        "." => Some(Keyword::Period),
         "[" => Some(Keyword::IndexStart),
         "]" => Some(Keyword::IndexEnd),
         ":" => Some(Keyword::Colon),
@@ -68,6 +69,9 @@ pub fn get_keywords(str_token: &str) -> Option<Keyword> {
         "interval" => Some(Keyword::Interval),
         "to" => Some(Keyword::To),
         "distinct" => Some(Keyword::Distinct),
+        "group" => Some(Keyword::GroupBy),
+        "by" => Some(Keyword::By),
+        "as" => Some(Keyword::As),
 
         _ => None,
     }

@@ -26,6 +26,7 @@ pub enum Keyword {
     Lparen,
     Rparen,
     Comma,
+    Period,
     Le,
     Ge,
     IpV4,
@@ -49,6 +50,14 @@ pub enum Keyword {
     IndexEnd,
     Colon,
     Distinct,
+    As,
+    By,
+    GroupBy,
+    Sum,
+    Count,
+    Min,
+    Max,
+    Bandwidth,
 }
 
 impl fmt::Display for Keyword {

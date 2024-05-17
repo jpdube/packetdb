@@ -1,7 +1,9 @@
 #![allow(dead_code)]
 
 use crate::index_manager::IndexField;
-use crate::tokenizer::{Keyword, Token, Tokenizer};
+use crate::keywords::Keyword;
+use crate::lexer::Lexer;
+use crate::token::Token;
 use chrono::{prelude::*, Duration};
 use chrono::{Local, TimeZone};
 use frame::constant::NetConstant;
@@ -264,9 +266,9 @@ impl Parse {
     }
 
     pub fn parse(&mut self, pql: &str) -> Option<Expression> {
-        let mut tokenizer = Tokenizer::new();
+        let mut lexer = Lexer::new();
 
-        self.token_list = tokenizer.tokenize(&pql).clone();
+        self.token_list = lexer.tokenize(&pql).clone();
 
         let result = self.parse_stmt().unwrap();
         if !self.has_error {
@@ -279,9 +281,11 @@ impl Parse {
     }
 
     pub fn parse_select(&mut self, pql: &str) -> Result<PqlStatement, Vec<ErrorMsg>> {
-        let mut tokenizer = Tokenizer::new();
+        let mut tokenizer = Lexer::new();
+        // let mut tokenizer = Tokenizer::new();
 
         self.token_list = tokenizer.tokenize(&pql).clone();
+        // self.token_list = tokenizer.tokenize(&pql).clone();
         // let mut query = PqlStatement::default();
 
         if self.accept(Keyword::Select).is_some() {

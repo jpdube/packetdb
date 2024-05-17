@@ -1,4 +1,5 @@
 use crate::keywords::Keyword;
+use crate::preparser::Preparser;
 use crate::token::{get_constants, get_keywords, get_token_one, get_token_two, Token};
 use std::io::Read;
 
@@ -27,7 +28,7 @@ impl Lexer {
     pub fn tokenize(&mut self, lines: &str) -> &Vec<Token> {
         self.index = 0;
         let s: Vec<_> = lines.chars().collect();
-        // let mut token_list: Vec<Token> = Vec::new();
+        let mut preparser = Preparser::default();
 
         let mut line: usize = 1;
         let mut line_offset: usize = 0;
@@ -69,9 +70,9 @@ impl Lexer {
                 };
                 self.token_list.push(token);
 
-                if s[self.index] == ';' {
-                    line += 1;
-                }
+                // if s[self.index] == ';' {
+                //     line += 1;
+                // }
 
                 self.index += 1;
             } else if s[self.index].is_numeric() {
@@ -141,6 +142,7 @@ impl Lexer {
         };
         self.token_list.push(token);
 
+        self.token_list = preparser.parse(self.token_list.clone());
         return &self.token_list;
     }
 }
@@ -148,6 +150,15 @@ impl Lexer {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn ipv4_tokens() {
+        let mut t = Lexer::new();
+        let line = "192.168.3.0";
+        let token_list: &Vec<Token> = t.tokenize(line);
+        println!("IP tokens: {:?}", token_list);
+        assert!(token_list.len() == 8);
+    }
 
     #[test]
     fn count_token() {
@@ -205,20 +216,22 @@ mod tests {
     #[test]
     fn two_chars_tokens() {
         let mut t = Lexer::new();
-        let line = ">= <=";
+        let line = ">= <= == !=";
         let tl: &Vec<Token> = t.tokenize(line);
-        assert!(tl.len() == 3);
+        assert!(tl.len() == 5);
 
         assert!(tl[0].token == Keyword::Ge && tl[0].column == 1 && tl[0].line == 1);
         assert!(tl[1].token == Keyword::Le && tl[1].column == 4 && tl[1].line == 1);
+        assert!(tl[2].token == Keyword::Equal && tl[2].column == 7 && tl[1].line == 1);
+        assert!(tl[3].token == Keyword::Ne && tl[3].column == 10 && tl[1].line == 1);
     }
 
     #[test]
     fn one_chars_tokens() {
         let mut t = Lexer::new();
-        let line = "< > - + * / , ;";
+        let line = "< > - + * / , ; & | ^ [ ] :";
         let tl: &Vec<Token> = t.tokenize(line);
-        assert!(tl.len() == 9);
+        assert!(tl.len() == 15);
 
         assert!(tl[0].token == Keyword::Lt && tl[0].column == 1 && tl[0].line == 1);
         assert!(tl[1].token == Keyword::Gt && tl[1].column == 3 && tl[1].line == 1);
@@ -228,6 +241,12 @@ mod tests {
         assert!(tl[5].token == Keyword::Mask && tl[5].column == 11 && tl[5].line == 1);
         assert!(tl[6].token == Keyword::Comma && tl[6].column == 13 && tl[6].line == 1);
         assert!(tl[7].token == Keyword::Semi && tl[7].column == 15 && tl[7].line == 1);
+        assert!(tl[8].token == Keyword::BitAnd && tl[8].column == 17 && tl[8].line == 1);
+        assert!(tl[9].token == Keyword::BitOr && tl[9].column == 19 && tl[9].line == 1);
+        assert!(tl[10].token == Keyword::BitXor && tl[10].column == 21 && tl[10].line == 1);
+        assert!(tl[11].token == Keyword::IndexStart && tl[11].column == 23 && tl[11].line == 1);
+        assert!(tl[12].token == Keyword::IndexEnd && tl[12].column == 25 && tl[12].line == 1);
+        assert!(tl[13].token == Keyword::Colon && tl[13].column == 27 && tl[13].line == 1);
     }
 
     #[test]
