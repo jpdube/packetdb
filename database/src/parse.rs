@@ -13,7 +13,7 @@ use frame::ipv4_address::{ipv4_to_string, string_ipv4_to_int};
 use frame::mac_address::{mac_to_string, string_mac_to_int};
 
 use std::collections::HashSet;
-use std::fmt;
+use std::{fmt, usize};
 
 #[derive(Debug, Clone)]
 pub enum Operator {
@@ -122,7 +122,8 @@ pub enum Expression {
     BinOp(Operator, Box<Expression>, Box<Expression>),
     Group(Box<Expression>),
     Label(u32),
-    LabelByte(u32),
+    LabelByte(u32, usize, usize),
+    Array(Vec<u8>),
     Boolean(bool),
     // Const(String),
     Integer(u32),
@@ -147,7 +148,9 @@ impl fmt::Display for Expression {
             }
             Self::Group(expr) => write!(f, "Group({})", expr),
             Self::Label(lbl) => write!(f, "Label({:x})", lbl),
-            Self::LabelByte(lbl) => write!(f, "Label byte({})", lbl),
+            Self::LabelByte(lbl, offset, length) => {
+                write!(f, "Label byte({},{},{})", lbl, offset, length)
+            }
             Self::Integer(value) => write!(f, "Integer({})", value),
             Self::Timestamp(value) => write!(f, "Timestamp({})", value),
             // Self::Float(value) => write!(f, "Float({})", value),
@@ -155,6 +158,7 @@ impl fmt::Display for Expression {
             Self::Boolean(value) => write!(f, "Bool: {}", value),
             // Self::Const(const_str) => write!(f, "Const({})", const_str),
             Self::MacAddress(mac_addr) => write!(f, "Mac({})", mac_to_string(*mac_addr)),
+            Self::Array(array_bytes) => write!(f, "Array({:?})", array_bytes),
             Self::NoOp => write!(f, "NoOp"),
             // _ => write!(f, "Undefined"),
         }
@@ -520,6 +524,8 @@ impl Parse {
             self.parse_int()
         } else if self.peek(Keyword::Timestamp).is_some() {
             self.parse_timestamp()
+        } else if self.peek(Keyword::IndexStart).is_some() {
+            self.parse_array()
         } else if self.peek(Keyword::Constant).is_some() {
             // println!("Factor,Constant");
             self.parse_constant()
@@ -643,16 +649,64 @@ impl Parse {
     //     }
     // }
 
+    fn parse_array(&mut self) -> Option<Expression> {
+        let mut index_values: Vec<u8> = Vec::new();
+
+        if self.accept(Keyword::IndexStart).is_some() {
+            loop {
+                if let Some(tok) = self.accept(Keyword::Integer) {
+                    index_values.push(tok.value.parse::<u8>().unwrap());
+                }
+                if self.peek(Keyword::Comma).is_none() {
+                    _ = self.expect(Keyword::IndexEnd);
+                    break;
+                } else {
+                    self.expect(Keyword::Comma);
+                }
+            }
+
+            return Some(Expression::Array(index_values.clone()));
+        } else {
+            None
+        }
+    }
+
+    fn parse_label_byte(&mut self, tok: Token) -> Option<Expression> {
+        let label: u32;
+        let mut offset: usize = 0;
+        let mut length: usize = 0;
+
+        // if let Some(tok) = self.peek(Keyword::Identifier) {
+        label = string_to_int(&tok.value).unwrap();
+        if self.accept(Keyword::IndexStart).is_some() {
+            if let Some(tok_offset) = self.expect(Keyword::Integer) {
+                offset = tok_offset.value.parse::<usize>().unwrap();
+            }
+
+            _ = self.expect(Keyword::Colon);
+
+            if let Some(tok_len) = self.expect(Keyword::Integer) {
+                length = tok_len.value.parse::<usize>().unwrap();
+            }
+
+            _ = self.expect(Keyword::IndexEnd);
+
+            return Some(Expression::LabelByte(label, offset, length));
+        }
+        // }
+
+        None
+    }
+
     fn parse_label(&mut self) -> Option<Expression> {
         // println!("In label");
         if let Some(tok) = self.accept(Keyword::Identifier) {
+            if self.peek(Keyword::IndexStart).is_some() {
+                return self.parse_label_byte(tok);
+            }
             self.add_type(&tok.value);
             if let Some(field) = string_to_int(&tok.value) {
-                if &tok.value == "tcp.payload" {
-                    return Some(Expression::LabelByte(field));
-                } else {
-                    return Some(Expression::Label(field));
-                }
+                return Some(Expression::Label(field));
             }
         }
 

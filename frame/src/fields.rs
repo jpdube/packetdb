@@ -55,6 +55,7 @@ pub const TCP_OPTIONS_MSS: u32 = 0x00040014;
 pub const TCP_OPTIONS_TIMESTAMP: u32 = 0x00040015;
 pub const TCP_OPTIONS_TIMESTAMP_TSVAL: u32 = 0x00040016;
 pub const TCP_OPTIONS_TIMESTAMP_TSECR: u32 = 0x00040017;
+pub const TCP_PACKET: u32 = 0x00040018;
 
 //-- ICMP
 pub const ICMP_BASE: u32 = 0x00050000;
@@ -117,6 +118,7 @@ pub fn string_to_int(field_str: &str) -> Option<u32> {
         "tcp.options.timestamp" => Some(TCP_OPTIONS_TIMESTAMP),
         "tcp.options.timestamp.tsval" => Some(TCP_OPTIONS_TIMESTAMP_TSVAL),
         "tcp.options.timestamp.tsecr" => Some(TCP_OPTIONS_TIMESTAMP_TSECR),
+        "tcp.packet" => Some(TCP_PACKET),
 
         //--- ICMP
         "icmp.type" => Some(ICMP_TYPE),

@@ -99,6 +99,10 @@ impl Tcp {
         self.raw_packet[self.hdr_len() as usize..].to_vec()
     }
 
+    pub fn payload_range(&self, offset: usize, len: usize) -> Vec<u8> {
+        self.raw_packet[offset..offset + len].to_vec()
+    }
+
     pub fn dport(&self) -> u16 {
         BigEndian::read_u16(&self.raw_packet[2..4])
     }

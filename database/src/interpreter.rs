@@ -140,9 +140,10 @@ impl Interpreter {
             Expression::Integer(i) => Ok(Object::Integer(*i as u64)),
             Expression::Timestamp(t) => Ok(Object::Timestamp(*t)),
             Expression::Label(value) => Ok(Object::Integer(pkt.get_field(*value) as u64)),
-            Expression::LabelByte(value) => {
-                Ok(Object::ByteArray(pkt.get_field_byte(*value) as Vec<u8>))
-            }
+            Expression::LabelByte(field, offset, len) => Ok(Object::ByteArray(
+                pkt.get_field_byte(*field, *offset, *len).unwrap(),
+            )),
+            Expression::Array(array_values) => Ok(Object::ByteArray(array_values.clone())),
             Expression::IPv4(addr, mask) => Ok(Object::IPv4(*addr, *mask)),
             Expression::MacAddress(addr) => Ok(Object::MacAddress(*addr)),
             Expression::Boolean(b) => Ok(Object::Boolean(*b)),
@@ -178,6 +179,9 @@ impl Interpreter {
             (Object::Integer(pts), Object::Timestamp(ts)) => {
                 self.eval_integer_infix_expression(operator, *pts as u64, *ts as u64)
             }
+            (Object::ByteArray(pts), Object::ByteArray(ts)) => {
+                self.eval_array_infix_expression(operator, pts.clone(), ts.clone())
+            }
             (Object::Integer(b0), Object::Boolean(b1)) => {
                 let lb = if *b0 == 1 { true } else { false };
                 self.eval_boolean_infix_expression(operator, lb, *b1)
@@ -186,6 +190,37 @@ impl Interpreter {
             (_, _) => Err(EvalError::TypeMismatch(
                 format!("{} {} {}", left.debug_type(), operator, right.debug_type()),
                 "eval_infix_expression".to_string(),
+            )),
+        }
+    }
+
+    fn compare_array(&self, left_array: Vec<u8>, right_array: Vec<u8>) -> bool {
+        if left_array.len() != right_array.len() {
+            return false;
+        }
+
+        for i in 0..left_array.len() {
+            if left_array[i] != right_array[i] {
+                return false;
+            }
+        }
+
+        true
+    }
+
+    fn eval_array_infix_expression(
+        &self,
+        operator: &Operator,
+        left_array: Vec<u8>,
+        right_array: Vec<u8>,
+    ) -> Result<Object, EvalError> {
+        match operator {
+            Operator::Equal => Ok(Object::get_bool(
+                self.compare_array(left_array, right_array),
+            )),
+            _ => Err(EvalError::UnknownOperator(
+                format!("{}", operator),
+                "eval_integer_infix_expression".to_string(),
             )),
         }
     }
