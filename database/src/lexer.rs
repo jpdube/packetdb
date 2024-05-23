@@ -75,6 +75,17 @@ impl Lexer {
                 // }
 
                 self.index += 1;
+            } else if self.is_hex_digit(&s) {
+                let start = self.index;
+                let number = self.read_hex_digit(&s);
+
+                let token = Token {
+                    token: Keyword::Integer,
+                    value: number.to_string(),
+                    column: (start + 1) - line_offset,
+                    line,
+                };
+                self.token_list.push(token);
             } else if s[self.index].is_numeric() {
                 let start = self.index;
 
@@ -145,6 +156,28 @@ impl Lexer {
         self.token_list = preparser.parse(self.token_list.clone());
         return &self.token_list;
     }
+
+    fn is_hex_digit(&mut self, line: &Vec<char>) -> bool {
+        if self.index + 1 < line.len() {
+            return line[self.index] == '0' && line[self.index + 1] == 'x';
+        }
+
+        false
+    }
+
+    fn read_hex_digit(&mut self, line: &Vec<char>) -> u32 {
+        self.index += 2;
+        let start_pos = self.index;
+        while self.index < line.len() && line[self.index].is_ascii_hexdigit() {
+            self.index += 1;
+        }
+
+        println!("HEX conv: start:{start_pos}, end: {}", self.index);
+        let str_value = String::from_iter(line[start_pos..self.index].to_vec());
+        let value: u32 = u32::from_str_radix(&str_value, 16).unwrap();
+
+        value
+    }
 }
 
 #[cfg(test)]
@@ -156,8 +189,47 @@ mod tests {
         let mut t = Lexer::new();
         let line = "192.168.3.0";
         let token_list: &Vec<Token> = t.tokenize(line);
-        println!("IP tokens: {:?}", token_list);
-        assert!(token_list.len() == 8);
+        assert!(token_list.len() == 2);
+        assert!(token_list[0].value == "192.168.3.0");
+        assert!(token_list[0].token == Keyword::IpV4);
+    }
+    #[test]
+    fn hex_1_digit_digit_tokens() {
+        let mut t = Lexer::new();
+        let line = "0x8";
+        let token_list: &Vec<Token> = t.tokenize(line);
+        assert!(token_list.len() == 2);
+        assert!(token_list[0].value == "8");
+        assert!(token_list[0].token == Keyword::Integer);
+    }
+
+    #[test]
+    fn hex_1_digit_tokens() {
+        let mut t = Lexer::new();
+        let line = "0xc";
+        let token_list: &Vec<Token> = t.tokenize(line);
+        assert!(token_list.len() == 2);
+        assert!(token_list[0].value == "12");
+        assert!(token_list[0].token == Keyword::Integer);
+    }
+    #[test]
+    fn hex_2_digit_tokens() {
+        let mut t = Lexer::new();
+        let line = "0xc0";
+        let token_list: &Vec<Token> = t.tokenize(line);
+        assert!(token_list.len() == 2);
+        assert!(token_list[0].value == "192");
+        assert!(token_list[0].token == Keyword::Integer);
+    }
+
+    #[test]
+    fn hex_4_digit_tokens() {
+        let mut t = Lexer::new();
+        let line = "0xc0a8";
+        let token_list: &Vec<Token> = t.tokenize(line);
+        assert!(token_list.len() == 2);
+        assert!(token_list[0].value == "49320");
+        assert!(token_list[0].token == Keyword::Integer);
     }
 
     #[test]
@@ -204,7 +276,7 @@ mod tests {
         let mut t = Lexer::new();
         let line = "select ip_dst, ip_src\nfrom sniffer_01\nwhere dport == 443";
         let tl: &Vec<Token> = t.tokenize(line);
-        println!("{:#?}", tl);
+        // println!("{:#?}", tl);
         assert!(tl.len() == 11);
 
         assert!(tl[0].token == Keyword::Select && tl[0].column == 1 && tl[0].line == 1);
