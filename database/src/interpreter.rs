@@ -218,6 +218,9 @@ impl Interpreter {
             Operator::Equal => Ok(Object::get_bool(
                 self.compare_array(left_array, right_array),
             )),
+            Operator::NE => Ok(Object::get_bool(
+                !self.compare_array(left_array, right_array),
+            )),
             _ => Err(EvalError::UnknownOperator(
                 format!("{}", operator),
                 "eval_integer_infix_expression".to_string(),
