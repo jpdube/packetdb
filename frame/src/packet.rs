@@ -237,6 +237,9 @@ impl Packet {
                 .unwrap()
                 .payload_range(offset, len);
             return pkt_array;
+        } else if self.field_type(field, fields::ETH_BASE) && self.eth_packet.is_some() {
+            let pkt_array = self.eth_packet.as_ref().unwrap().payload_range(offset, len);
+            return pkt_array;
         }
 
         let pkt: Vec<u8> = Vec::new();

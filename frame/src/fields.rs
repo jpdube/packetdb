@@ -12,6 +12,7 @@ pub const ETH_DST_MAC: u32 = 0x00010001;
 pub const ETH_SRC_MAC: u32 = 0x00010002;
 pub const ETH_PROTO: u32 = 0x00010003;
 pub const ETH_VLAN_ID: u32 = 0x00010004;
+pub const ETH_PACKET: u32 = 0x00010005;
 
 //--- IP V4
 pub const IPV4_BASE: u32 = 0x00020000;
@@ -81,6 +82,7 @@ pub fn string_to_int(field_str: &str) -> Option<u32> {
         "eth.dst" => Some(ETH_DST_MAC),
         "eth.type" => Some(ETH_PROTO),
         "eth.vlan" => Some(ETH_VLAN_ID),
+        "eth.packet" => Some(ETH_PACKET),
 
         //--- IP version 4
         "ip.src" => Some(IPV4_SRC_ADDR),
