@@ -29,6 +29,7 @@ pub const UDP_SRC_PORT: u32 = 0x00030001;
 pub const UDP_DEST_PORT: u32 = 0x00030002;
 pub const UDP_LEN: u32 = 0x00030003;
 pub const UDP_CHEKCSUM: u32 = 0x00030004;
+pub const UDP_PACKET: u32 = 0x00030005;
 
 //-- TCP
 pub const TCP_BASE: u32 = 0x00040000;
@@ -127,6 +128,7 @@ pub fn string_to_int(field_str: &str) -> Option<u32> {
         "icmp.code" => Some(ICMP_CODE),
         "icmp.identifier" => Some(ICMP_IDENTIFIER),
         "icmp.seq_no" => Some(ICMP_SEQ_NO),
+        "icmp.packet" => Some(ICMP_PACKET),
 
         _ => None,
     }
