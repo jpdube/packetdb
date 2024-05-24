@@ -54,7 +54,7 @@ pub struct Packet {
     ip_packet: Option<IpFrame>,
     tcp_packet: Option<Tcp>,
     udp_packet: Option<UdpFrame>,
-    icmp: Option<Icmp>,
+    icmp_packet: Option<Icmp>,
     pub file_id: u32,
     pub pkt_ptr: u32,
     layer_list: HashMap<String, Box<dyn Layer>>,
@@ -123,7 +123,7 @@ impl Packet {
                 IP_ICMP_PROTO => {
                     let mut icmp = Icmp::default();
                     icmp.set_packet(self.raw_packet[vo + ip_header_len..].to_vec());
-                    self.icmp = Some(icmp);
+                    self.icmp_packet = Some(icmp);
                 }
                 _ => {}
             }
@@ -146,7 +146,7 @@ impl Packet {
         self.tcp_packet.is_some()
     }
     pub fn has_icmp(&self) -> bool {
-        self.icmp.is_some()
+        self.icmp_packet.is_some()
     }
 
     pub fn has_https(&self) -> bool {
@@ -208,6 +208,7 @@ impl Packet {
             self.ip_packet.as_ref().unwrap().get_field(field)
         } else if self.field_type(field, fields::UDP_BASE) && self.udp_packet.is_some() {
             self.udp_packet.as_ref().unwrap().get_field(field)
+        } else if self.field_type(field, fields::ICMP_BASE) && self.icmp_packet.is_some() {
             self.icmp_packet.as_ref().unwrap().get_field(field)
         } else {
             match field {
@@ -222,11 +223,19 @@ impl Packet {
         }
     }
 
+    pub fn get_field_byte(&self, field: u32, offset: usize, len: usize) -> Vec<u8> {
         if self.field_type(field, fields::TCP_BASE) && self.tcp_packet.is_some() {
             let pkt_array = self.tcp_packet.as_ref().unwrap().payload_range(offset, len);
-            return Some(pkt_array);
+            return pkt_array;
         } else if self.field_type(field, fields::UDP_BASE) && self.udp_packet.is_some() {
             let pkt_array = self.udp_packet.as_ref().unwrap().payload_range(offset, len);
+            return pkt_array;
+        } else if self.field_type(field, fields::ICMP_BASE) && self.icmp_packet.is_some() {
+            let pkt_array = self
+                .icmp_packet
+                .as_ref()
+                .unwrap()
+                .payload_range(offset, len);
             return pkt_array;
         }
 
@@ -279,7 +288,7 @@ impl PacketDisplay for Packet {
             }
 
             if ip.proto() == IP_ICMP_PROTO {
-                if let Some(icmp) = &self.icmp {
+                if let Some(icmp) = &self.icmp_packet {
                     result += &format!("    {}\n", &icmp.summary());
                 }
             }
