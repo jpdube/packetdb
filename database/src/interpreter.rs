@@ -140,9 +140,9 @@ impl Interpreter {
             Expression::Integer(i) => Ok(Object::Integer(*i as u64)),
             Expression::Timestamp(t) => Ok(Object::Timestamp(*t)),
             Expression::Label(value) => Ok(Object::Integer(pkt.get_field(*value) as u64)),
-            Expression::LabelByte(field, offset, len) => Ok(Object::ByteArray(
-                pkt.get_field_byte(*field, *offset, *len).unwrap(),
-            )),
+            Expression::LabelByte(field, offset, len) => {
+                Ok(Object::ByteArray(pkt.get_field_byte(*field, *offset, *len)))
+            }
             Expression::Array(array_values) => Ok(Object::ByteArray(array_values.clone())),
             Expression::IPv4(addr, mask) => Ok(Object::IPv4(*addr, *mask)),
             Expression::MacAddress(addr) => Ok(Object::MacAddress(*addr)),

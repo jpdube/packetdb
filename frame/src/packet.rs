@@ -223,13 +223,13 @@ impl Packet {
         }
     }
 
-    pub fn get_field_byte(&self, field: u32, offset: usize, len: usize) -> Option<Vec<u8>> {
         if self.field_type(field, fields::TCP_BASE) && self.tcp_packet.is_some() {
             let pkt_array = self.tcp_packet.as_ref().unwrap().payload_range(offset, len);
             return Some(pkt_array);
         }
 
-        None
+        let pkt: Vec<u8> = Vec::new();
+        pkt
     }
 
     //----------------------------------------------------
