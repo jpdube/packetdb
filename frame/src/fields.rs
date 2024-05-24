@@ -94,6 +94,7 @@ pub fn string_to_int(field_str: &str) -> Option<u32> {
         "udp.dport" => Some(UDP_DEST_PORT),
         "udp.length" => Some(UDP_LEN),
         "udp.checksum" => Some(UDP_CHEKCSUM),
+        "udp.packet" => Some(UDP_PACKET),
 
         //--- TCP
         "tcp.sport" => Some(TCP_SRC_PORT),

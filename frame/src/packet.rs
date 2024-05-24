@@ -225,6 +225,9 @@ impl Packet {
         if self.field_type(field, fields::TCP_BASE) && self.tcp_packet.is_some() {
             let pkt_array = self.tcp_packet.as_ref().unwrap().payload_range(offset, len);
             return Some(pkt_array);
+        } else if self.field_type(field, fields::UDP_BASE) && self.udp_packet.is_some() {
+            let pkt_array = self.udp_packet.as_ref().unwrap().payload_range(offset, len);
+            return pkt_array;
         }
 
         let pkt: Vec<u8> = Vec::new();
