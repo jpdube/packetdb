@@ -63,6 +63,7 @@ pub const ICMP_TYPE: u32 = 0x00050001;
 pub const ICMP_CODE: u32 = 0x00050002;
 pub const ICMP_IDENTIFIER: u32 = 0x00050003;
 pub const ICMP_SEQ_NO: u32 = 0x00050004;
+pub const ICMP_PACKET: u32 = 0x00050005;
 
 pub fn string_to_int(field_str: &str) -> Option<u32> {
     match field_str {

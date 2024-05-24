@@ -33,6 +33,10 @@ impl UdpFrame {
         self.raw_packet[8..].to_vec()
     }
 
+    pub fn payload_range(&self, offset: usize, len: usize) -> Vec<u8> {
+        self.raw_packet[offset..offset + len].to_vec()
+    }
+
     pub fn is_dns(&self) -> bool {
         self.dport() == 53 || self.sport() == 53
     }

@@ -208,8 +208,7 @@ impl Packet {
             self.ip_packet.as_ref().unwrap().get_field(field)
         } else if self.field_type(field, fields::UDP_BASE) && self.udp_packet.is_some() {
             self.udp_packet.as_ref().unwrap().get_field(field)
-        } else if self.field_type(field, fields::ICMP_BASE) && self.icmp.is_some() {
-            self.icmp.as_ref().unwrap().get_field(field)
+            self.icmp_packet.as_ref().unwrap().get_field(field)
         } else {
             match field {
                 fields::FRAME_TIMESTAMP => self.timestamp() as usize,
