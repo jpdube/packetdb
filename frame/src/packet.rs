@@ -155,6 +155,24 @@ impl Packet {
         }
         false
     }
+    pub fn has_http(&self) -> bool {
+        if let Some(pkt) = &self.tcp_packet {
+            return pkt.is_http();
+        }
+        false
+    }
+    pub fn has_ssh(&self) -> bool {
+        if let Some(pkt) = &self.tcp_packet {
+            return pkt.is_ssh();
+        }
+        false
+    }
+    pub fn has_telnet(&self) -> bool {
+        if let Some(pkt) = &self.tcp_packet {
+            return pkt.is_telnet();
+        }
+        false
+    }
 
     pub fn has_dns(&self) -> bool {
         if let Some(pkt) = &self.udp_packet {

@@ -194,6 +194,15 @@ impl Tcp {
     pub fn is_https(&self) -> bool {
         return self.sport() == 443 || self.dport() == 443;
     }
+    pub fn is_http(&self) -> bool {
+        return self.sport() == 80 || self.dport() == 80;
+    }
+    pub fn is_ssh(&self) -> bool {
+        return self.sport() == 22 || self.dport() == 22;
+    }
+    pub fn is_telnet(&self) -> bool {
+        return self.sport() == 23 || self.dport() == 23;
+    }
 }
 
 impl Layer for Tcp {
