@@ -676,7 +676,7 @@ impl Parse {
         let mut offset: usize = 0;
         let mut length: usize = 0;
 
-        // if let Some(tok) = self.peek(Keyword::Identifier) {
+        self.add_type(&tok.value);
         label = string_to_int(&tok.value).unwrap();
         if self.accept(Keyword::IndexStart).is_some() {
             if let Some(tok_offset) = self.expect(Keyword::Integer) {
@@ -693,7 +693,6 @@ impl Parse {
 
             return Some(Expression::LabelByte(label, offset, length));
         }
-        // }
 
         None
     }

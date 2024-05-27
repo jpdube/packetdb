@@ -10,16 +10,6 @@ use std::fs::File;
 use std::io::BufReader;
 use std::io::Read;
 
-pub const IDX_ETHERNET: u32 = 0x01;
-pub const _IDX_ARP: u32 = 0x02;
-pub const IDX_IPV4: u32 = 0x04;
-pub const IDX_ICMP: u32 = 0x08;
-pub const IDX_UDP: u32 = 0x10;
-pub const IDX_TCP: u32 = 0x20;
-pub const IDX_DNS: u32 = 0x40;
-pub const IDX_DHCP: u32 = 0x80;
-pub const IDX_HTTPS: u32 = 0x100;
-
 #[derive(Default)]
 pub struct PktIndex {}
 
@@ -30,6 +20,7 @@ impl PktIndex {
         let mut buffer = [0; 20];
         let mut packet_ptr = PacketPtr::default();
         packet_ptr.file_id = file_id;
+        println!("Search type: {:?}", &pql.search_type);
         let search_value = self.build_search_index(&pql.search_type);
 
         loop {
@@ -71,6 +62,10 @@ impl PktIndex {
                 IndexField::Dns => ret_type += IndexField::Dns as u32,
                 IndexField::Dhcp => ret_type += IndexField::Dhcp as u32,
                 IndexField::Https => ret_type += IndexField::Https as u32,
+                IndexField::Http => ret_type += IndexField::Http as u32,
+                IndexField::Ssh => ret_type += IndexField::Ssh as u32,
+                IndexField::Telnet => ret_type += IndexField::Telnet as u32,
+                IndexField::IpV6 => ret_type += IndexField::IpV6 as u32,
             }
         }
 

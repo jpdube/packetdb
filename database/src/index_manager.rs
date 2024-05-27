@@ -1,26 +1,14 @@
 use crate::config;
 use crate::pcapfile::PcapFile;
-// use anyhow::Error;
 use byteorder::{BigEndian, ByteOrder, WriteBytesExt};
 use frame::fields;
 use frame::packet::Packet;
-// use log::info;
 use rayon::prelude::*;
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::BufReader;
 use std::io::BufWriter;
 use std::io::Read;
-
-pub const IDX_ETHERNET: u32 = 0x01;
-pub const _IDX_ARP: u32 = 0x02;
-pub const IDX_IPV4: u32 = 0x04;
-pub const IDX_ICMP: u32 = 0x08;
-pub const IDX_UDP: u32 = 0x10;
-pub const IDX_TCP: u32 = 0x20;
-pub const IDX_DNS: u32 = 0x40;
-pub const IDX_DHCP: u32 = 0x80;
-pub const IDX_HTTPS: u32 = 0x100;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum IndexField {
@@ -33,13 +21,10 @@ pub enum IndexField {
     Dns = 0x40,
     Dhcp = 0x80,
     Https = 0x100,
-}
-
-#[derive(Default, Debug)]
-pub struct PacketIndex {
-    pub timestamp: u32,
-    pub pkt_ptr: u32,
-    pub index: u32,
+    Http = 0x200,
+    IpV6 = 0x400,
+    Ssh = 0x800,
+    Telnet = 0x1000,
 }
 
 #[derive(Default, Debug)]
@@ -92,28 +77,37 @@ impl IndexManager {
         let mut index: u32 = 0;
 
         if pkt.has_ethernet() {
-            index += IDX_ETHERNET
+            index += IndexField::Ethernet as u32
         }
         if pkt.has_ipv4() {
-            index += IDX_IPV4
+            index += IndexField::IpV4 as u32
         }
         if pkt.has_icmp() {
-            index += IDX_ICMP
+            index += IndexField::Icmp as u32
         }
         if pkt.has_udp() {
-            index += IDX_UDP
+            index += IndexField::Udp as u32
         }
         if pkt.has_tcp() {
-            index += IDX_TCP
+            index += IndexField::Tcp as u32
         }
         if pkt.has_https() {
-            index += IDX_HTTPS
+            index += IndexField::Https as u32
         }
         if pkt.has_dns() {
-            index += IDX_DNS
+            index += IndexField::Dns as u32
         }
         if pkt.has_dhcp() {
-            index += IDX_DHCP
+            index += IndexField::Dhcp as u32
+        }
+        if pkt.has_ssh() {
+            index += IndexField::Ssh as u32
+        }
+        if pkt.has_telnet() {
+            index += IndexField::Telnet as u32
+        }
+        if pkt.has_http() {
+            index += IndexField::Http as u32
         }
 
         index
@@ -141,7 +135,6 @@ impl IndexManager {
 
     pub fn build_search_index(&self, search_type: &HashSet<IndexField>) -> u32 {
         let mut ret_type: u32 = 0;
-
         for stype in search_type {
             match stype {
                 IndexField::Ethernet => ret_type += IndexField::Ethernet as u32,
@@ -153,6 +146,10 @@ impl IndexManager {
                 IndexField::Dns => ret_type += IndexField::Dns as u32,
                 IndexField::Dhcp => ret_type += IndexField::Dhcp as u32,
                 IndexField::Https => ret_type += IndexField::Https as u32,
+                IndexField::Http => ret_type += IndexField::Http as u32,
+                IndexField::Ssh => ret_type += IndexField::Ssh as u32,
+                IndexField::Telnet => ret_type += IndexField::Telnet as u32,
+                IndexField::IpV6 => ret_type += IndexField::IpV6 as u32,
             }
         }
 
