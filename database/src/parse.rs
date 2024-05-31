@@ -107,7 +107,7 @@ impl Default for PqlStatement {
             select: Vec::new(),
             from: Vec::new(),
             filter: Expression::NoOp,
-            top: 10,
+            top: 0,
             offset: 0,
             interval: None,
             search_type: HashSet::new(),
@@ -371,20 +371,21 @@ impl Parse {
                 });
             }
 
-            if self.peek(Keyword::Top).is_some() {
-                self.accept(Keyword::Top);
-                if let Some(tok) = self.accept(Keyword::Integer) {
-                    self.query.top = tok.value.parse::<usize>().unwrap();
-                } else {
-                    println!("Expected integer");
-                }
-            }
             if self.peek(Keyword::Offset).is_some() {
                 self.accept(Keyword::Offset);
                 if let Some(tok) = self.accept(Keyword::Integer) {
                     println!("Offset: {:?}", tok);
                     self.query.offset = tok.value.parse::<usize>().unwrap();
                 } else {
+                    println!("Expected integer");
+                }
+            }
+            if self.peek(Keyword::Top).is_some() {
+                self.accept(Keyword::Top);
+                if let Some(tok) = self.accept(Keyword::Integer) {
+                    self.query.top = tok.value.parse::<usize>().unwrap();
+                } else {
+                    self.query.top = 5;
                     println!("Expected integer");
                 }
             }
