@@ -3,7 +3,7 @@ use crate::exec_plan::ExecutionPlan;
 use crate::index_manager::IndexManager;
 use crate::interpreter::Interpreter;
 use crate::packet_ptr::PacketPtr;
-use crate::parse::{Parse, SelectField};
+use crate::parse::{Parse, PqlStatement};
 use crate::pkt_index::PktIndex;
 use crate::query_result::{get_field_type, Field, QueryResult, Record};
 use crate::seek_packet::SeekPacket;
@@ -18,6 +18,7 @@ use std::time::SystemTime;
 pub struct DbEngine {
     result: QueryResult,
     exec_plan: ExecutionPlan,
+    offset: usize,
 }
 
 impl DbEngine {
@@ -25,6 +26,7 @@ impl DbEngine {
         Self {
             result: QueryResult::default(),
             exec_plan: ExecutionPlan::default(),
+            offset: 0,
         }
     }
 
@@ -38,8 +40,12 @@ impl DbEngine {
             let mut top_limit: usize = expr.top;
             let mut ptr_result: Vec<PacketPtr> = Vec::new();
             let mut file_count = 0;
+            let top_offset: usize = expr.top + expr.offset;
+
+            self.offset = 0;
 
             let mut pkt_index = PktIndex::default();
+            println!("Top: {}, Offset: {}", expr.top, expr.offset);
             match self.get_index_files() {
                 Ok(pkt_list) => {
                     for file_id in pkt_list {
@@ -49,17 +55,17 @@ impl DbEngine {
 
                         let result = interpreter.run_pgm_seek(&ptr, top_limit);
                         count += result.pkt_ptr.len();
-                        top_limit = expr.top - count;
+                        top_limit = top_offset - count;
                         ptr_result.push(result);
 
-                        if count >= expr.top {
+                        if count >= top_offset {
                             println!("len: {}", count);
                             break;
                         }
                     }
 
                     for p in &ptr_result {
-                        self._get_fields(&expr.select, &p);
+                        self._get_fields(&expr, &p);
                     }
 
                     info!("Nbr files searched: {}", file_count);
@@ -92,7 +98,7 @@ impl DbEngine {
         Ok(file_id_list)
     }
 
-    fn _get_fields(&mut self, fields_list: &Vec<SelectField>, packet_list: &PacketPtr) {
+    fn _get_fields(&mut self, expr: &PqlStatement, packet_list: &PacketPtr) {
         if packet_list.pkt_ptr.len() == 0 {
             return;
         }
@@ -100,8 +106,12 @@ impl DbEngine {
         let mut seek_pkt = SeekPacket::new(packet_list.clone());
 
         while let Some(pkt) = seek_pkt.next() {
+            if self.offset < expr.offset {
+                self.offset += 1;
+                continue;
+            }
             let mut record = Record::default();
-            for field in fields_list {
+            for field in &expr.select {
                 if let Some(field_value) = get_field_type(field.id, pkt.get_field(field.id)) {
                     record.add_field(Field {
                         name: field.name.clone(),
