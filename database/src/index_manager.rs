@@ -1,5 +1,6 @@
 use crate::config;
 use crate::pcapfile::PcapFile;
+use crate::ref_index::RefIndex;
 use byteorder::{BigEndian, ByteOrder, WriteBytesExt};
 use frame::fields;
 use frame::packet::Packet;
@@ -45,6 +46,9 @@ impl IndexManager {
         let mut mindex = MasterIndex::default();
         let mut first_index = false;
         let mut ts: u32 = 0;
+        let mut pkt_index: u32;
+        let mut ref_index = RefIndex::new(filename);
+        let mut pkt_counter: u32 = 0;
 
         while let Some(pkt) = pfile.next() {
             ts = pkt.get_field(fields::FRAME_TIMESTAMP) as u32;
@@ -54,11 +58,16 @@ impl IndexManager {
                 first_index = true;
                 mindex.start_timestamp = ts
             }
+
             writer.write_u32::<BigEndian>(ts).unwrap();
             writer.write_u32::<BigEndian>(pkt.pkt_ptr).unwrap();
-            writer
-                .write_u32::<BigEndian>(self.build_index(&pkt))
-                .unwrap();
+
+            pkt_index = self.build_index(&pkt);
+            ref_index.add_key(pkt_index, pkt_counter);
+            pkt_counter += 20;
+
+            writer.write_u32::<BigEndian>(pkt_index).unwrap();
+
             writer
                 .write_u32::<BigEndian>(pkt.get_field(fields::IPV4_DST_ADDR) as u32)
                 .unwrap();
@@ -69,6 +78,9 @@ impl IndexManager {
 
         mindex.end_timestamp = ts;
         mindex.file_ptr = filename;
+
+        ref_index.write_index();
+        // ref_index.print();
 
         mindex
     }

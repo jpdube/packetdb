@@ -11,6 +11,7 @@ pub mod pcapfile;
 pub mod pkt_index;
 pub mod preparser;
 pub mod query_result;
+pub mod ref_index;
 pub mod seek_packet;
 pub mod token;
 

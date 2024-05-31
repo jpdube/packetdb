@@ -5,6 +5,7 @@ use crate::parse::PqlStatement;
 use byteorder::{BigEndian, ByteOrder};
 use frame::ipv4_address::{is_ip_in_range, IPv4};
 // use log::info;
+use crate::ref_index::RefIndex;
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::BufReader;
@@ -14,13 +15,55 @@ use std::io::Read;
 pub struct PktIndex {}
 
 impl PktIndex {
-    pub fn search_index(&mut self, pql: &PqlStatement, file_id: u32) -> PacketPtr {
+    pub fn _search_index(&mut self, pql: &PqlStatement, file_id: u32) -> PacketPtr {
         let idx_filename = &format!("{}/{}.pidx", &config::CONFIG.index_path, file_id);
         let mut file = BufReader::new(File::open(idx_filename).unwrap());
         let mut buffer = [0; 20];
         let mut packet_ptr = PacketPtr::default();
         packet_ptr.file_id = file_id;
         println!("Search type: {:?}", &pql.search_type);
+
+        let mut ref_index = RefIndex::new(file_id);
+
+        let search_value = self.build_search_index(&pql.search_type);
+        let index_list = ref_index.read_index(0x125);
+        let mut file_pos: i64 = 0;
+
+        for idx in index_list {
+            file.seek_relative(idx as i64 - file_pos).unwrap();
+            file_pos = idx as i64;
+            match file.read_exact(&mut buffer) {
+                Ok(_) => {
+                    if let Some(interval) = &pql.interval {
+                        let timestamp = BigEndian::read_u32(&buffer[0..4]);
+                        if timestamp >= interval.from
+                            && timestamp <= interval.to
+                            && self.match_index(&buffer, search_value, &pql.ip_list)
+                        {
+                            packet_ptr.pkt_ptr.push(BigEndian::read_u32(&buffer[4..8]));
+                        }
+                    } else {
+                        if self.match_index(&buffer, search_value, &pql.ip_list) {
+                            packet_ptr.pkt_ptr.push(BigEndian::read_u32(&buffer[4..8]));
+                        }
+                    }
+                }
+                Err(_) => {
+                    break;
+                }
+            }
+        }
+
+        packet_ptr
+    }
+
+    pub fn search_index(&mut self, pql: &PqlStatement, file_id: u32) -> PacketPtr {
+        let idx_filename = &format!("{}/{}.pidx", &config::CONFIG.index_path, file_id);
+        let mut file = BufReader::new(File::open(idx_filename).unwrap());
+        let mut buffer = [0; 20];
+        let mut packet_ptr = PacketPtr::default();
+        packet_ptr.file_id = file_id;
+        println!("Search file: {}, type: {:?}", file_id, &pql.search_type);
         let search_value = self.build_search_index(&pql.search_type);
 
         loop {
