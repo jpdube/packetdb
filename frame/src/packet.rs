@@ -46,7 +46,7 @@ pub struct PcapHeader {
     pub header_len: u8,
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Packet {
     header: PcapHeader,
     raw_packet: Vec<u8>,
@@ -57,7 +57,7 @@ pub struct Packet {
     icmp_packet: Option<Icmp>,
     pub file_id: u32,
     pub pkt_ptr: u32,
-    layer_list: HashMap<String, Box<dyn Layer>>,
+    // layer_list: HashMap<String, Box<dyn Layer>>,
 }
 
 impl Packet {
@@ -66,7 +66,7 @@ impl Packet {
     }
 
     pub fn add_layer(&mut self, name: String, layer: Box<dyn Layer>) {
-        self.layer_list.insert(name, layer);
+        // self.layer_list.insert(name, layer);
     }
 
     pub fn set_packet(&mut self, packet: Vec<u8>, header: [u8; 16], file_id: u32, pkt_ptr: u32) {
@@ -93,21 +93,23 @@ impl Packet {
 
         let mut ether = EtherFrame::default();
         ether.set_packet(packet[0..vo].to_vec());
-        self.layer_list
-            .insert("eth".to_string(), Box::new(ether.clone()));
+        // self.layer_list
+        //     .insert("eth".to_string(), Box::new(ether.clone()));
+
         // .insert("eth".to_string(), Layer::Ethernet(ether.clone()));
 
         if ether.ethertype() == ETHER_IPV4_PROTO {
             let mut ip_packet = IpFrame::default();
 
             ip_packet.set_packet(self.raw_packet[vo..vo + ip_header_len].to_vec());
-            self.layer_list
-                .insert("ip".to_string(), Box::new(ip_packet.clone()));
+            // self.layer_list
+            //     .insert("ip".to_string(), Box::new(ip_packet.clone()));
             self.ip_packet = Some(ip_packet);
         }
         self.eth_packet = Some(ether);
 
-        if let Some(p) = &self.layer_list.get("ip") {
+        if let Some(p) = &self.ip_packet {
+            // if let Some(p) = &self.layer_list.get("ip") {
             match p.get_field(fields::IPV4_PROTOCOL) as u8 {
                 // match p.proto() {
                 IP_TCP_PROTO => {
