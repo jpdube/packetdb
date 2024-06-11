@@ -59,4 +59,18 @@ impl SeekPacket {
 
         Some(pkt)
     }
+
+    pub fn next_chunk(&mut self, count: usize) -> Option<Vec<Packet>> {
+        let mut result: Vec<Packet> = Vec::new();
+
+        while let Some(pkt) = self.next() {
+            if result.len() < count {
+                result.push(pkt);
+            } else {
+                return Some(result);
+            }
+        }
+
+        None
+    }
 }
