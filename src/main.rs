@@ -1,6 +1,7 @@
 use actix_cors::Cors;
 use database::config::CONFIG;
 use database::dbengine::DbEngine;
+use database::pipeline::pipeline_test2;
 use log::info;
 use serde_json::Value;
 use std::collections::BTreeMap;
@@ -89,6 +90,7 @@ fn process_params() {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    pipeline_test2();
     web_main().await?;
     Ok(())
 }
@@ -113,6 +115,9 @@ async fn web_main() -> std::io::Result<()> {
             .wrap(
                 Cors::default()
                     .allowed_origin("http://localhost:9000")
+                    .allowed_origin_fn(|origin, _req_head| {
+                        origin.as_bytes().ends_with(b".localhost")
+                    })
                     .allowed_methods(vec!["GET", "POST"])
                     .allowed_headers(vec![header::AUTHORIZATION, header::ACCEPT])
                     .allowed_header(header::CONTENT_TYPE)
@@ -123,7 +128,8 @@ async fn web_main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .service(execute)
     })
-    .bind_openssl("0.0.0.0:7443", builder)?
+    .bind("localhost:9001")?
+    // .bind_openssl("localhost:7443", builder)?
     .run()
     .await
 }

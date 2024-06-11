@@ -8,6 +8,7 @@ use crate::pcapfile::PcapFile;
 use crate::seek_packet::SeekPacket;
 use frame::ipv4_address::is_ip_in_range;
 use frame::packet::Packet;
+use rayon::prelude::*;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Object {
@@ -92,6 +93,61 @@ impl Interpreter {
         Self { model }
     }
 
+    pub fn _run_pgm_seek(&self, packet_list: &PacketPtr, top_limit: usize) -> PacketPtr {
+        let mut seek_pkt = SeekPacket::new(packet_list.clone());
+        let mut packet_ptr = PacketPtr::default();
+        let mut counter: usize = 0;
+        let mut completed: bool = false;
+
+        packet_ptr.file_id = packet_list.file_id;
+
+        while let Some(pkt) = seek_pkt.next_chunk(4) {
+            let result: Vec<Option<u32>> = pkt
+                .into_par_iter()
+                .map(|p| {
+                    // println!("Packet: {:?}", &p);
+                    if self.eval(&p) {
+                        // println!("Found packet");
+                        Some(p.pkt_ptr)
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+
+            // println!("RESULT: {:?}", result);
+
+            for r in result {
+                if let Some(pkt) = r {
+                    packet_ptr.pkt_ptr.push(pkt);
+                    if !self.model.aggregate {
+                        counter += 1;
+                        // println!("TOP: {top_limit}, Counter: {counter}");
+                        if top_limit == counter {
+                            // if self.model.top == counter {
+                            completed = true;
+                        }
+                    }
+                }
+            }
+
+            if completed {
+                break;
+            }
+            // if self.eval(&self.model.filter.to_owned(), &pkt) {
+            //     packet_ptr.pkt_ptr.push(pkt.pkt_ptr);
+            //     if !self.model.aggregate {
+            //         counter += 1;
+            //         if top_limit == counter {
+            //             // if self.model.top == counter {
+            //             break;
+            //         }
+            //     }
+            // }
+        }
+
+        packet_ptr
+    }
     pub fn run_pgm_seek(&self, packet_list: &PacketPtr, top_limit: usize) -> PacketPtr {
         let mut seek_pkt = SeekPacket::new(packet_list.clone());
         let mut packet_ptr = PacketPtr::default();
@@ -100,7 +156,7 @@ impl Interpreter {
         packet_ptr.file_id = packet_list.file_id;
 
         while let Some(pkt) = seek_pkt.next() {
-            if self.eval(&self.model.filter.to_owned(), &pkt) {
+            if self.eval(&pkt) {
                 packet_ptr.pkt_ptr.push(pkt.pkt_ptr);
                 if !self.model.aggregate {
                     counter += 1;
@@ -122,7 +178,8 @@ impl Interpreter {
         packet_ptr.file_id = filename;
 
         while let Some(pkt) = pfile.next() {
-            if self.eval(&self.model.filter.to_owned(), &pkt) {
+            if self.eval(&pkt) {
+                // if self.eval(&self.model.filter.to_owned(), &pkt) {
                 packet_ptr.pkt_ptr.push(pkt.pkt_ptr);
             }
         }
@@ -130,10 +187,14 @@ impl Interpreter {
         packet_ptr
     }
 
-    pub fn eval(&self, expr: &Expression, pkt: &Packet) -> bool {
-        let result = self.eval_expression(&expr, &pkt).unwrap();
+    pub fn eval(&self, pkt: &Packet) -> bool {
+        let result = self.eval_expression(&self.model.filter, &pkt).unwrap();
         result == TRUE
     }
+    // pub fn eval(&self, expr: &Expression, pkt: &Packet) -> bool {
+    //     let result = self.eval_expression(&expr, &pkt).unwrap();
+    //     result == TRUE
+    // }
 
     fn eval_expression(&self, expression: &Expression, pkt: &Packet) -> Result<Object, EvalError> {
         match expression {

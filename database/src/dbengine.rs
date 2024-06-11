@@ -7,6 +7,7 @@ use crate::parse::{Parse, PqlStatement};
 use crate::pkt_index::PktIndex;
 use crate::query_result::{get_field_type, Field, QueryResult, Record};
 use crate::seek_packet::SeekPacket;
+use rayon::prelude::*;
 
 use anyhow::Result;
 use log::info;
@@ -19,6 +20,7 @@ pub struct DbEngine {
     result: QueryResult,
     exec_plan: ExecutionPlan,
     offset: usize,
+    // pql_stmt: PqlStatement,
 }
 
 impl DbEngine {
@@ -27,11 +29,12 @@ impl DbEngine {
             result: QueryResult::default(),
             exec_plan: ExecutionPlan::default(),
             offset: 0,
+            // pql_stmt: PqlStatement::default(),
         }
     }
 
     pub fn run(&mut self, query: &str) -> Result<&QueryResult, String> {
-        println!("Searching for...");
+        println!("Searching for: {}", query);
         let mut parse = Parse::new();
 
         self.exec_plan.start("Start search");
@@ -78,6 +81,62 @@ impl DbEngine {
         self.exec_plan.show();
         Ok(&self.result)
     }
+    // pub fn exec_query(&mut self) {
+    //     let mut pkt_list: Vec<i32> = Vec::new();
+    //     let mut counter = 0;
+    //     let mut processed_pkt: Vec<i32> = Vec::new();
+
+    //     for i in 0..10_000_000 {
+    //         pkt_list.push(i);
+    //     }
+
+    //     for pkt in pkt_list.chunks(10) {
+    //         println!("Chunck: {:?}", pkt);
+
+    //         let result: Vec<i32> = pkt
+    //             .into_par_iter()
+    //             .map(|pkt| self.run_pgm_seek(pql, packet_list, top_limit))
+    //             .collect();
+
+    //         for p in result {
+    //             if processed_pkt.len() < 32 {
+    //                 processed_pkt.push(p);
+    //                 counter += 1;
+    //             }
+    //         }
+    //     }
+
+    //     println!("Result: {:?}, Len: {}", processed_pkt, processed_pkt.len());
+    // }
+
+    // fn run_pgm_seek(
+    //     &self,
+    //     pql: &PqlStatement,
+    //     packet_list: &PacketPtr,
+    //     top_limit: usize,
+    // ) -> PacketPtr {
+    //     let mut seek_pkt = SeekPacket::new(packet_list.clone());
+    //     let mut packet_ptr = PacketPtr::default();
+    //     let mut counter: usize = 0;
+
+    //     packet_ptr.file_id = packet_list.file_id;
+    //     let interpreter = Interpreter::default();
+
+    //     while let Some(pkt) = seek_pkt.next() {
+    //         if interpreter.eval(&pql.filter, &pkt) {
+    //             packet_ptr.pkt_ptr.push(pkt.pkt_ptr);
+    //             // if !self.model.aggregate {
+    //             //     counter += 1;
+    //             //     if top_limit == counter {
+    //             //         // if self.model.top == counter {
+    //             //         break;
+    //             //     }
+    //             // }
+    //         }
+    //     }
+
+    //     packet_ptr
+    // }
 
     fn get_index_files(&self) -> Result<Vec<u32>> {
         let paths = fs::read_dir(&CONFIG.index_path).unwrap();
@@ -134,3 +193,51 @@ impl DbEngine {
         );
     }
 }
+// pub fn run(&mut self, query: &str) -> Result<&QueryResult, String> {
+//     println!("Searching for: {}", query);
+//     let mut parse = Parse::new();
+
+//     self.exec_plan.start("Start search");
+//     if let Ok(expr) = parse.parse_select(query) {
+//         let mut count: usize = 0;
+//         let mut top_limit: usize = expr.top;
+//         let mut ptr_result: Vec<PacketPtr> = Vec::new();
+//         let mut file_count = 0;
+//         let top_offset: usize = expr.top + expr.offset;
+
+//         self.offset = 0;
+
+//         let mut pkt_index = PktIndex::default();
+//         println!("Top: {}, Offset: {}", expr.top, expr.offset);
+//         match self.get_index_files() {
+//             Ok(pkt_list) => {
+//                 for file_id in pkt_list {
+//                     file_count += 1;
+//                     let interpreter = Interpreter::new(expr.clone());
+//                     let ptr = pkt_index.search_index(&expr, file_id);
+
+//                     let result = interpreter.run_pgm_seek(&ptr, top_limit);
+//                     count += result.pkt_ptr.len();
+//                     top_limit = top_offset - count;
+//                     ptr_result.push(result);
+
+//                     if count >= top_offset {
+//                         println!("len: {}", count);
+//                         break;
+//                     }
+//                 }
+
+//                 for p in &ptr_result {
+//                     self._get_fields(&expr, &p);
+//                 }
+
+//                 info!("Nbr files searched: {}", file_count);
+//             }
+//             Err(e) => println!("Error with index error:{}", e),
+//         }
+//     }
+
+//     self.exec_plan.stop();
+//     self.exec_plan.show();
+//     Ok(&self.result)
+// }
