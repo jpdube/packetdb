@@ -8,7 +8,6 @@ pub mod lexer;
 pub mod packet_ptr;
 pub mod parse;
 pub mod pcapfile;
-pub mod pipeline;
 pub mod pkt_index;
 pub mod preparser;
 pub mod query_result;

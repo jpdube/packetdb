@@ -1,7 +1,6 @@
 use actix_cors::Cors;
 use database::config::CONFIG;
 use database::dbengine::DbEngine;
-use database::pipeline::pipeline_test2;
 use log::info;
 use serde_json::Value;
 use std::collections::BTreeMap;
@@ -90,7 +89,6 @@ fn process_params() {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    pipeline_test2();
     web_main().await?;
     Ok(())
 }
