@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 frame = { path = "../frame/" }
-rayon = "1.6"
+rayon = "1.10"
 regex = "1.7.0"
 chrono = "0.4.23"
 toml = "0.7.4"
