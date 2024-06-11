@@ -9,7 +9,6 @@ use crate::tcp::Tcp;
 use crate::udp::UdpFrame;
 
 use byteorder::{BigEndian, ByteOrder};
-use std::collections::HashMap;
 
 // const IP_HDR_LEN_POS: usize = 0x0e;
 // const TCP_HDR_LEN_POS: usize = 0x2e;
@@ -57,16 +56,11 @@ pub struct Packet {
     icmp_packet: Option<Icmp>,
     pub file_id: u32,
     pub pkt_ptr: u32,
-    // layer_list: HashMap<String, Box<dyn Layer>>,
 }
 
 impl Packet {
     pub fn new() -> Self {
         Packet::default()
-    }
-
-    pub fn add_layer(&mut self, name: String, layer: Box<dyn Layer>) {
-        // self.layer_list.insert(name, layer);
     }
 
     pub fn set_packet(&mut self, packet: Vec<u8>, header: [u8; 16], file_id: u32, pkt_ptr: u32) {
@@ -93,25 +87,17 @@ impl Packet {
 
         let mut ether = EtherFrame::default();
         ether.set_packet(packet[0..vo].to_vec());
-        // self.layer_list
-        //     .insert("eth".to_string(), Box::new(ether.clone()));
-
-        // .insert("eth".to_string(), Layer::Ethernet(ether.clone()));
 
         if ether.ethertype() == ETHER_IPV4_PROTO {
             let mut ip_packet = IpFrame::default();
 
             ip_packet.set_packet(self.raw_packet[vo..vo + ip_header_len].to_vec());
-            // self.layer_list
-            //     .insert("ip".to_string(), Box::new(ip_packet.clone()));
             self.ip_packet = Some(ip_packet);
         }
         self.eth_packet = Some(ether);
 
         if let Some(p) = &self.ip_packet {
-            // if let Some(p) = &self.layer_list.get("ip") {
             match p.get_field(fields::IPV4_PROTOCOL) as u8 {
-                // match p.proto() {
                 IP_TCP_PROTO => {
                     let mut tcp_packet = Tcp::default();
                     tcp_packet.set_packet(self.raw_packet[vo + ip_header_len..].to_vec());
@@ -196,29 +182,6 @@ impl Packet {
         (field & 0xffff0000) == field_base
     }
 
-    // pub fn get_field(&self, field: u32) -> FieldResult {
-    //     if self.field_type(field, fields::ETH_BASE) && self.eth_packet.is_some() {
-    //         self.eth_packet.as_ref().unwrap().get_field(field)
-    //     } else if self.field_type(field, fields::TCP_BASE) && self.tcp_packet.is_some() {
-    //         self.tcp_packet.as_ref().unwrap().get_field(field)
-    //     } else if self.field_type(field, fields::IPV4_BASE) && self.ip_packet.is_some() {
-    //         self.ip_packet.as_ref().unwrap().get_field(field)
-    //     } else if self.field_type(field, fields::UDP_BASE) && self.udp_packet.is_some() {
-    //         self.udp_packet.as_ref().unwrap().get_field(field)
-    //     } else if self.field_type(field, fields::ICMP_BASE) && self.icmp.is_some() {
-    //         self.icmp.as_ref().unwrap().get_field(field)
-    //     } else {
-    //         match field {
-    //             fields::FRAME_TIMESTAMP => FieldResult::Uint(self.timestamp() as usize),
-    //             fields::FRAME_OFFSET => self.ts_offset() as usize,
-    //             fields::FRAME_ORIG_LEN => self.orig_len() as usize,
-    //             fields::FRAME_INC_LEN => self.inc_len() as usize,
-    //             fields::FRAME_FILE_ID => self.file_id as usize,
-    //             fields::FRAME_PKT_PTR => self.pkt_ptr as usize,
-    //             _ => usize::MAX,
-    //         }
-    //     }
-    // }
     pub fn get_field(&self, field: u32) -> usize {
         if self.field_type(field, fields::ETH_BASE) && self.eth_packet.is_some() {
             self.eth_packet.as_ref().unwrap().get_field(field)
