@@ -41,7 +41,7 @@ impl fmt::Display for Field {
 
 impl Field {
     fn to_json(&self) -> Value {
-        match self.field.clone() {
+        match &self.field {
             FieldType::Number(value) => json!(value),
 
             FieldType::Ipv4(value) => json!(ipv4_str(&value)),
