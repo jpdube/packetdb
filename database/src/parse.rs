@@ -73,6 +73,7 @@ pub struct SelectField {
 #[derive(Debug, Clone)]
 pub struct PqlStatement {
     pub select: Vec<SelectField>,
+    pub filter_fields: Vec<SelectField>,
     pub from: Vec<String>,
     pub filter: Expression,
     pub top: usize,
@@ -105,6 +106,7 @@ impl Default for PqlStatement {
     fn default() -> Self {
         Self {
             select: Vec::new(),
+            filter_fields: Vec::new(),
             from: Vec::new(),
             filter: Expression::NoOp,
             top: 0,
@@ -528,7 +530,6 @@ impl Parse {
         } else if self.peek(Keyword::IndexStart).is_some() {
             self.parse_array()
         } else if self.peek(Keyword::Constant).is_some() {
-            // println!("Factor,Constant");
             self.parse_constant()
         } else if self.peek(Keyword::IpV4).is_some() {
             self.parse_ipv4()
@@ -699,8 +700,14 @@ impl Parse {
     }
 
     fn parse_label(&mut self) -> Option<Expression> {
-        // println!("In label");
+        println!("In label -->");
         if let Some(tok) = self.accept(Keyword::Identifier) {
+            if let Some(field) = string_to_int(&tok.value) {
+                self.query.filter_fields.push(SelectField {
+                    name: tok.value.clone(),
+                    id: field,
+                });
+            }
             if self.peek(Keyword::IndexStart).is_some() {
                 return self.parse_label_byte(tok);
             }
