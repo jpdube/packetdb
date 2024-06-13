@@ -2,7 +2,7 @@ use ::chrono::prelude::*;
 use frame::fields;
 use serde::Serialize;
 use serde_json::{json, Value};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fmt;
 
 #[derive(Debug, Serialize, Clone)]
@@ -61,17 +61,19 @@ pub fn get_field_type(field_id: u32, value: usize) -> Option<FieldType> {
 
 #[derive(Debug, Default, Serialize)]
 pub struct Record {
-    field_list: Vec<Field>,
+    field_list: HashMap<String, Field>,
+    // field_list: Vec<Field>,
 }
 
 impl Record {
     pub fn add_field(&mut self, field: Field) {
-        self.field_list.push(field);
+        self.field_list.insert(field.name.to_owned(), field);
     }
 
     pub fn to_json(&self) -> BTreeMap<&str, Value> {
         let mut result: BTreeMap<&str, Value> = BTreeMap::new();
-        for f in self.field_list.iter() {
+        for f in self.field_list.values() {
+            // for f in self.field_list.iter() {
             result.insert(&f.name, f.to_json());
         }
 
@@ -81,7 +83,7 @@ impl Record {
 
 #[derive(Debug, Default)]
 pub struct QueryResult {
-    pub record_list: Vec<Record>,
+    record_list: Vec<Record>,
 }
 
 impl QueryResult {
@@ -103,14 +105,16 @@ impl QueryResult {
         let mut first_line = true;
         for f in &self.record_list {
             if first_line {
-                for h in &f.field_list {
+                for h in f.field_list.values() {
+                    // for h in &f.field_list {
                     print!("{}\t\t", h.name);
                 }
                 println!();
                 println!("----------------------------------------------------------");
                 first_line = false;
             }
-            for r in &f.field_list {
+            for r in f.field_list.values() {
+                // for r in &f.field_list {
                 print!("{}\t", r.field);
             }
             println!();
