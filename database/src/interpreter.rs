@@ -3,6 +3,7 @@ use std::fmt::Display;
 
 use crate::packet_ptr::PacketPtr;
 use crate::parse::{Expression, Operator, PqlStatement};
+use crate::query_result::{get_field_type, Field, Record};
 use crate::seek_packet::SeekPacket;
 use frame::ipv4_address::is_ip_in_range;
 use frame::packet::Packet;
@@ -90,16 +91,24 @@ impl Interpreter {
         Self { model }
     }
 
-    pub fn run_pgm_seek(&self, packet_list: &PacketPtr, top_limit: usize) -> PacketPtr {
+    pub fn run_pgm_seek(&self, packet_list: &PacketPtr, top_limit: usize) -> Vec<Record> {
         let mut seek_pkt = SeekPacket::new(packet_list.clone());
-        let mut packet_ptr = PacketPtr::default();
         let mut counter: usize = 0;
-
-        packet_ptr.file_id = packet_list.file_id;
+        let mut packet_ptr: Vec<Record> = Vec::new();
 
         while let Some(pkt) = seek_pkt.next() {
             if self.eval(&pkt) {
-                packet_ptr.pkt_ptr.push(pkt.pkt_ptr);
+                let mut record = Record::default();
+                for field in &self.model.select {
+                    if let Some(field_value) = get_field_type(field.id, pkt.get_field(field.id)) {
+                        record.add_field(Field {
+                            name: field.name.clone(),
+                            field: field_value,
+                        });
+                    }
+                }
+                packet_ptr.push(record);
+
                 if !self.model.aggregate {
                     counter += 1;
                     if top_limit == counter {
@@ -112,22 +121,6 @@ impl Interpreter {
 
         packet_ptr
     }
-
-    // pub fn _run_pgm(&self, filename: u32) -> PacketPtr {
-    //     let mut pfile = PcapFile::new(filename, &config::CONFIG.db_path);
-    //     // let mut total = 0;
-    //     let mut packet_ptr = PacketPtr::default();
-    //     packet_ptr.file_id = filename;
-
-    //     while let Some(pkt) = pfile.next() {
-    //         if self.eval(&pkt) {
-    //             // if self.eval(&self.model.filter.to_owned(), &pkt) {
-    //             packet_ptr.pkt_ptr.push(pkt.pkt_ptr);
-    //         }
-    //     }
-
-    //     packet_ptr
-    // }
 
     pub fn eval(&self, pkt: &Packet) -> bool {
         let result = self.eval_expression(&self.model.filter, &pkt).unwrap();

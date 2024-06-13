@@ -27,7 +27,7 @@ impl fmt::Display for FieldType {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 pub struct Field {
     pub field: FieldType,
     pub name: String,
@@ -59,7 +59,7 @@ pub fn get_field_type(field_id: u32, value: usize) -> Option<FieldType> {
     }
 }
 
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Default, Serialize, Clone)]
 pub struct Record {
     field_list: HashMap<String, Field>,
     // field_list: Vec<Field>,
@@ -89,6 +89,12 @@ pub struct QueryResult {
 impl QueryResult {
     pub fn add_record(&mut self, new_record: Record) {
         self.record_list.push(new_record);
+    }
+
+    pub fn append_records(&mut self, record_list: Vec<Record>) {
+        for r in record_list {
+            self.record_list.push(r.clone());
+        }
     }
 
     pub fn to_json(&self) -> Vec<BTreeMap<&str, Value>> {
