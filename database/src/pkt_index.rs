@@ -20,7 +20,6 @@ impl PktIndex {
         let mut buffer = [0; 20];
         let mut packet_ptr = PacketPtr::default();
         packet_ptr.file_id = file_id;
-        println!("Search type: {:?}", &pql.search_type);
         let search_value = self.build_search_index(&pql.search_type);
 
         loop {
