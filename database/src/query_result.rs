@@ -73,7 +73,6 @@ impl Record {
     pub fn to_json(&self) -> BTreeMap<&str, Value> {
         let mut result: BTreeMap<&str, Value> = BTreeMap::new();
         for f in self.field_list.values() {
-            // for f in self.field_list.iter() {
             result.insert(&f.name, f.to_json());
         }
 
