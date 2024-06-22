@@ -1,10 +1,15 @@
 use crate::config;
+use crate::packet_ptr::PacketPtr;
+use crate::parse::PqlStatement;
 use crate::pcapfile::PcapFile;
 use byteorder::{BigEndian, ByteOrder, WriteBytesExt};
 use frame::fields;
+use frame::ipv4_address::{is_ip_in_range, IPv4};
 use frame::packet::Packet;
 use rayon::prelude::*;
-use std::collections::HashSet;
+use rusqlite::{Connection, Result};
+use std::collections::{HashMap, HashSet};
+use std::fmt;
 use std::fs::File;
 use std::io::BufReader;
 use std::io::BufWriter;
@@ -27,6 +32,97 @@ pub enum IndexField {
     Telnet = 0x1000,
 }
 
+const STAT_SQL: &str =
+    "INSERT INTO proto_stats (file_id, proto, count) values (:file_id, :proto, :count)";
+
+#[derive(Debug)]
+pub struct ProtoStat {
+    file_id: u32,
+    proto_count: HashMap<u32, u32>,
+}
+
+struct StatCount {
+    count: usize,
+}
+
+impl fmt::Display for ProtoStat {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "File ID: {}, {:x?} ", self.file_id, self.proto_count)
+    }
+}
+
+impl ProtoStat {
+    pub fn new(file_id: u32) -> Self {
+        Self {
+            file_id,
+            proto_count: HashMap::new(),
+        }
+    }
+
+    pub fn add(&mut self, proto: u32) {
+        if let Some(key) = self.proto_count.get_mut(&proto) {
+            *key += 1;
+        } else {
+            self.proto_count.insert(proto, 1);
+        }
+    }
+
+    pub fn save(&mut self) -> Result<()> {
+        let mut conn =
+            Connection::open(format!("{}/packetdb.db", &config::CONFIG.master_index_path))?;
+
+        let tx = conn.transaction()?;
+        tx.prepare(STAT_SQL)?;
+
+        tx.execute_batch(
+            "PRAGMA journal_mode = MEMORY;
+                    PRAGMA cache_size = 1000000;
+                    PRAGMA temp_store = MEMORY;
+                    PRAGMA threads=4;", // PRAGMA locking_mode = EXCLUSIVE;",
+        )
+        .expect("PRAGMA");
+
+        tx.execute("delete from proto_stats where file_id = ?", [self.file_id])?;
+
+        for (proto, count) in self.proto_count.to_owned().into_iter() {
+            tx.execute(
+                "INSERT INTO proto_stats (file_id, proto, count) values (?, ?, ?);",
+                [self.file_id, proto, count],
+            )?;
+        }
+
+        tx.commit()?;
+
+        Ok(())
+    }
+
+    pub fn get_count_stats(&self, proto: u32) -> usize {
+        let conn =
+            Connection::open(format!("{}/packetdb.db", &config::CONFIG.master_index_path)).unwrap();
+
+        // let mut stmt = conn.prepare("select cast (avg(count) as int) from proto_stats group by proto having (proto & ?) = ?;").unwrap();
+        let mut stmt = conn
+            .prepare("select cast (avg(count) as int) from proto_stats where (proto & ?) = ?;")
+            .unwrap();
+
+        let count_iter = stmt
+            .query_map([proto, proto], |row| {
+                Ok(StatCount {
+                    count: row.get(0).unwrap(),
+                })
+            })
+            .unwrap();
+
+        let mut value: usize = 0;
+
+        for c in count_iter {
+            value = c.unwrap().count;
+        }
+
+        value
+    }
+}
+
 #[derive(Default, Debug)]
 pub struct MasterIndex {
     pub start_timestamp: u32,
@@ -38,6 +134,60 @@ pub struct MasterIndex {
 pub struct IndexManager {}
 
 impl IndexManager {
+    pub fn search_index(&mut self, pql: &PqlStatement, file_id: u32) -> PacketPtr {
+        let idx_filename = &format!("{}/{}.pidx", &config::CONFIG.index_path, file_id);
+        let mut file = BufReader::new(File::open(idx_filename).unwrap());
+        let mut buffer = [0; 20];
+        let mut packet_ptr = PacketPtr::default();
+        packet_ptr.file_id = file_id;
+        let search_value = self.build_search_index(&pql.search_type);
+
+        loop {
+            match file.read_exact(&mut buffer) {
+                Ok(_) => {
+                    if let Some(interval) = &pql.interval {
+                        let timestamp = BigEndian::read_u32(&buffer[0..4]);
+                        if timestamp >= interval.from
+                            && timestamp <= interval.to
+                            && self.match_index(&buffer, search_value, &pql.ip_list)
+                        {
+                            packet_ptr.pkt_ptr.push(BigEndian::read_u32(&buffer[4..8]));
+                        }
+                    } else {
+                        if self.match_index(&buffer, search_value, &pql.ip_list) {
+                            packet_ptr.pkt_ptr.push(BigEndian::read_u32(&buffer[4..8]));
+                        }
+                    }
+                }
+                Err(_) => {
+                    break;
+                }
+            }
+        }
+
+        packet_ptr
+    }
+
+    fn match_index(&self, buffer: &[u8], search_value: u32, ip_list: &Vec<IPv4>) -> bool {
+        let cindex = BigEndian::read_u32(&buffer[8..12]);
+        let ip_dst = BigEndian::read_u32(&buffer[12..16]);
+        let ip_src = BigEndian::read_u32(&buffer[16..20]);
+        let mut ip_found = true;
+
+        if ip_list.len() > 0 {
+            ip_found = false;
+            for ip in ip_list {
+                if is_ip_in_range(ip_dst, ip.address, ip.mask)
+                    || is_ip_in_range(ip_src, ip.address, ip.mask)
+                {
+                    ip_found = true;
+                }
+            }
+        }
+
+        ((cindex & search_value) == search_value) && ip_found
+    }
+
     pub fn index_file(&self, filename: u32) -> MasterIndex {
         let mut pfile = PcapFile::new(filename, &config::CONFIG.db_path);
         let idx_filename = &format!("{}/{}.pidx", &config::CONFIG.index_path, filename);
@@ -45,6 +195,7 @@ impl IndexManager {
         let mut mindex = MasterIndex::default();
         let mut first_index = false;
         let mut ts: u32 = 0;
+        let mut proto_stat = ProtoStat::new(filename);
 
         while let Some(pkt) = pfile.next() {
             ts = pkt.get_field(fields::FRAME_TIMESTAMP) as u32;
@@ -56,15 +207,22 @@ impl IndexManager {
             }
             writer.write_u32::<BigEndian>(ts).unwrap();
             writer.write_u32::<BigEndian>(pkt.pkt_ptr).unwrap();
-            writer
-                .write_u32::<BigEndian>(self.build_index(&pkt))
-                .unwrap();
+
+            let pindex = self.build_index(&pkt);
+            writer.write_u32::<BigEndian>(pindex).unwrap();
+            proto_stat.add(pindex);
+
             writer
                 .write_u32::<BigEndian>(pkt.get_field(fields::IPV4_DST_ADDR) as u32)
                 .unwrap();
             writer
                 .write_u32::<BigEndian>(pkt.get_field(fields::IPV4_SRC_ADDR) as u32)
                 .unwrap();
+        }
+
+        match proto_stat.save() {
+            Ok(_) => {}
+            Err(err) => eprintln!("Error computing protocol stats: {}", err),
         }
 
         mindex.end_timestamp = ts;
@@ -208,92 +366,4 @@ impl IndexManager {
 
         return index_list;
     }
-
-    // pub fn _read_index(&self, index_file: u32) {
-    //     let idx_filename = &format!("{}/{}.pidx", &config::CONFIG.index_path, index_file);
-    //     let mut file = BufReader::new(File::open(idx_filename).unwrap());
-
-    //     let mut buffer = [0; 12];
-    //     let mut count: usize = 0;
-
-    //     loop {
-    //         match file.read_exact(&mut buffer) {
-    //             Ok(_) => {
-    //                 if self.match_index(&buffer, 0x120) {
-    //                     count += 1;
-    //                 }
-    //             }
-    //             Err(_) => {
-    //                 break;
-    //             }
-    //         }
-    //     }
-    //     println!("{} count {}", index_file, count);
-    // }
-
-    // pub fn search(&self, pql: &PqlStatement) {
-    //     let mut total = 0;
-
-    //     for i in 0..1 {
-    //         println!("Index: {}", i);
-    //         // if total > 1 {
-    //         //     return;
-    //         // }
-    //         let result = self.search_index(pql, i);
-    //         total += result.pkt_ptr.len();
-    //     }
-    //     println!("Pakcet found: {}", total);
-    // }
-
-    // pub fn search_index(&self, pql: &PqlStatement, index_file: u32) -> PacketPtr {
-    //     let idx_filename = &format!("{}/{}.pidx", &config::CONFIG.index_path, index_file);
-    //     let mut file = BufReader::new(File::open(idx_filename).unwrap());
-    //     let mut buffer = [0; 12];
-    //     // let mut count: usize = 0;
-    //     // let mut total: usize = 0;
-    //     let mut packet_ptr = PacketPtr::default();
-    //     packet_ptr.file_id = index_file;
-    //     // let mut ip_dst: u32;
-    //     // let mut ip_src: u32;
-    //     let search_value = self.build_search_index(&pql.search_type);
-    //     loop {
-    //         match file.read_exact(&mut buffer) {
-    //             Ok(_) => {
-    //                 // ip_dst = BigEndian::read_u32(&buffer[12..16]);
-    //                 // ip_src = BigEndian::read_u32(&buffer[16..20]);
-    //                 if let Some(interval) = &pql.interval {
-    //                     let timestamp = BigEndian::read_u32(&buffer[0..4]);
-    //                     if timestamp >= interval.from
-    //                         && timestamp <= interval.to
-    //                         && self.match_index(&buffer, search_value)
-    //                     {
-    //                         packet_ptr.pkt_ptr.push(BigEndian::read_u32(&buffer[4..8]));
-    //                     }
-    //                 } else {
-    //                     if self.match_index(&buffer, search_value)
-    //                     // && (ip_dst == 0xc0a8036e || ip_src == 0xc0a8036e)
-    //                     {
-    //                         packet_ptr.pkt_ptr.push(BigEndian::read_u32(&buffer[4..8]));
-    //                         // count += 1;
-    //                     }
-    //                 }
-
-    //                 // total += 1;
-    //             }
-    //             Err(_) => {
-    //                 break;
-    //             }
-    //         }
-    //         // if total > 5000 {
-    //         //     return packet_ptr;
-    //         // }
-    //     }
-
-    //     packet_ptr
-    // }
-
-    // fn match_index(&self, buffer: &[u8], search_value: u32) -> bool {
-    //     let cindex = BigEndian::read_u32(&buffer[8..12]);
-    //     (cindex & search_value) == search_value
-    // }
 }

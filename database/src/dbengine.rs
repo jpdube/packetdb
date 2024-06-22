@@ -1,9 +1,8 @@
 use crate::config::CONFIG;
 use crate::exec_plan::ExecutionPlan;
-use crate::index_manager::IndexManager;
+use crate::index_manager::{IndexManager, ProtoStat};
 use crate::interpreter::Interpreter;
-use crate::parse::Parse;
-use crate::pkt_index::PktIndex;
+use crate::parse::{Parse, PqlStatement};
 use crate::query_result::QueryResult;
 
 use anyhow::Result;
@@ -41,21 +40,22 @@ impl DbEngine {
             let top_offset: usize = expr.top + expr.offset;
             let mut stop = false;
             let interpreter = Interpreter::new(expr.clone());
-            let chunk_size = 2;
 
             self.offset = 0;
+            println!("Chunk size: {}", self.chunk_size(&expr));
+            let nbr_cores = self.chunk_size(&expr);
 
             // println!("Top: {}, Offset: {}", expr.top, expr.offset);
             match self.get_index_files() {
                 Ok(pkt_list) => {
                     while !stop {
-                        for chunk_id in pkt_list.chunks(chunk_size) {
-                            file_count += chunk_size;
+                        for chunk_id in pkt_list.chunks(nbr_cores) {
+                            file_count += nbr_cores;
 
                             let interp_result: Vec<_> = chunk_id
                                 .into_par_iter()
                                 .map(|file_id| {
-                                    let mut pkt_index = PktIndex::default();
+                                    let mut pkt_index = IndexManager::default();
                                     let ptr = pkt_index.search_index(&expr, *file_id);
 
                                     interpreter.run_pgm_seek(&ptr, top_limit)
@@ -102,6 +102,34 @@ impl DbEngine {
         self.exec_plan.stop();
         self.exec_plan.show();
         Ok(&self.result)
+    }
+
+    fn chunk_size(&self, expr: &PqlStatement) -> usize {
+        let ix_manager = IndexManager::default();
+        let search_proto = ix_manager.build_search_index(&expr.search_type);
+        let proto_stat = ProtoStat::new(0);
+
+        let avg_file = proto_stat.get_count_stats(search_proto);
+
+        let mut chunk_size: usize = 2;
+
+        if avg_file != 0 {
+            chunk_size = (&expr.top + &expr.offset) / avg_file;
+            println!(
+                "Chunk size raw: Proto: {search_proto}, top: {}, Avg: {avg_file}, chunk: {chunk_size}",
+                &expr.top
+            );
+
+            if chunk_size == 0 {
+                chunk_size = 1;
+            }
+
+            if chunk_size > 8 {
+                chunk_size = 8;
+            }
+        }
+
+        chunk_size
     }
 
     fn get_index_files(&self) -> Result<Vec<u32>> {
