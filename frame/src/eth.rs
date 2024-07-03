@@ -82,8 +82,8 @@ impl PacketDisplay for EtherFrame {
 
         result = format!(
             "Eth -> DMac: {}, SMac: {} Etype: {:04x} Vlan: {}\n",
-            mac_to_string(self.dst()),
-            mac_to_string(self.src()),
+            mac_to_string(&self.dst()),
+            mac_to_string(&self.src()),
             self.ethertype(),
             self.vlan_id(),
         );

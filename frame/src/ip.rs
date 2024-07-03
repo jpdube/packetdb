@@ -73,8 +73,8 @@ impl PacketDisplay for IpFrame {
 
         result = format!(
             "IP -> Src:{}, Dst:{}",
-            ipv4_to_string(self.src()),
-            ipv4_to_string(self.dst())
+            ipv4_to_string(&self.src()),
+            ipv4_to_string(&self.dst())
         );
 
         result

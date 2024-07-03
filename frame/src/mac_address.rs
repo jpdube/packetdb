@@ -26,11 +26,11 @@ pub fn string_mac_to_int(ip_str: String) -> u64 {
     result
 }
 
-pub fn mac_to_string(mac: u64) -> String {
+pub fn mac_to_string(mac: &u64) -> String {
     let result: String;
 
     result = format!(
-        "{:x}:{:x}:{:x}:{:x}:{:x}:{:x}",
+        "{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}",
         (mac >> 40) as u8,
         (mac >> 32) as u8,
         (mac >> 24) as u8,

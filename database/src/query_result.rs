@@ -1,5 +1,7 @@
 use ::chrono::prelude::*;
 use frame::fields;
+use frame::ipv4_address::ipv4_to_string;
+use frame::mac_address::mac_to_string;
 use serde::Serialize;
 use serde_json::{json, Value};
 use std::collections::{BTreeMap, HashMap};
@@ -12,6 +14,7 @@ pub enum FieldType {
     Ipv4(u32),
     Timestamp(usize),
     Str(String),
+    MacAddr(u64),
     // Binary(Vec<u8>),
 }
 
@@ -19,7 +22,8 @@ impl fmt::Display for FieldType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Number(value) => write!(f, "{}", value),
-            Self::Ipv4(address) => write!(f, "{}", ipv4_str(address)),
+            Self::Ipv4(address) => write!(f, "{}", ipv4_to_string(address)),
+            Self::MacAddr(address) => write!(f, "{}", mac_to_string(address)),
             Self::Timestamp(ts) => write!(f, "{}", timestamp_str(ts)),
             Self::Str(value) => write!(f, "{}", value),
             // Self::Binary(value) => write!(f, "{:?}", value),
@@ -44,7 +48,8 @@ impl Field {
         match &self.field {
             FieldType::Number(value) => json!(value),
 
-            FieldType::Ipv4(value) => json!(ipv4_str(&value)),
+            FieldType::Ipv4(value) => json!(ipv4_to_string(value)),
+            FieldType::MacAddr(value) => json!(mac_to_string(value)),
             FieldType::Str(value) => json!(value),
             FieldType::Timestamp(value) => json!(timestamp_str(&value)),
         }
@@ -55,6 +60,7 @@ pub fn get_field_type(field_id: u32, value: usize) -> Option<FieldType> {
     match field_id {
         fields::IPV4_DST_ADDR | fields::IPV4_SRC_ADDR => Some(FieldType::Ipv4(value as u32)),
         fields::FRAME_TIMESTAMP => Some(FieldType::Timestamp(value)),
+        fields::ETH_DST_MAC | fields::ETH_SRC_MAC => Some(FieldType::MacAddr(value as u64)),
         _ => Some(FieldType::Number(value)),
     }
 }
@@ -127,15 +133,19 @@ impl QueryResult {
     }
 }
 
-fn ipv4_str(address: &u32) -> String {
-    format!(
-        "{}.{}.{}.{}",
-        (address >> 24) & 0xff,
-        (address >> 16) & 0xff,
-        (address >> 8) & 0xff,
-        address & 0xff
-    )
-}
+// fn macaddr_str(mac_address: &u64) -> String {
+//     format!("{}:{}:{}:{}:{}:{}",)
+// }
+
+// fn ipv4_str(address: &u32) -> String {
+//     format!(
+//         "{}.{}.{}.{}",
+//         (address >> 24) & 0xff,
+//         (address >> 16) & 0xff,
+//         (address >> 8) & 0xff,
+//         address & 0xff
+//     )
+// }
 
 fn timestamp_str(ts: &usize) -> String {
     let naive = Utc.timestamp_opt(*ts as i64, 0).unwrap();

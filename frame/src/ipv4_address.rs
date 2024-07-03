@@ -29,7 +29,7 @@ pub fn string_ipv4_to_int(ip_str: &str) -> u32 {
     result
 }
 
-pub fn ipv4_to_string(ip: u32) -> String {
+pub fn ipv4_to_string(ip: &u32) -> String {
     let result: String;
 
     result = format!(
