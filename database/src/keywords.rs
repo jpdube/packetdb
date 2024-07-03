@@ -58,6 +58,10 @@ pub enum Keyword {
     Min,
     Max,
     Bandwidth,
+    String,
+    Var,
+    Assign,
+    Print,
 }
 
 impl fmt::Display for Keyword {

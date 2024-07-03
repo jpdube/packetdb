@@ -38,6 +38,7 @@ pub fn get_token_one(str_token: &str) -> Option<Keyword> {
         "&" => Some(Keyword::BitAnd),
         "|" => Some(Keyword::BitOr),
         "^" => Some(Keyword::BitXor),
+        "=" => Some(Keyword::Assign),
         _ => None,
     }
 }
@@ -72,6 +73,8 @@ pub fn get_keywords(str_token: &str) -> Option<Keyword> {
         "group" => Some(Keyword::GroupBy),
         "by" => Some(Keyword::By),
         "as" => Some(Keyword::As),
+        "var" => Some(Keyword::Var),
+        "print" => Some(Keyword::Print),
 
         _ => None,
     }

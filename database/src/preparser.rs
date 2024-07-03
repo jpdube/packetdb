@@ -47,6 +47,7 @@ impl Preparser {
         self.len = self.token_src.len();
 
         while !self.at_end() {
+            self.get_float();
             self.get_ip_address();
             self.get_mac_address();
             self.get_timestamp();
@@ -62,6 +63,37 @@ impl Preparser {
         }
 
         self.token_list.clone()
+    }
+    fn get_float(&mut self) {
+        let mut float_str = String::new();
+        let mut column = 0;
+        let mut line = 0;
+
+        if self.peek_at(0, Keyword::Integer).is_some()
+            && self.peek_at(1, Keyword::Period).is_some()
+            && self.peek_at(2, Keyword::Integer).is_some()
+            && self.peek_at(3, Keyword::Period).is_none()
+        {
+            for i in 0..3 {
+                if let Some(tok) = self.advance() {
+                    if i == 0 {
+                        column = tok.column;
+                        line = tok.line;
+                    }
+
+                    float_str.push_str(&tok.value);
+                }
+            }
+
+            let token = Token {
+                token: Keyword::Float,
+                value: float_str,
+                column,
+                line,
+            };
+
+            self.token_list.push(token);
+        }
     }
 
     fn get_as(&mut self) {

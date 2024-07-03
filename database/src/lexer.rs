@@ -6,6 +6,9 @@ use std::io::Read;
 pub struct Lexer {
     token_list: Vec<Token>,
     index: usize,
+    line: usize,
+    line_offset: usize,
+    s: Vec<char>,
 }
 
 impl Lexer {
@@ -13,6 +16,9 @@ impl Lexer {
         Self {
             token_list: Vec::new(),
             index: 0,
+            line: 1,
+            line_offset: 0,
+            s: Vec::new(),
         }
     }
 
@@ -27,118 +33,12 @@ impl Lexer {
 
     pub fn tokenize(&mut self, lines: &str) -> &Vec<Token> {
         self.index = 0;
-        let s: Vec<_> = lines.chars().collect();
+        self.s = lines.chars().collect();
         let mut preparser = Preparser::default();
 
-        let mut line: usize = 1;
-        let mut line_offset: usize = 0;
-
-        while self.index < s.len() {
-            if s[self.index].is_whitespace() {
-                if s[self.index] == '\n' {
-                    line += 1;
-                    line_offset = self.index + 1;
-                }
-                self.index += 1;
-            } else if s[self.index] == '#' {
-                if let Some(eol) = String::from_iter(s[self.index + 1..].to_vec()).find('\n') {
-                    self.index = eol + 1;
-                    println!("Found EOL: {eol}");
-                }
-            } else if (self.index + 2) <= s.len()
-                && get_token_two(&String::from_iter(s[self.index..self.index + 2].to_vec()))
-                    .is_some()
-            {
-                let stoken: &str = &String::from_iter(s[self.index..self.index + 2].to_vec());
-                let tok = get_token_two(stoken).unwrap();
-                let token = Token {
-                    token: tok.to_owned(),
-                    value: String::from(stoken),
-                    column: (self.index + 1) - line_offset,
-                    line,
-                };
-                self.token_list.push(token);
-
-                self.index += 2;
-            } else if get_token_one(&String::from(s[self.index]) as &str).is_some() {
-                let tok = get_token_one(&String::from(s[self.index]) as &str).unwrap();
-                let token = Token {
-                    token: tok.to_owned(),
-                    value: String::from(s[self.index]),
-                    column: (self.index + 1) - line_offset,
-                    line,
-                };
-                self.token_list.push(token);
-
-                // if s[self.index] == ';' {
-                //     line += 1;
-                // }
-
-                self.index += 1;
-            } else if self.is_hex_digit(&s) {
-                let start = self.index;
-                let number = self.read_hex_digit(&s);
-
-                let token = Token {
-                    token: Keyword::Integer,
-                    value: number.to_string(),
-                    column: (start + 1) - line_offset,
-                    line,
-                };
-                self.token_list.push(token);
-            } else if s[self.index].is_numeric() {
-                let start = self.index;
-
-                while self.index < s.len() && s[self.index].is_numeric() {
-                    self.index += 1;
-                }
-
-                let number = String::from_iter(s[start..self.index].to_vec());
-                let token = Token {
-                    token: Keyword::Integer,
-                    value: number,
-                    column: (start + 1) - line_offset,
-                    line,
-                };
-                self.token_list.push(token);
-            } else if s[self.index].is_alphabetic() || s[self.index] == '_' {
-                let start = self.index;
-                while self.index < s.len()
-                    && (s[self.index].is_alphabetic()
-                        || s[self.index].is_numeric()
-                        || s[self.index] == '_')
-                {
-                    self.index += 1;
-                }
-                let keyword: &str = &String::from_iter(s[start..self.index].to_vec());
-                if get_keywords(keyword).is_some() {
-                    // if keywords.contains_key(keyword) {
-                    let tok = get_keywords(keyword).unwrap();
-                    let token = Token {
-                        token: tok.to_owned(),
-                        value: String::from(keyword),
-                        column: (start + 1) - line_offset,
-                        line,
-                    };
-                    self.token_list.push(token);
-                } else if get_constants(keyword).is_some() {
-                    let tok = get_constants(keyword).unwrap();
-                    let token = Token {
-                        token: tok.to_owned(),
-                        value: String::from(keyword),
-                        column: (start + 1) - line_offset,
-                        line,
-                    };
-                    self.token_list.push(token);
-                } else {
-                    let token = Token {
-                        token: Keyword::Identifier,
-                        value: String::from(keyword),
-                        column: (start + 1) - line_offset,
-                        line,
-                    };
-                    self.token_list.push(token);
-                }
+        while self.index < self.s.len() {
+            if let Some(tok) = self.match_any() {
+                self.token_list.push(tok);
             } else {
                 self.index += 1;
             }
@@ -147,9 +47,8 @@ impl Lexer {
         let token = Token {
             token: Keyword::EOF,
             value: String::from("eof"),
-            column: (self.index + 1) - line_offset,
-            // column: s.len() + 1,
-            line,
+            column: (self.index + 1) - self.line_offset,
+            line: self.line,
         };
         self.token_list.push(token);
 
@@ -157,26 +56,219 @@ impl Lexer {
         return &self.token_list;
     }
 
-    fn is_hex_digit(&mut self, line: &Vec<char>) -> bool {
-        if self.index + 1 < line.len() {
-            return line[self.index] == '0' && line[self.index + 1] == 'x';
+    fn get_hex_digit(&mut self) -> Option<Token> {
+        if (self.index + 1 < self.s.len())
+            && self.s[self.index] == '0'
+            && self.s[self.index + 1] == 'x'
+        {
+            self.index += 2;
+            let start_pos = self.index;
+            while self.index < self.s.len() && self.s[self.index].is_ascii_hexdigit() {
+                self.index += 1;
+            }
+
+            println!("HEX conv: start:{start_pos}, end: {}", self.index);
+            let str_value = String::from_iter(self.s[start_pos..self.index].to_vec());
+            let value: u32 = u32::from_str_radix(&str_value, 16).unwrap();
+
+            let token = Token {
+                token: Keyword::Integer,
+                value: value.to_string(),
+                column: (self.index + 1) - self.line_offset,
+                line: self.line,
+            };
+            return Some(token);
         }
 
-        false
+        None
     }
 
-    fn read_hex_digit(&mut self, line: &Vec<char>) -> u32 {
-        self.index += 2;
-        let start_pos = self.index;
-        while self.index < line.len() && line[self.index].is_ascii_hexdigit() {
-            self.index += 1;
+    fn match_any(&mut self) -> Option<Token> {
+        self.get_whitespace();
+
+        //--- Comments
+        self.get_comments();
+
+        //--- Token 2 characters
+        if let Some(tok) = self.get_two_chars() {
+            return Some(tok);
         }
 
-        println!("HEX conv: start:{start_pos}, end: {}", self.index);
-        let str_value = String::from_iter(line[start_pos..self.index].to_vec());
-        let value: u32 = u32::from_str_radix(&str_value, 16).unwrap();
+        //--- Token one character
+        if let Some(tok) = self.get_one_char() {
+            return Some(tok);
+        }
 
-        value
+        //--- Hex digit
+        if let Some(tok) = self.get_hex_digit() {
+            return Some(tok);
+        }
+
+        //--- Scan for numbers
+        if let Some(tok) = self.get_number() {
+            return Some(tok);
+        }
+
+        //--- Scan for Alphanum
+        if let Some(tok) = self.get_alphanum() {
+            return Some(tok);
+        }
+
+        //--- Scan for String
+        if let Some(tok) = self.get_string() {
+            return Some(tok);
+        }
+
+        None
+    }
+
+    fn get_comments(&mut self) {
+        if self.s[self.index] == '#' && self.index < self.s.len() {
+            while self.s[self.index] != '\n' && self.index < self.s.len() {
+                self.index += 1;
+            }
+            self.index += 1;
+        }
+    }
+
+    fn get_whitespace(&mut self) {
+        if self.s[self.index].is_whitespace() {
+            if self.s[self.index] == '\n' {
+                self.line += 1;
+                self.line_offset = self.index + 1;
+            }
+            self.index += 1;
+        }
+    }
+    fn get_two_chars(&mut self) -> Option<Token> {
+        if (self.index + 2) <= self.s.len()
+            && get_token_two(&String::from_iter(
+                self.s[self.index..self.index + 2].to_vec(),
+            ))
+            .is_some()
+        {
+            let stoken: &str = &String::from_iter(self.s[self.index..self.index + 2].to_vec());
+            if let Some(tok) = get_token_two(stoken) {
+                let token = Token {
+                    token: tok.to_owned(),
+                    value: String::from(stoken),
+                    column: (self.index + 1) - self.line_offset,
+                    line: self.line,
+                };
+                self.index += 2;
+                return Some(token);
+            }
+        }
+
+        None
+    }
+
+    fn get_one_char(&mut self) -> Option<Token> {
+        if let Some(tok) = get_token_one(&String::from(self.s[self.index]) as &str) {
+            let token = Token {
+                token: tok.to_owned(),
+                value: String::from(self.s[self.index]),
+                column: (self.index + 1) - self.line_offset,
+                line: self.line,
+            };
+            self.index += 1;
+
+            return Some(token);
+        }
+
+        None
+    }
+
+    fn get_string(&mut self) -> Option<Token> {
+        if self.s[self.index] == '"' {
+            self.index += 1;
+            let start = self.index;
+
+            while self.index < self.s.len() && self.s[self.index] != '"' {
+                self.index += 1;
+            }
+
+            let str = String::from_iter(self.s[start..self.index].to_vec());
+            let token = Token {
+                token: Keyword::String,
+                value: str,
+                column: start - self.line_offset,
+                line: self.line,
+            };
+            self.index += 1;
+
+            return Some(token);
+        }
+
+        None
+    }
+
+    fn get_number(&mut self) -> Option<Token> {
+        if self.s[self.index].is_numeric() {
+            let start = self.index;
+
+            while self.index < self.s.len() && self.s[self.index].is_numeric() {
+                self.index += 1;
+            }
+
+            let number = String::from_iter(self.s[start..self.index].to_vec());
+
+            let mut token = Token {
+                token: Keyword::Integer,
+                value: number,
+                column: start - self.line_offset,
+                line: self.line,
+            };
+
+            token.column = (start + 1) - self.line_offset;
+            token.line = self.line;
+
+            return Some(token);
+        }
+
+        None
+    }
+
+    fn get_alphanum(&mut self) -> Option<Token> {
+        if self.s[self.index].is_alphabetic() || self.s[self.index] == '_' {
+            let start = self.index;
+            while self.index < self.s.len()
+                && (self.s[self.index].is_alphabetic()
+                    || self.s[self.index].is_numeric()
+                    || self.s[self.index] == '_')
+            {
+                self.index += 1;
+            }
+            let keyword: &str = &String::from_iter(self.s[start..self.index].to_vec());
+            if let Some(tok) = get_keywords(keyword) {
+                let token = Token {
+                    token: tok.to_owned(),
+                    value: String::from(keyword),
+                    column: (start + 1) - self.line_offset,
+                    line: self.line,
+                };
+                return Some(token);
+            } else if let Some(tok) = get_constants(keyword) {
+                let token = Token {
+                    token: tok.to_owned(),
+                    value: String::from(keyword),
+                    column: (start + 1) - self.line_offset,
+                    line: self.line,
+                };
+                return Some(token);
+            } else {
+                let token = Token {
+                    token: Keyword::Identifier,
+                    value: String::from(keyword),
+                    column: (start + 1) - self.line_offset,
+                    line: self.line,
+                };
+
+                return Some(token);
+            }
+        }
+
+        None
     }
 }
 
@@ -184,6 +276,63 @@ impl Lexer {
 mod tests {
     use super::*;
 
+    #[test]
+    fn test_string() {
+        let mut t = Lexer::new();
+        let line = "\"Hello World\"";
+        let tl: &Vec<Token> = t.tokenize(line);
+        println!(">>>String: {} {:?}", tl.len(), tl);
+        assert!(tl.len() == 2);
+
+        assert!(tl[0].token == Keyword::String && tl[0].column == 1 && tl[0].line == 1);
+    }
+
+    #[test]
+    fn test_print() {
+        let mut t = Lexer::new();
+        let line = "print";
+        let tl: &Vec<Token> = t.tokenize(line);
+        assert!(tl.len() == 2);
+
+        assert!(tl[0].token == Keyword::Print && tl[0].column == 1 && tl[0].line == 1);
+    }
+
+    #[test]
+    fn test_var_keyword() {
+        let mut t = Lexer::new();
+        let line = "var";
+        let tl: &Vec<Token> = t.tokenize(line);
+        assert!(tl.len() == 2);
+
+        assert!(tl[0].token == Keyword::Var && tl[0].column == 1 && tl[0].line == 1);
+    }
+
+    #[test]
+    fn test_var_assign_int() {
+        let mut t = Lexer::new();
+        let line = "var a = 10;";
+        let tl: &Vec<Token> = t.tokenize(line);
+        assert!(tl.len() == 6);
+
+        assert!(tl[0].token == Keyword::Var);
+        assert!(tl[1].token == Keyword::Identifier);
+        assert!(tl[2].token == Keyword::Assign);
+        assert!(tl[3].token == Keyword::Integer);
+        assert!(tl[3].value == format!("{}", 10));
+    }
+    #[test]
+    fn test_var_assign_string() {
+        let mut t = Lexer::new();
+        let line = "var a = \"PQL rocks\";";
+        let tl: &Vec<Token> = t.tokenize(line);
+        assert!(tl.len() == 6);
+
+        assert!(tl[0].token == Keyword::Var);
+        assert!(tl[1].token == Keyword::Identifier);
+        assert!(tl[2].token == Keyword::Assign);
+        assert!(tl[3].token == Keyword::String);
+        assert!(tl[3].value == "PQL rocks");
+    }
     #[test]
     fn ipv4_tokens() {
         let mut t = Lexer::new();
@@ -376,5 +525,23 @@ mod tests {
         assert!(tl.len() == 2);
 
         assert!(tl[0].token == Keyword::OrderDesc && tl[0].column == 1 && tl[0].line == 1);
+    }
+    #[test]
+    fn test_constants() {
+        let mut t = Lexer::new();
+        let line = "DNS";
+        let tl: &Vec<Token> = t.tokenize(line);
+        assert!(tl.len() == 2);
+
+        assert!(tl[0].token == Keyword::Constant && tl[0].column == 1 && tl[0].line == 1);
+    }
+    #[test]
+    fn test_float() {
+        let mut t = Lexer::new();
+        let line = "2.5";
+        let tl: &Vec<Token> = t.tokenize(line);
+        assert!(tl.len() == 2);
+
+        assert!(tl[0].token == Keyword::Float && tl[0].column == 1 && tl[0].line == 1);
     }
 }
