@@ -1,4 +1,5 @@
 // #![allow(dead_code)]
+use crate::arp::Arp;
 use crate::eth::EtherFrame;
 use crate::fields;
 use crate::icmp::Icmp;
@@ -18,7 +19,7 @@ use byteorder::{BigEndian, ByteOrder};
 
 const ETHER_IPV4_PROTO: u16 = 0x0800;
 // const ETHER_IPV6_PROTO: u16 = 0x86DD;
-// const ETHER_ARP_PROTO: u16 = 0x0806;
+const ETHER_ARP_PROTO: u16 = 0x0806;
 // const ETHER_8021Q: u16 = 0x8100;
 
 const IP_TCP_PROTO: u8 = 0x06;
@@ -33,7 +34,7 @@ pub enum LayerType {
     Udp(UdpFrame),
     Tcp(Tcp),
     Icmp(IpFrame),
-    Arp,
+    Arp(Arp),
 }
 
 #[derive(Default, Debug, Clone, Eq, PartialEq)]
@@ -54,6 +55,7 @@ pub struct Packet {
     tcp_packet: Option<Tcp>,
     udp_packet: Option<UdpFrame>,
     icmp_packet: Option<Icmp>,
+    arp_packet: Option<Arp>,
     pub file_id: u32,
     pub pkt_ptr: u32,
 }
@@ -88,6 +90,13 @@ impl Packet {
         let mut ether = EtherFrame::default();
         ether.set_packet(packet[0..vo].to_vec());
 
+        if ether.ethertype() == ETHER_ARP_PROTO {
+            let mut arp_packet = Arp::default();
+            arp_packet.set_packet(self.raw_packet[vo..].to_vec());
+
+            self.arp_packet = Some(arp_packet);
+        }
+
         if ether.ethertype() == ETHER_IPV4_PROTO {
             let mut ip_packet = IpFrame::default();
 
@@ -120,6 +129,10 @@ impl Packet {
 
     pub fn has_ethernet(&self) -> bool {
         self.eth_packet.is_some()
+    }
+
+    pub fn has_arp(&self) -> bool {
+        self.arp_packet.is_some()
     }
 
     pub fn has_ipv4(&self) -> bool {
@@ -185,6 +198,8 @@ impl Packet {
     pub fn get_field(&self, field: u32) -> usize {
         if self.field_type(field, fields::ETH_BASE) && self.eth_packet.is_some() {
             self.eth_packet.as_ref().unwrap().get_field(field)
+        } else if self.field_type(field, fields::ARP_BASE) && self.arp_packet.is_some() {
+            self.arp_packet.as_ref().unwrap().get_field(field)
         } else if self.field_type(field, fields::TCP_BASE) && self.tcp_packet.is_some() {
             self.tcp_packet.as_ref().unwrap().get_field(field)
         } else if self.field_type(field, fields::IPV4_BASE) && self.ip_packet.is_some() {

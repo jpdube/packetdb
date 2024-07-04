@@ -67,6 +67,18 @@ pub const ICMP_IDENTIFIER: u32 = 0x00050003;
 pub const ICMP_SEQ_NO: u32 = 0x00050004;
 pub const ICMP_PACKET: u32 = 0x00050005;
 
+//-- ARP
+pub const ARP_BASE: u32 = 0x00060000;
+pub const ARP_SHA: u32 = 0x00060001;
+pub const ARP_SPA: u32 = 0x00060002;
+pub const ARP_THA: u32 = 0x00060003;
+pub const ARP_TPA: u32 = 0x00060004;
+pub const ARP_HTYPE: u32 = 0x00060005;
+pub const ARP_PTYPE: u32 = 0x00060006;
+pub const ARP_OPCODE: u32 = 0x00060007;
+pub const ARP_HLEN: u32 = 0x00060008;
+pub const ARP_PLEN: u32 = 0x00060009;
+
 pub fn string_to_int(field_str: &str) -> Option<u32> {
     match field_str {
         //--- Frame
@@ -83,6 +95,16 @@ pub fn string_to_int(field_str: &str) -> Option<u32> {
         "eth.type" => Some(ETH_PROTO),
         "eth.vlan" => Some(ETH_VLAN_ID),
         "eth.packet" => Some(ETH_PACKET),
+
+        "arp.sender_mac" => Some(ARP_SHA),
+        "arp.sender_ip" => Some(ARP_SPA),
+        "arp.target_mac" => Some(ARP_THA),
+        "arp.target_ip" => Some(ARP_TPA),
+        "arp.hwd_type" => Some(ARP_HTYPE),
+        "arp.proto_type" => Some(ARP_PTYPE),
+        "arp.opcode" => Some(ARP_OPCODE),
+        "arp.proto_size" => Some(ARP_PLEN),
+        "arp.hwd_size" => Some(ARP_HLEN),
 
         //--- IP version 4
         "ip.src" => Some(IPV4_SRC_ADDR),

@@ -237,6 +237,9 @@ impl IndexManager {
         if pkt.has_ethernet() {
             index += IndexField::Ethernet as u32
         }
+        if pkt.has_arp() {
+            index += IndexField::Arp as u32
+        }
         if pkt.has_ipv4() {
             index += IndexField::IpV4 as u32
         }

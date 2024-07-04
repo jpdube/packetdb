@@ -58,9 +58,13 @@ impl Field {
 
 pub fn get_field_type(field_id: u32, value: usize) -> Option<FieldType> {
     match field_id {
-        fields::IPV4_DST_ADDR | fields::IPV4_SRC_ADDR => Some(FieldType::Ipv4(value as u32)),
+        fields::IPV4_DST_ADDR | fields::IPV4_SRC_ADDR | fields::ARP_TPA | fields::ARP_SPA => {
+            Some(FieldType::Ipv4(value as u32))
+        }
         fields::FRAME_TIMESTAMP => Some(FieldType::Timestamp(value)),
-        fields::ETH_DST_MAC | fields::ETH_SRC_MAC => Some(FieldType::MacAddr(value as u64)),
+        fields::ETH_DST_MAC | fields::ETH_SRC_MAC | fields::ARP_SHA | fields::ARP_THA => {
+            Some(FieldType::MacAddr(value as u64))
+        }
         _ => Some(FieldType::Number(value)),
     }
 }
