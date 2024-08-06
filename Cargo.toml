@@ -23,5 +23,5 @@ anyhow = "1.0.75"
 # [build]
 # rustflags = ["-Z", "threads=8"]
 
-# [profile.release]
-# strip = true
+[profile.release]
+strip = true
