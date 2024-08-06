@@ -8,9 +8,8 @@ use chrono::{prelude::*, Duration};
 use chrono::{Local, TimeZone};
 use frame::constant::NetConstant;
 use frame::fields::string_to_int;
-use frame::ipv4_address::IPv4;
-use frame::ipv4_address::{ipv4_to_string, string_ipv4_to_int};
-use frame::mac_address::{mac_to_string, string_mac_to_int};
+use frame::ipv4_address::{from_string_to_ip, IPv4};
+use frame::mac_address::MacAddr;
 
 use std::collections::HashSet;
 use std::{fmt, usize};
@@ -156,10 +155,10 @@ impl fmt::Display for Expression {
             Self::Integer(value) => write!(f, "Integer({})", value),
             Self::Timestamp(value) => write!(f, "Timestamp({})", value),
             // Self::Float(value) => write!(f, "Float({})", value),
-            Self::IPv4(ip_addr, cidr) => write!(f, "IPv4({},{})", ipv4_to_string(ip_addr), cidr),
+            Self::IPv4(ip_addr, cidr) => write!(f, "IPv4({})", IPv4::new(*ip_addr, *cidr as u8)),
             Self::Boolean(value) => write!(f, "Bool: {}", value),
             // Self::Const(const_str) => write!(f, "Const({})", const_str),
-            Self::MacAddress(mac_addr) => write!(f, "Mac({})", mac_to_string(mac_addr)),
+            Self::MacAddress(mac_addr) => write!(f, "Mac({})", MacAddr::set_from_int(mac_addr)),
             Self::Array(array_bytes) => write!(f, "Array({:?})", array_bytes),
             Self::NoOp => write!(f, "NoOp"),
             // _ => write!(f, "Undefined"),
@@ -605,9 +604,9 @@ impl Parse {
 
     fn parse_mac_address(&mut self) -> Option<Expression> {
         if let Some(tok) = self.accept(Keyword::MacAddress) {
-            Some(Expression::MacAddress(string_mac_to_int(
-                tok.value.parse().unwrap(),
-            )))
+            Some(Expression::MacAddress(
+                MacAddr::set_from_str(&tok.value).address,
+            ))
         } else {
             None
         }
@@ -632,11 +631,12 @@ impl Parse {
                     cidr = mask.value.parse().unwrap();
                 }
             }
-            self.query.ip_list.push(IPv4 {
-                address: string_ipv4_to_int(&tok.value),
-                mask: cidr,
-            });
-            Some(Expression::IPv4(string_ipv4_to_int(&tok.value), cidr))
+
+            let ipv4 = IPv4::new(from_string_to_ip(&tok.value), cidr);
+
+            self.query.ip_list.push(ipv4.clone());
+
+            Some(Expression::IPv4(ipv4.address, ipv4.mask))
         } else {
             None
         }

@@ -5,7 +5,7 @@ use crate::packet_ptr::PacketPtr;
 use crate::parse::{Expression, Operator, PqlStatement};
 use crate::query_result::{get_field_type, Field, Record};
 use crate::seek_packet::SeekPacket;
-use frame::ipv4_address::is_ip_in_range;
+use frame::ipv4_address::IPv4;
 use frame::packet::Packet;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -64,7 +64,7 @@ impl Object {
     }
 
     fn get_ip_in_range(sa: u32, ip: u32, mask: u8) -> Object {
-        if is_ip_in_range(sa, ip, mask) {
+        if IPv4::new(ip, mask).is_in_subnet(sa) {
             TRUE
         } else {
             FALSE
@@ -72,7 +72,7 @@ impl Object {
     }
 
     fn get_ip_not_in_range(sa: u32, ip: u32, mask: u8) -> Object {
-        if is_ip_in_range(sa, ip, mask) {
+        if IPv4::new(ip, mask).is_in_subnet(sa) {
             FALSE
         } else {
             TRUE

@@ -1,13 +1,54 @@
 use ipnet::Ipv4Net;
+use std::fmt;
 use std::net::Ipv4Addr;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct IPv4 {
     pub address: u32,
     pub mask: u8,
 }
 
-pub fn string_ipv4_to_int(ip_str: &str) -> u32 {
+impl fmt::Display for IPv4 {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}/{}", self.to_string(), self.mask)
+    }
+}
+
+impl IPv4 {
+    pub fn new(address: u32, mask: u8) -> Self {
+        Self { address, mask }
+    }
+
+    pub fn set_from_string(ip_str: &str) -> Self {
+        Self {
+            address: from_string_to_ip(ip_str),
+            mask: 32,
+        }
+    }
+
+    pub fn to_string(&self) -> String {
+        let result: String;
+
+        result = format!(
+            "{}.{}.{}.{}",
+            (self.address >> 24) as u8,
+            (self.address >> 16) as u8,
+            (self.address >> 8) as u8,
+            (self.address & 0xff) as u8
+        );
+
+        result
+    }
+
+    pub fn is_in_subnet(&self, sa: u32) -> bool {
+        let target: Ipv4Addr = Ipv4Addr::from(sa);
+        let network: Ipv4Net = Ipv4Net::new(Ipv4Addr::from(self.address), self.mask).unwrap();
+
+        network.contains(&target)
+    }
+}
+
+pub fn from_string_to_ip(ip_str: &str) -> u32 {
     let mut result: u32 = 0;
     let mut int_field: u32;
 
@@ -27,25 +68,4 @@ pub fn string_ipv4_to_int(ip_str: &str) -> u32 {
     }
 
     result
-}
-
-pub fn ipv4_to_string(ip: &u32) -> String {
-    let result: String;
-
-    result = format!(
-        "{}.{}.{}.{}",
-        (ip >> 24) as u8,
-        (ip >> 16) as u8,
-        (ip >> 8) as u8,
-        (ip & 0xff) as u8
-    );
-
-    result
-}
-
-pub fn is_ip_in_range(sa: u32, ip: u32, mask: u8) -> bool {
-    let target: Ipv4Addr = Ipv4Addr::from(sa);
-    let network: Ipv4Net = Ipv4Net::new(Ipv4Addr::from(ip), mask).unwrap();
-
-    network.contains(&target)
 }

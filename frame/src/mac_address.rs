@@ -1,4 +1,44 @@
-pub fn string_mac_to_int(ip_str: String) -> u64 {
+use std::fmt;
+
+pub struct MacAddr {
+    pub address: u64,
+}
+
+impl fmt::Display for MacAddr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.to_string())
+    }
+}
+
+impl MacAddr {
+    pub fn set_from_int(address: &u64) -> Self {
+        Self { address: *address }
+    }
+
+    pub fn set_from_str(address: &str) -> Self {
+        Self {
+            address: string_mac_to_int(address),
+        }
+    }
+
+    pub fn to_string(&self) -> String {
+        let result: String;
+
+        result = format!(
+            "{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}",
+            (self.address >> 40) as u8,
+            (self.address >> 32) as u8,
+            (self.address >> 24) as u8,
+            (self.address >> 16) as u8,
+            (self.address >> 8) as u8,
+            (self.address & 0xff) as u8
+        );
+
+        result
+    }
+}
+
+pub fn string_mac_to_int(ip_str: &str) -> u64 {
     let mut result: u64 = 0;
     let mut int_field: u64;
 
@@ -22,22 +62,6 @@ pub fn string_mac_to_int(ip_str: String) -> u64 {
         int_field = u64::from_str_radix(fields[5], 16).unwrap();
         result += int_field;
     }
-
-    result
-}
-
-pub fn mac_to_string(mac: &u64) -> String {
-    let result: String;
-
-    result = format!(
-        "{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}",
-        (mac >> 40) as u8,
-        (mac >> 32) as u8,
-        (mac >> 24) as u8,
-        (mac >> 16) as u8,
-        (mac >> 8) as u8,
-        (mac & 0xff) as u8
-    );
 
     result
 }

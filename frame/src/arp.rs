@@ -1,9 +1,9 @@
 use byteorder::{BigEndian, ByteOrder};
 
 use crate::fields;
-use crate::ipv4_address::ipv4_to_string;
+use crate::ipv4_address::IPv4;
 use crate::layer::Layer;
-use crate::mac_address::mac_to_string;
+use crate::mac_address::MacAddr;
 use crate::packet_display::PacketDisplay;
 
 /*
@@ -91,10 +91,10 @@ impl PacketDisplay for Arp {
 
         result = format!(
             "Eth -> SHA: {}, SPA: {} THA: {} TPA: {}\n",
-            mac_to_string(&self.get_sha()),
-            ipv4_to_string(&self.get_spa()),
-            mac_to_string(&self.get_tha()),
-            ipv4_to_string(&self.get_tpa()),
+            MacAddr::set_from_int(&self.get_sha()).to_string(),
+            IPv4::new(self.get_spa(), 32).to_string(),
+            MacAddr::set_from_int(&self.get_tha()).to_string(),
+            IPv4::new(self.get_tpa(), 32).to_string(),
         );
 
         result

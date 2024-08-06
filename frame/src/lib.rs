@@ -9,5 +9,6 @@ pub mod layer;
 pub mod mac_address;
 pub mod packet;
 pub mod packet_display;
+pub mod pfield;
 pub mod tcp;
 pub mod udp;

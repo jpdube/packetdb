@@ -1,6 +1,6 @@
 use crate::fields;
 use crate::layer::Layer;
-use crate::mac_address::mac_to_string;
+use crate::mac_address::MacAddr;
 use crate::packet_display::PacketDisplay;
 
 use byteorder::{BigEndian, ByteOrder};
@@ -82,8 +82,8 @@ impl PacketDisplay for EtherFrame {
 
         result = format!(
             "Eth -> DMac: {}, SMac: {} Etype: {:04x} Vlan: {}\n",
-            mac_to_string(&self.dst()),
-            mac_to_string(&self.src()),
+            MacAddr::set_from_int(&self.dst()),
+            MacAddr::set_from_int(&self.src()),
             self.ethertype(),
             self.vlan_id(),
         );

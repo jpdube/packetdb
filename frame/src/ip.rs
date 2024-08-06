@@ -1,5 +1,5 @@
 use crate::fields;
-use crate::ipv4_address::ipv4_to_string;
+use crate::ipv4_address::IPv4;
 use crate::layer::Layer;
 use crate::packet_display::PacketDisplay;
 use byteorder::{BigEndian, ByteOrder};
@@ -73,8 +73,8 @@ impl PacketDisplay for IpFrame {
 
         result = format!(
             "IP -> Src:{}, Dst:{}",
-            ipv4_to_string(&self.src()),
-            ipv4_to_string(&self.dst())
+            IPv4::new(self.src(), 32),
+            IPv4::new(self.dst(), 32),
         );
 
         result

@@ -4,7 +4,7 @@ use crate::parse::PqlStatement;
 use crate::pcapfile::PcapFile;
 use byteorder::{BigEndian, ByteOrder, WriteBytesExt};
 use frame::fields;
-use frame::ipv4_address::{is_ip_in_range, IPv4};
+use frame::ipv4_address::IPv4;
 use frame::packet::Packet;
 use rayon::prelude::*;
 use rusqlite::{Connection, Result};
@@ -177,8 +177,10 @@ impl IndexManager {
         if ip_list.len() > 0 {
             ip_found = false;
             for ip in ip_list {
-                if is_ip_in_range(ip_dst, ip.address, ip.mask)
-                    || is_ip_in_range(ip_src, ip.address, ip.mask)
+                if IPv4::new(ip.address, ip.mask).is_in_subnet(ip_dst)
+                    || IPv4::new(ip.address, ip.mask).is_in_subnet(ip_src)
+                // if is_ip_in_range(ip_dst, ip.address, ip.mask)
+                //     || is_ip_in_range(ip_src, ip.address, ip.mask)
                 {
                     ip_found = true;
                 }

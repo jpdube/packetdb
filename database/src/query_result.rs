@@ -1,7 +1,7 @@
 use ::chrono::prelude::*;
 use frame::fields;
-use frame::ipv4_address::ipv4_to_string;
-use frame::mac_address::mac_to_string;
+use frame::ipv4_address::IPv4;
+use frame::mac_address::MacAddr;
 use serde::Serialize;
 use serde_json::{json, Value};
 use std::collections::{BTreeMap, HashMap};
@@ -22,8 +22,8 @@ impl fmt::Display for FieldType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Number(value) => write!(f, "{}", value),
-            Self::Ipv4(address) => write!(f, "{}", ipv4_to_string(address)),
-            Self::MacAddr(address) => write!(f, "{}", mac_to_string(address)),
+            Self::Ipv4(address) => write!(f, "{}", IPv4::new(*address, 32).to_string()),
+            Self::MacAddr(address) => write!(f, "{}", MacAddr::set_from_int(address)),
             Self::Timestamp(ts) => write!(f, "{}", timestamp_str(ts)),
             Self::Str(value) => write!(f, "{}", value),
             // Self::Binary(value) => write!(f, "{:?}", value),
@@ -47,9 +47,8 @@ impl Field {
     fn to_json(&self) -> Value {
         match &self.field {
             FieldType::Number(value) => json!(value),
-
-            FieldType::Ipv4(value) => json!(ipv4_to_string(value)),
-            FieldType::MacAddr(value) => json!(mac_to_string(value)),
+            FieldType::Ipv4(value) => json!(IPv4::new(*value, 32).to_string()),
+            FieldType::MacAddr(value) => json!(MacAddr::set_from_int(value).to_string()),
             FieldType::Str(value) => json!(value),
             FieldType::Timestamp(value) => json!(timestamp_str(&value)),
         }
