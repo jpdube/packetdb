@@ -60,6 +60,7 @@ pub enum Keyword {
     Min,
     Max,
     Bandwidth,
+    Average,
     String,
     Var,
     Assign,

@@ -15,6 +15,28 @@ use std::collections::HashSet;
 use std::{fmt, usize};
 
 #[derive(Debug, Clone)]
+pub enum Aggregate {
+    Count(String),
+    Avg(u32, String),
+    Min(u32, String),
+    Max(u32, String),
+    Sum(u32, String),
+    Bandwidth(u32, String),
+}
+impl fmt::Display for Aggregate {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Count(as_of) => write!(f, " Count({}) ", as_of),
+            Self::Avg(field, as_of) => write!(f, " Average({}, {}) ", field, as_of),
+            Self::Min(field, as_of) => write!(f, " Min({}, {}) ", field, as_of),
+            Self::Max(field, as_of) => write!(f, " Max({}, {}) ", field, as_of),
+            Self::Sum(field, as_of) => write!(f, " Sum({}, {}) ", field, as_of),
+            Self::Bandwidth(field, as_of) => write!(f, " Bandwidth({}, {}) ", field, as_of),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub enum Operator {
     Add,
     Substract,
@@ -91,6 +113,7 @@ pub struct PqlStatement {
     pub search_type: HashSet<IndexField>,
     pub aggregate: bool,
     pub ip_list: Vec<IPv4>,
+    pub aggr_list: Vec<Aggregate>,
 }
 
 impl fmt::Display for PqlStatement {
@@ -124,6 +147,7 @@ impl Default for PqlStatement {
             search_type: HashSet::new(),
             aggregate: false,
             ip_list: Vec::new(),
+            aggr_list: Vec::new(),
         }
     }
 }
@@ -275,9 +299,12 @@ impl Parse {
     }
 
     pub fn print(&self) {
+        println!("------- Tokens ---------");
         for i in self.token_list.iter() {
             println!("{}", i);
         }
+        println!("------- Aggregates ---------");
+        println!("{:#?}", self.query.aggr_list);
     }
 
     pub fn parse(&mut self, pql: &str) -> Option<Expression> {
@@ -295,6 +322,45 @@ impl Parse {
         }
     }
 
+    fn parse_aggregate(&mut self) -> Option<Aggregate> {
+        if self.accept(Keyword::Count).is_some() {
+            let as_tok = self.expect(Keyword::As).unwrap();
+            return Some(Aggregate::Count(as_tok.value));
+        } else if let Some(tok) = self.accept(Keyword::Max) {
+            let as_tok = self.expect(Keyword::As).unwrap();
+            return Some(Aggregate::Max(
+                string_to_int(&tok.value).unwrap(),
+                as_tok.value,
+            ));
+        } else if let Some(tok) = self.accept(Keyword::Min) {
+            let as_tok = self.expect(Keyword::As).unwrap();
+            return Some(Aggregate::Min(
+                string_to_int(&tok.value).unwrap(),
+                as_tok.value,
+            ));
+        } else if let Some(tok) = self.accept(Keyword::Sum) {
+            let as_tok = self.expect(Keyword::As).unwrap();
+            return Some(Aggregate::Sum(
+                string_to_int(&tok.value).unwrap(),
+                as_tok.value,
+            ));
+        } else if let Some(tok) = self.accept(Keyword::Average) {
+            let as_tok = self.expect(Keyword::As).unwrap();
+            return Some(Aggregate::Avg(
+                string_to_int(&tok.value).unwrap(),
+                as_tok.value,
+            ));
+        } else if let Some(tok) = self.accept(Keyword::Bandwidth) {
+            let as_tok = self.expect(Keyword::As).unwrap();
+            return Some(Aggregate::Bandwidth(
+                string_to_int(&tok.value).unwrap(),
+                as_tok.value,
+            ));
+        }
+
+        None
+    }
+
     pub fn parse_select(&mut self, pql: &str) -> Result<PqlStatement, Vec<ErrorMsg>> {
         let mut tokenizer = Lexer::new();
         // let mut tokenizer = Tokenizer::new();
@@ -304,12 +370,18 @@ impl Parse {
         // let mut query = PqlStatement::default();
 
         if self.accept(Keyword::Select).is_some() {
-            while let Some(sfield) = self.expect(Keyword::Identifier) {
-                if let Some(field) = string_to_int(&sfield.value) {
-                    self.query.select.push(SelectField {
-                        name: sfield.value,
-                        id: field,
-                    });
+            loop {
+                if let Some(aggr) = self.parse_aggregate() {
+                    println!("AGGREGATE: {:?}", aggr);
+                    self.query.aggr_list.push(aggr);
+                }
+                if let Some(sfield) = self.expect(Keyword::Identifier) {
+                    if let Some(field) = string_to_int(&sfield.value) {
+                        self.query.select.push(SelectField {
+                            name: sfield.value,
+                            id: field,
+                        });
+                    }
                 }
                 if self.peek(Keyword::Comma).is_some() {
                     self.accept(Keyword::Comma);
@@ -317,6 +389,22 @@ impl Parse {
                     break;
                 }
             }
+            // while let Some(sfield) = self.expect(Keyword::Identifier) {
+            //     if let (aggr) = self.parse_aggregate(sfield) {
+            //         self.aggr_list.push(aggr);
+            //     }
+            //     if let Some(field) = string_to_int(&sfield.value) {
+            //         self.query.select.push(SelectField {
+            //             name: sfield.value,
+            //             id: field,
+            //         });
+            //     }
+            //     if self.peek(Keyword::Comma).is_some() {
+            //         self.accept(Keyword::Comma);
+            //     } else {
+            //         break;
+            //     }
+            // }
 
             if self.accept(Keyword::From).is_some() {
                 while let Some(ffield) = self.expect(Keyword::Identifier) {

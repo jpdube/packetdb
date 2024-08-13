@@ -54,6 +54,11 @@ impl Preparser {
             self.get_date();
             self.get_time();
             self.get_count();
+            self.get_max();
+            self.get_bandwidth();
+            self.get_min();
+            self.get_average();
+            self.get_sum();
             self.get_as();
             self.get_groupby();
             self.get_label();
@@ -67,28 +72,190 @@ impl Preparser {
     }
 
     fn get_count(&mut self) {
-        let mut count_str = String::new();
-        let mut column = 0;
-        let mut line = 0;
+        let column;
+        let line;
 
         if self.peek_at(0, Keyword::Count).is_some()
             && self.peek_at(1, Keyword::Lparen).is_some()
-            && self.peek_at(2, Keyword::Rparen).is_none()
+            && self.peek_at(2, Keyword::Rparen).is_some()
         {
-            for i in 0..2 {
-                if let Some(tok) = self.advance() {
-                    if i == 0 {
-                        column = tok.column;
-                        line = tok.line;
-                    }
+            let tok = self.advance().unwrap();
+            column = tok.column;
+            line = tok.line;
 
-                    count_str.push_str(&tok.value);
-                }
-            }
+            self.advance();
+            self.advance();
 
             let token = Token {
                 token: Keyword::Count,
-                value: count_str,
+                value: tok.value,
+                column,
+                line,
+            };
+
+            self.token_list.push(token);
+        }
+    }
+
+    fn get_sum(&mut self) {
+        let sum_str;
+        let column;
+        let line;
+
+        if self.peek_at(0, Keyword::Sum).is_some()
+            && self.peek_at(1, Keyword::Lparen).is_some()
+            && self.peek_at(2, Keyword::Identifier).is_some()
+            && self.peek_at(3, Keyword::Period).is_some()
+            && self.peek_at(4, Keyword::Identifier).is_some()
+            && self.peek_at(5, Keyword::Rparen).is_some()
+        {
+            let max_tok = self.advance().unwrap();
+            column = max_tok.column;
+            line = max_tok.line;
+
+            self.advance();
+            let name1 = self.advance().unwrap();
+            self.advance();
+            let name2 = self.advance().unwrap();
+            sum_str = format!("{}.{}", name1.value, name2.value);
+            self.advance();
+
+            let token = Token {
+                token: Keyword::Sum,
+                value: sum_str,
+                column,
+                line,
+            };
+
+            self.token_list.push(token);
+        }
+    }
+    fn get_average(&mut self) {
+        let avg_str;
+        let column;
+        let line;
+
+        if self.peek_at(0, Keyword::Average).is_some()
+            && self.peek_at(1, Keyword::Lparen).is_some()
+            && self.peek_at(2, Keyword::Identifier).is_some()
+            && self.peek_at(3, Keyword::Period).is_some()
+            && self.peek_at(4, Keyword::Identifier).is_some()
+            && self.peek_at(5, Keyword::Rparen).is_some()
+        {
+            let max_tok = self.advance().unwrap();
+            column = max_tok.column;
+            line = max_tok.line;
+
+            self.advance();
+            let name1 = self.advance().unwrap();
+            self.advance();
+            let name2 = self.advance().unwrap();
+            avg_str = format!("{}.{}", name1.value, name2.value);
+            self.advance();
+
+            let token = Token {
+                token: Keyword::Average,
+                value: avg_str,
+                column,
+                line,
+            };
+
+            self.token_list.push(token);
+        }
+    }
+    fn get_min(&mut self) {
+        let min_str;
+        let column;
+        let line;
+
+        if self.peek_at(0, Keyword::Min).is_some()
+            && self.peek_at(1, Keyword::Lparen).is_some()
+            && self.peek_at(2, Keyword::Identifier).is_some()
+            && self.peek_at(3, Keyword::Period).is_some()
+            && self.peek_at(4, Keyword::Identifier).is_some()
+            && self.peek_at(5, Keyword::Rparen).is_some()
+        {
+            let max_tok = self.advance().unwrap();
+            column = max_tok.column;
+            line = max_tok.line;
+
+            self.advance();
+            let name1 = self.advance().unwrap();
+            self.advance();
+            let name2 = self.advance().unwrap();
+            min_str = format!("{}.{}", name1.value, name2.value);
+            self.advance();
+
+            let token = Token {
+                token: Keyword::Min,
+                value: min_str,
+                column,
+                line,
+            };
+
+            self.token_list.push(token);
+        }
+    }
+    fn get_max(&mut self) {
+        let max_str;
+        let column;
+        let line;
+
+        if self.peek_at(0, Keyword::Max).is_some()
+            && self.peek_at(1, Keyword::Lparen).is_some()
+            && self.peek_at(2, Keyword::Identifier).is_some()
+            && self.peek_at(3, Keyword::Period).is_some()
+            && self.peek_at(4, Keyword::Identifier).is_some()
+            && self.peek_at(5, Keyword::Rparen).is_some()
+        {
+            let max_tok = self.advance().unwrap();
+            column = max_tok.column;
+            line = max_tok.line;
+
+            self.advance();
+            let name1 = self.advance().unwrap();
+            self.advance();
+            let name2 = self.advance().unwrap();
+            max_str = format!("{}.{}", name1.value, name2.value);
+            self.advance();
+
+            let token = Token {
+                token: Keyword::Max,
+                value: max_str,
+                column,
+                line,
+            };
+
+            self.token_list.push(token);
+        }
+    }
+
+    fn get_bandwidth(&mut self) {
+        let bw_str;
+        let column;
+        let line;
+
+        if self.peek_at(0, Keyword::Bandwidth).is_some()
+            && self.peek_at(1, Keyword::Lparen).is_some()
+            && self.peek_at(2, Keyword::Identifier).is_some()
+            && self.peek_at(3, Keyword::Period).is_some()
+            && self.peek_at(4, Keyword::Identifier).is_some()
+            && self.peek_at(5, Keyword::Rparen).is_some()
+        {
+            let max_tok = self.advance().unwrap();
+            column = max_tok.column;
+            line = max_tok.line;
+
+            self.advance();
+            let name1 = self.advance().unwrap();
+            self.advance();
+            let name2 = self.advance().unwrap();
+            bw_str = format!("{}.{}", name1.value, name2.value);
+            self.advance();
+
+            let token = Token {
+                token: Keyword::Bandwidth,
+                value: bw_str,
                 column,
                 line,
             };

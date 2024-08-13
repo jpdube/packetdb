@@ -77,6 +77,12 @@ pub fn get_keywords(str_token: &str) -> Option<Keyword> {
         "as" => Some(Keyword::As),
         "var" => Some(Keyword::Var),
         "print" => Some(Keyword::Print),
+        "count" => Some(Keyword::Count),
+        "max" => Some(Keyword::Max),
+        "min" => Some(Keyword::Min),
+        "sum" => Some(Keyword::Sum),
+        "avg" => Some(Keyword::Average),
+        "bandwidth" => Some(Keyword::Bandwidth),
 
         _ => None,
     }
