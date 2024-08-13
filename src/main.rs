@@ -126,7 +126,7 @@ async fn web_main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .service(execute)
     })
-    .bind("localhost:9001")?
+    .bind("0.0.0.0:9001")?
     // .bind_openssl("localhost:7443", builder)?
     .run()
     .await
