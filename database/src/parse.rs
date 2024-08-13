@@ -28,6 +28,11 @@ pub enum Operator {
     GE,
     LAND,
     LOR,
+    BAND,
+    BOR,
+    BXOR,
+    BitShiftLeft,
+    BitShiftRight,
 }
 
 impl Operator {}
@@ -47,6 +52,11 @@ impl fmt::Display for Operator {
             Self::LE => write!(f, " <= "),
             Self::GT => write!(f, " > "),
             Self::GE => write!(f, " => "),
+            Self::BAND => write!(f, " & "),
+            Self::BOR => write!(f, " | "),
+            Self::BXOR => write!(f, " ^ "),
+            Self::BitShiftLeft => write!(f, " << "),
+            Self::BitShiftRight => write!(f, " >> "),
         }
     }
 }
@@ -513,6 +523,36 @@ impl Parse {
         } else if self.accept(Keyword::Ne).is_some() {
             Some(Expression::BinOp(
                 Operator::NE,
+                Box::new(leftval),
+                Box::new(self.parse_factor().unwrap()),
+            ))
+        } else if self.accept(Keyword::BitAnd).is_some() {
+            Some(Expression::BinOp(
+                Operator::BAND,
+                Box::new(leftval),
+                Box::new(self.parse_factor().unwrap()),
+            ))
+        } else if self.accept(Keyword::BitOr).is_some() {
+            Some(Expression::BinOp(
+                Operator::BOR,
+                Box::new(leftval),
+                Box::new(self.parse_factor().unwrap()),
+            ))
+        } else if self.accept(Keyword::BitXor).is_some() {
+            Some(Expression::BinOp(
+                Operator::BXOR,
+                Box::new(leftval),
+                Box::new(self.parse_factor().unwrap()),
+            ))
+        } else if self.accept(Keyword::BitShiftRight).is_some() {
+            Some(Expression::BinOp(
+                Operator::BitShiftRight,
+                Box::new(leftval),
+                Box::new(self.parse_factor().unwrap()),
+            ))
+        } else if self.accept(Keyword::BitShiftLeft).is_some() {
+            Some(Expression::BinOp(
+                Operator::BitShiftLeft,
                 Box::new(leftval),
                 Box::new(self.parse_factor().unwrap()),
             ))

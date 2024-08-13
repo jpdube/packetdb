@@ -250,6 +250,11 @@ impl Interpreter {
             Operator::GE => Ok(Object::get_bool(i >= j)),
             Operator::Equal => Ok(Object::get_bool(i == j)),
             Operator::NE => Ok(Object::get_bool(i != j)),
+            Operator::BAND => Ok(Object::Integer(i & j)),
+            Operator::BOR => Ok(Object::Integer(i | j)),
+            Operator::BXOR => Ok(Object::Integer(i ^ j)),
+            Operator::BitShiftRight => Ok(Object::Integer(i >> j)),
+            Operator::BitShiftLeft => Ok(Object::Integer(i << j)),
             _ => Err(EvalError::UnknownOperator(
                 format!("{}", operator),
                 "eval_integer_infix_expression".to_string(),

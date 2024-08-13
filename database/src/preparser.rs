@@ -53,6 +53,7 @@ impl Preparser {
             self.get_timestamp();
             self.get_date();
             self.get_time();
+            self.get_count();
             self.get_as();
             self.get_groupby();
             self.get_label();
@@ -64,6 +65,38 @@ impl Preparser {
 
         self.token_list.clone()
     }
+
+    fn get_count(&mut self) {
+        let mut count_str = String::new();
+        let mut column = 0;
+        let mut line = 0;
+
+        if self.peek_at(0, Keyword::Count).is_some()
+            && self.peek_at(1, Keyword::Lparen).is_some()
+            && self.peek_at(2, Keyword::Rparen).is_none()
+        {
+            for i in 0..2 {
+                if let Some(tok) = self.advance() {
+                    if i == 0 {
+                        column = tok.column;
+                        line = tok.line;
+                    }
+
+                    count_str.push_str(&tok.value);
+                }
+            }
+
+            let token = Token {
+                token: Keyword::Count,
+                value: count_str,
+                column,
+                line,
+            };
+
+            self.token_list.push(token);
+        }
+    }
+
     fn get_float(&mut self) {
         let mut float_str = String::new();
         let mut column = 0;

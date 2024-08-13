@@ -15,6 +15,8 @@ pub enum Keyword {
     BitAnd,
     BitOr,
     BitXor,
+    BitShiftRight,
+    BitShiftLeft,
     Equal,
     Ne,
     Mask,

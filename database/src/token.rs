@@ -49,6 +49,8 @@ pub fn get_token_two(str_token: &str) -> Option<Keyword> {
         ">=" => Some(Keyword::Ge),
         "==" => Some(Keyword::Equal),
         "!=" => Some(Keyword::Ne),
+        ">>" => Some(Keyword::BitShiftRight),
+        "<<" => Some(Keyword::BitShiftLeft),
         _ => None,
     }
 }
