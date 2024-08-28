@@ -136,20 +136,6 @@ impl QueryResult {
     }
 }
 
-// fn macaddr_str(mac_address: &u64) -> String {
-//     format!("{}:{}:{}:{}:{}:{}",)
-// }
-
-// fn ipv4_str(address: &u32) -> String {
-//     format!(
-//         "{}.{}.{}.{}",
-//         (address >> 24) & 0xff,
-//         (address >> 16) & 0xff,
-//         (address >> 8) & 0xff,
-//         address & 0xff
-//     )
-// }
-
 fn timestamp_str(ts: &usize) -> String {
     let naive = Utc.timestamp_opt(*ts as i64, 0).unwrap();
     let timestamp = naive.format("%Y-%m-%d %H:%M:%S");
