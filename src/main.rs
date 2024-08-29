@@ -38,11 +38,10 @@ pub struct CmdResponse<'a> {
 #[post("/execute")]
 async fn execute(name: web::Json<Command>) -> impl Responder {
     let mut db = DbEngine::new();
-    let response = db.run(&name.command);
-    // let response = db.exec_script(&name.command);
+    let response = db.run(&name.command).unwrap().clone();
     let result = CmdResponse {
         success: true,
-        result: response.unwrap().to_json(),
+        result: response.to_json(),
     };
 
     HttpResponse::Ok().json(result)
