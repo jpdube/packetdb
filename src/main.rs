@@ -66,25 +66,6 @@ fn process_params() {
     info!("Config: {}", CONFIG.db_path);
 }
 
-// fn main() {
-//     about();
-//     process_params();
-
-//     let mut db = DbEngine::new();
-//     db.run();
-// let index = IndexManager::default();
-// let query =
-//     "select tcp.dport, tcp.sport from a where tcp.dport == HTTPS or tcp.sport == HTTPS top 10;";
-// let mut parse = Parse::new();
-
-// let pql = parse.parse_select(query).unwrap();
-// let mut plan = ExecutionPlan::default();
-// plan.start("Index search");
-// let result = index.search(&pql);
-// plan.stop();
-// plan.show();
-// println!("Index count: {}", result.pkt_ptr.len());
-// }
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
