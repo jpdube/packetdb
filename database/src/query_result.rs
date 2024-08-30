@@ -5,6 +5,7 @@ use frame::packet::Packet;
 use crate::cursor::{get_field_type, Cursor, Field, Record};
 use crate::parse::PqlStatement;
 use frame::fields::FRAME_TIMESTAMP;
+use log::{debug, info};
 
 pub struct QueryResult {
     model: PqlStatement,
@@ -57,6 +58,7 @@ impl QueryResult {
     }
 
     pub fn get_result(&self) -> Cursor {
+        debug!("Start ts: {}, end ts: {}", self.ts_start, self.ts_end);
         self.result.clone()
     }
 }

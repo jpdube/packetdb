@@ -48,7 +48,7 @@ async fn execute(name: web::Json<Command>) -> impl Responder {
 }
 
 fn process_params() {
-    env::set_var("RUST_LOG", "info");
+    env::set_var("RUST_LOG", "debug");
 
     let args = Args::parse();
     env_logger::init();
