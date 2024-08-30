@@ -5,13 +5,14 @@ use frame::packet::Packet;
 use crate::cursor::{get_field_type, Cursor, Field, Record};
 use crate::parse::PqlStatement;
 use frame::fields::FRAME_TIMESTAMP;
-use log::{debug, info};
+use log::debug;
 
 pub struct QueryResult {
     model: PqlStatement,
     ts_start: usize,
     ts_end: usize,
     result: Cursor,
+    offset: usize,
 }
 
 impl QueryResult {
@@ -21,6 +22,7 @@ impl QueryResult {
             ts_start: usize::max_value(),
             ts_end: 0,
             result: Cursor::default(),
+            offset: 0,
         }
     }
 
@@ -30,6 +32,11 @@ impl QueryResult {
     }
 
     pub fn add(&mut self, pkt: &Packet) {
+        if self.model.offset > 0 && self.offset < self.model.offset {
+            self.offset += 1;
+            return;
+        }
+
         let mut record = Record::default();
         for field in &self.model.select {
             if let Some(field_value) = get_field_type(field.id, pkt.get_field(field.id)) {

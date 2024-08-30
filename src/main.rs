@@ -66,7 +66,6 @@ fn process_params() {
     info!("Config: {}", CONFIG.db_path);
 }
 
-
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     web_main().await?;
