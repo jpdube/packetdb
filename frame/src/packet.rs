@@ -46,7 +46,7 @@ pub struct PcapHeader {
     pub header_len: u8,
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct Packet {
     header: PcapHeader,
     raw_packet: Vec<u8>,
