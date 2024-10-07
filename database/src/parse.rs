@@ -16,28 +16,6 @@ use log::debug;
 use std::collections::HashSet;
 use std::{fmt, usize};
 
-// #[derive(Debug, Clone)]
-// pub enum Aggregate {
-//     Count(String),
-//     Avg(u32, String),
-//     Min(u32, String),
-//     Max(u32, String),
-//     Sum(u32, String),
-//     Bandwidth(u32, String),
-// }
-// impl fmt::Display for Aggregate {
-//     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-//         match self {
-//             Self::Count(as_of) => write!(f, " Count({}) ", as_of),
-//             Self::Avg(field, as_of) => write!(f, " Average({}, {}) ", field, as_of),
-//             Self::Min(field, as_of) => write!(f, " Min({}, {}) ", field, as_of),
-//             Self::Max(field, as_of) => write!(f, " Max({}, {}) ", field, as_of),
-//             Self::Sum(field, as_of) => write!(f, " Sum({}, {}) ", field, as_of),
-//             Self::Bandwidth(field, as_of) => write!(f, " Bandwidth({}, {}) ", field, as_of),
-//         }
-//     }
-// }
-
 #[derive(Debug, Clone)]
 pub enum Operator {
     Add,
