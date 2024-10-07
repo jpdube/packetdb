@@ -6,6 +6,7 @@ use byteorder::{BigEndian, ByteOrder, WriteBytesExt};
 use frame::fields;
 use frame::ipv4_address::IPv4;
 use frame::packet::Packet;
+use log::info;
 use rayon::prelude::*;
 use rusqlite::{Connection, Result};
 use std::collections::{HashMap, HashSet};
@@ -41,6 +42,7 @@ pub struct ProtoStat {
     proto_count: HashMap<u32, u32>,
 }
 
+#[derive(Debug)]
 struct StatCount {
     count: usize,
 }
@@ -141,6 +143,8 @@ impl IndexManager {
         let mut packet_ptr = PacketPtr::default();
         packet_ptr.file_id = file_id;
         let search_value = self.build_search_index(&pql.search_type);
+
+        info!("Searching index file id: {}", file_id);
 
         loop {
             match file.read_exact(&mut buffer) {

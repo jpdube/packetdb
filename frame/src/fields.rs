@@ -5,6 +5,7 @@ pub const FRAME_ORIG_LEN: u32 = 0x00000003;
 pub const FRAME_INC_LEN: u32 = 0x00000004;
 pub const FRAME_FILE_ID: u32 = 0x00000005;
 pub const FRAME_PKT_PTR: u32 = 0x00000006;
+pub const FRAME_ID: u32 = 0x00000007;
 
 //--- Ethernet
 pub const ETH_BASE: u32 = 0x00010000;

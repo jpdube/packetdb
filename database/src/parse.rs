@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use crate::aggregate::Aggregate;
 use crate::index_manager::IndexField;
 use crate::keywords::Keyword;
 use crate::lexer::Lexer;
@@ -11,30 +12,31 @@ use frame::fields::string_to_int;
 use frame::ipv4_address::{from_string_to_ip, IPv4};
 use frame::mac_address::MacAddr;
 
+use log::debug;
 use std::collections::HashSet;
 use std::{fmt, usize};
 
-#[derive(Debug, Clone)]
-pub enum Aggregate {
-    Count(String),
-    Avg(u32, String),
-    Min(u32, String),
-    Max(u32, String),
-    Sum(u32, String),
-    Bandwidth(u32, String),
-}
-impl fmt::Display for Aggregate {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::Count(as_of) => write!(f, " Count({}) ", as_of),
-            Self::Avg(field, as_of) => write!(f, " Average({}, {}) ", field, as_of),
-            Self::Min(field, as_of) => write!(f, " Min({}, {}) ", field, as_of),
-            Self::Max(field, as_of) => write!(f, " Max({}, {}) ", field, as_of),
-            Self::Sum(field, as_of) => write!(f, " Sum({}, {}) ", field, as_of),
-            Self::Bandwidth(field, as_of) => write!(f, " Bandwidth({}, {}) ", field, as_of),
-        }
-    }
-}
+// #[derive(Debug, Clone)]
+// pub enum Aggregate {
+//     Count(String),
+//     Avg(u32, String),
+//     Min(u32, String),
+//     Max(u32, String),
+//     Sum(u32, String),
+//     Bandwidth(u32, String),
+// }
+// impl fmt::Display for Aggregate {
+//     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+//         match self {
+//             Self::Count(as_of) => write!(f, " Count({}) ", as_of),
+//             Self::Avg(field, as_of) => write!(f, " Average({}, {}) ", field, as_of),
+//             Self::Min(field, as_of) => write!(f, " Min({}, {}) ", field, as_of),
+//             Self::Max(field, as_of) => write!(f, " Max({}, {}) ", field, as_of),
+//             Self::Sum(field, as_of) => write!(f, " Sum({}, {}) ", field, as_of),
+//             Self::Bandwidth(field, as_of) => write!(f, " Bandwidth({}, {}) ", field, as_of),
+//         }
+//     }
+// }
 
 #[derive(Debug, Clone)]
 pub enum Operator {
@@ -114,6 +116,13 @@ pub struct PqlStatement {
     pub aggregate: bool,
     pub ip_list: Vec<IPv4>,
     pub aggr_list: Vec<Aggregate>,
+    pub groupby_fields: Vec<SelectField>,
+}
+
+impl PqlStatement {
+    pub fn has_groupby(&self) -> bool {
+        self.groupby_fields.len() != 0
+    }
 }
 
 impl fmt::Display for PqlStatement {
@@ -127,8 +136,8 @@ impl fmt::Display for PqlStatement {
         } else {
             write!(
                 f,
-                "Select {:?} From: {:?} Where: {:?} Top: {} Offset: {}",
-                self.select, self.from, self.filter, self.top, self.offset
+                "Select {:?} From: {:?} Where: {:?} Top: {} Offset: {} Group By: {:?} Aggregate: {:?}",
+                self.select, self.from, self.filter, self.top, self.offset, self.groupby_fields, self.aggr_list,
             )
         }
     }
@@ -148,6 +157,7 @@ impl Default for PqlStatement {
             aggregate: false,
             ip_list: Vec::new(),
             aggr_list: Vec::new(),
+            groupby_fields: Vec::new(),
         }
     }
 }
@@ -339,11 +349,11 @@ impl Parse {
                 as_tok.value,
             ));
         } else if let Some(tok) = self.accept(Keyword::Sum) {
+            debug!("In sum: {:?}", tok);
             let as_tok = self.expect(Keyword::As).unwrap();
-            return Some(Aggregate::Sum(
-                string_to_int(&tok.value).unwrap(),
-                as_tok.value,
-            ));
+            let result = Aggregate::Sum(string_to_int(&tok.value).unwrap(), as_tok.value);
+            debug!("SUM Result: {:?}", result);
+            return Some(result);
         } else if let Some(tok) = self.accept(Keyword::Average) {
             let as_tok = self.expect(Keyword::As).unwrap();
             return Some(Aggregate::Avg(
@@ -363,19 +373,16 @@ impl Parse {
 
     pub fn parse_select(&mut self, pql: &str) -> Result<PqlStatement, Vec<ErrorMsg>> {
         let mut tokenizer = Lexer::new();
-        // let mut tokenizer = Tokenizer::new();
 
         self.token_list = tokenizer.tokenize(&pql).clone();
-        // self.token_list = tokenizer.tokenize(&pql).clone();
-        // let mut query = PqlStatement::default();
 
         if self.accept(Keyword::Select).is_some() {
             loop {
+                debug!("Select loop");
                 if let Some(aggr) = self.parse_aggregate() {
                     println!("AGGREGATE: {:?}", aggr);
                     self.query.aggr_list.push(aggr);
-                }
-                if let Some(sfield) = self.expect(Keyword::Identifier) {
+                } else if let Some(sfield) = self.expect(Keyword::Identifier) {
                     if let Some(field) = string_to_int(&sfield.value) {
                         self.query.select.push(SelectField {
                             name: sfield.value,
@@ -389,24 +396,9 @@ impl Parse {
                     break;
                 }
             }
-            // while let Some(sfield) = self.expect(Keyword::Identifier) {
-            //     if let (aggr) = self.parse_aggregate(sfield) {
-            //         self.aggr_list.push(aggr);
-            //     }
-            //     if let Some(field) = string_to_int(&sfield.value) {
-            //         self.query.select.push(SelectField {
-            //             name: sfield.value,
-            //             id: field,
-            //         });
-            //     }
-            //     if self.peek(Keyword::Comma).is_some() {
-            //         self.accept(Keyword::Comma);
-            //     } else {
-            //         break;
-            //     }
-            // }
 
             if self.accept(Keyword::From).is_some() {
+                debug!("From");
                 while let Some(ffield) = self.expect(Keyword::Identifier) {
                     self.query.from.push(ffield.value);
                     if self.peek(Keyword::Comma).is_some() {
@@ -418,11 +410,13 @@ impl Parse {
             }
 
             if self.expect(Keyword::Where).is_some() {
+                debug!("Where");
                 self.query.filter = self.parse_expression().unwrap();
             }
 
             //--- Interval
             if self.peek(Keyword::Interval).is_some() {
+                debug!("Interval");
                 self.accept(Keyword::Interval);
                 let mut ts_start: u32 = 0;
                 let mut ts_end: u32 = 0;
@@ -470,6 +464,27 @@ impl Parse {
                 });
             }
 
+            if self.peek(Keyword::GroupBy).is_some() {
+                debug!("Group By");
+                self.accept(Keyword::GroupBy);
+
+                loop {
+                    if let Some(sfield) = self.expect(Keyword::Identifier) {
+                        if let Some(field) = string_to_int(&sfield.value) {
+                            self.query.groupby_fields.push(SelectField {
+                                name: sfield.value,
+                                id: field,
+                            });
+                        }
+                    }
+                    if self.peek(Keyword::Comma).is_some() {
+                        self.accept(Keyword::Comma);
+                    } else {
+                        break;
+                    }
+                }
+            }
+
             if self.peek(Keyword::Offset).is_some() {
                 self.accept(Keyword::Offset);
                 if let Some(tok) = self.accept(Keyword::Integer) {
@@ -489,11 +504,14 @@ impl Parse {
                 }
             }
 
+            debug!("End of process for select");
             self.query.search_type = self.field_type.clone();
         }
+
         if self.error_list.len() == 0 {
             Ok(self.query.clone())
         } else {
+            debug!("Select parse error: {:#?}", &self.error_list);
             Err(self.error_list.clone())
         }
     }

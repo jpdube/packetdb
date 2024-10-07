@@ -244,6 +244,10 @@ impl Packet {
         pkt
     }
 
+    pub fn get_id(&self) -> String {
+        format!("{}:{}", self.file_id, self.pkt_ptr)
+    }
+
     //----------------------------------------------------
     //--- Frame section
     //----------------------------------------------------

@@ -7,7 +7,7 @@ use crate::parse::{Parse, PqlStatement};
 use crate::query_result::QueryResult;
 
 use anyhow::Result;
-use log::info;
+use log::{debug, info};
 use rayon::prelude::*;
 use std::fs;
 use std::path::Path;
@@ -31,8 +31,11 @@ impl DbEngine {
         println!("Searching for: {}", query);
         let mut parse = Parse::new();
 
+        debug!("==================================================");
         self.exec_plan.start("Start search");
         if let Ok(expr) = parse.parse_select(query) {
+            debug!("--> Select query: {}", expr);
+
             let mut query_result = QueryResult::new(expr.clone());
 
             let mut file_count = 0;
@@ -60,7 +63,7 @@ impl DbEngine {
 
                             for c in interp_result {
                                 for r in c {
-                                    query_result.add(&r);
+                                    query_result.add(r);
                                     if query_result.count_reach() {
                                         break;
                                     }
