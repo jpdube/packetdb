@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::usize;
 
 use frame::packet::Packet;
-// use frame::pfield::FieldType;
 
 use crate::cursor::{get_field_type, Cursor, Field, FieldType, Record};
 use crate::parse::PqlStatement;
@@ -32,7 +31,11 @@ impl QueryResult {
 
     pub fn count_reach(&self) -> bool {
         // println!("COUNT REACHED: {}:{}", self.result.len(), self.model.top);
-        self.result.len() >= self.model.top
+        if self.model.has_groupby() {
+            self.groupby.count_reach()
+        } else {
+            self.result.len() >= self.model.top
+        }
     }
 
     pub fn add(&mut self, pkt: Packet) {
@@ -90,7 +93,7 @@ impl QueryResult {
 
 pub struct GroupBy {
     model: PqlStatement,
-    grp_result: HashMap<String, Vec<Packet>>,
+    grp_result: HashMap<Vec<usize>, Vec<Packet>>,
     result: Cursor,
 }
 
@@ -103,11 +106,15 @@ impl GroupBy {
         }
     }
 
+    pub fn count_reach(&self) -> bool {
+        self.grp_result.keys().len() >= self.model.top
+    }
+
     pub fn add(&mut self, pkt: Packet) {
-        let mut key = String::new();
+        let mut key = Vec::new();
 
         for k in &self.model.groupby_fields {
-            key.push_str(&format!("{}", pkt.get_field(k.id)));
+            key.push(pkt.get_field(k.id));
         }
 
         if let Some(aggr_key) = self.grp_result.get_mut(&key) {
@@ -118,27 +125,49 @@ impl GroupBy {
             self.grp_result.insert(key, grp_vec);
         }
 
-        // debug!("Group ADD: {:?}", &self.grp_result);
+        // debug!("Group ADD: {:#?}", &self.grp_result);
     }
 
     pub fn get_result(&mut self) -> Cursor {
         let mut record: Record;
+
         for (k, grp) in self.grp_result.iter() {
-            debug!("GroupBy RESULT: Key: {}, Len: {}", k, grp.len());
+            // debug!("GroupBy RESULT: Key: {:?}, Len: {}", k, grp.len());
 
             record = Record::default();
+
+            for (idx, gfield) in k.iter().enumerate() {
+                let field_name = self.model.groupby_fields[idx].name.clone();
+                let field_value: FieldType;
+
+                if field_name.contains("ip") {
+                    field_value = FieldType::Ipv4(*gfield as u32);
+                } else {
+                    field_value = FieldType::Number(*gfield);
+                }
+
+                let aggr_field = Field {
+                    name: field_name,
+                    field: field_value,
+                };
+
+                record.add_field(aggr_field);
+            }
+
+            // debug!("AGGREGATE LIST: {:#?}", self.model.groupby_fields);
             for aggr in &self.model.aggr_list {
+                // debug!("Aggregate loop: {:#?}", aggr);
                 let aggr_field = Field {
                     name: aggr.as_of().clone(),
                     field: FieldType::Number(aggr.compute(grp)),
                 };
 
                 record.add_field(aggr_field);
-                self.result.add_record(record.clone());
             }
+            self.result.add_record(record.clone());
         }
 
-        // debug!("Aggr result: {:?}", self.result);
+        // debug!("Aggr result: {:#?}", self.result);
 
         self.result.clone()
     }

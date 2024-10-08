@@ -1,7 +1,6 @@
 use std::fmt;
 
 use frame::packet::Packet;
-use log::debug;
 
 #[derive(Debug, Clone)]
 pub enum Aggregate {
@@ -37,20 +36,16 @@ impl Aggregate {
     }
 
     fn count(&self, pkt_list: &Vec<Packet>) -> usize {
-        debug!("Count: {}", pkt_list.len());
-
         pkt_list.len()
     }
 
-    fn bandwidth(&self, field_id: &u32, pkt_list: &Vec<Packet>) -> usize {
-        debug!("Bandwidth: {}:{}", field_id, pkt_list.len());
+    fn bandwidth(&self, _field_id: &u32, _pkt_list: &Vec<Packet>) -> usize {
         let result: usize = 0;
 
         result
     }
 
     fn sum(&self, field_id: &u32, pkt_list: &Vec<Packet>) -> usize {
-        debug!("Sum: {}:{}", field_id, pkt_list.len());
         let mut result: usize = 0;
 
         for pkt in pkt_list {
@@ -61,7 +56,6 @@ impl Aggregate {
     }
 
     fn avg(&self, field_id: &u32, pkt_list: &Vec<Packet>) -> usize {
-        debug!("Average: {}:{}", field_id, pkt_list.len());
         let mut result: usize = 0;
 
         for pkt in pkt_list {
@@ -72,7 +66,6 @@ impl Aggregate {
     }
 
     fn min(&self, field_id: &u32, pkt_list: &Vec<Packet>) -> usize {
-        debug!("Min: {}:{}", field_id, pkt_list.len());
         let mut result: usize = usize::max_value();
 
         for pkt in pkt_list {
@@ -86,7 +79,6 @@ impl Aggregate {
     }
 
     fn max(&self, field_id: &u32, pkt_list: &Vec<Packet>) -> usize {
-        debug!("Max {}:{}", field_id, pkt_list.len());
         let mut result: usize = 0;
 
         for pkt in pkt_list {
