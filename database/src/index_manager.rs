@@ -10,11 +10,12 @@ use log::info;
 use rayon::prelude::*;
 use rusqlite::{Connection, Result};
 use std::collections::{HashMap, HashSet};
-use std::fmt;
 use std::fs::File;
 use std::io::BufReader;
 use std::io::BufWriter;
 use std::io::Read;
+use std::time::Instant;
+use std::{f64, fmt};
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum IndexField {
@@ -203,7 +204,14 @@ impl IndexManager {
         let mut ts: u32 = 0;
         let mut proto_stat = ProtoStat::new(filename);
 
+        // let mut exec_plan = ExecutionPlan::default();
+        // exec_plan.start("Start index packet file");
+
+        let start = Instant::now();
+        let mut count = 0;
+
         while let Some(pkt) = pfile.next() {
+            count += 1;
             ts = pkt.get_field(fields::FRAME_TIMESTAMP) as u32;
             // println!("IP dst: {}", pkt.get_field(fields::IPV4_DST_ADDR));
 
@@ -225,6 +233,16 @@ impl IndexManager {
                 .write_u32::<BigEndian>(pkt.get_field(fields::IPV4_SRC_ADDR) as u32)
                 .unwrap();
         }
+        let duration = start.elapsed();
+        info!(
+            "Index file {} Total process time: {:3.3}ms Per packet: {:3.3}us",
+            filename,
+            duration.as_millis(),
+            (duration.as_secs_f64() / count as f64) * 1_000_000.0
+        );
+
+        // exec_plan.stop();
+        // exec_plan.show();
 
         match proto_stat.save() {
             Ok(_) => {}
