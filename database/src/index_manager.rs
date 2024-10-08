@@ -103,7 +103,6 @@ impl ProtoStat {
         let conn =
             Connection::open(format!("{}/packetdb.db", &config::CONFIG.master_index_path)).unwrap();
 
-        // let mut stmt = conn.prepare("select cast (avg(count) as int) from proto_stats group by proto having (proto & ?) = ?;").unwrap();
         let mut stmt = conn
             .prepare("select cast (avg(count) as int) from proto_stats where (proto & ?) = ?;")
             .unwrap();
@@ -145,8 +144,6 @@ impl IndexManager {
         packet_ptr.file_id = file_id;
         let search_value = self.build_search_index(&pql.search_type);
 
-        info!("Searching index file id: {}", file_id);
-
         loop {
             match file.read_exact(&mut buffer) {
                 Ok(_) => {
@@ -184,8 +181,6 @@ impl IndexManager {
             for ip in ip_list {
                 if IPv4::new(ip.address, ip.mask).is_in_subnet(ip_dst)
                     || IPv4::new(ip.address, ip.mask).is_in_subnet(ip_src)
-                // if is_ip_in_range(ip_dst, ip.address, ip.mask)
-                //     || is_ip_in_range(ip_src, ip.address, ip.mask)
                 {
                     ip_found = true;
                 }
@@ -204,16 +199,12 @@ impl IndexManager {
         let mut ts: u32 = 0;
         let mut proto_stat = ProtoStat::new(filename);
 
-        // let mut exec_plan = ExecutionPlan::default();
-        // exec_plan.start("Start index packet file");
-
         let start = Instant::now();
         let mut count = 0;
 
         while let Some(pkt) = pfile.next() {
             count += 1;
             ts = pkt.get_field(fields::FRAME_TIMESTAMP) as u32;
-            // println!("IP dst: {}", pkt.get_field(fields::IPV4_DST_ADDR));
 
             if !first_index {
                 first_index = true;
@@ -240,9 +231,6 @@ impl IndexManager {
             duration.as_millis(),
             (duration.as_secs_f64() / count as f64) * 1_000_000.0
         );
-
-        // exec_plan.stop();
-        // exec_plan.show();
 
         match proto_stat.save() {
             Ok(_) => {}
@@ -354,12 +342,6 @@ impl IndexManager {
                 Ok(_) => {
                     let idx_start = BigEndian::read_u32(&buffer[0..4]);
                     let idx_end = BigEndian::read_u32(&buffer[4..8]);
-                    // println!(
-                    //     "Master search: {}/{}-{}",
-                    //     idx_start,
-                    //     idx_end,
-                    //     BigEndian::read_u32(&buffer[8..12])
-                    // );
                     if !start_found && (start_ts >= idx_start && start_ts <= idx_end) {
                         start_found = true;
                         let index = MasterIndex {

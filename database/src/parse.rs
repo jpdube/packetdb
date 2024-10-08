@@ -282,6 +282,7 @@ impl Parse {
                 line: self.lookahead.as_ref().unwrap().line,
                 column: self.lookahead.as_ref().unwrap().column,
             });
+
             None
         }
     }

@@ -112,44 +112,6 @@ impl Interpreter {
 
         result
     }
-    // pub fn run_pgm_seek2(&self, packet_list: &PacketPtr, top_limit: usize) -> Vec<Record> {
-    //     let mut seek_pkt = SeekPacket::new(packet_list.clone());
-    //     let mut counter: usize = 0;
-    //     let mut packet_ptr: Vec<Record> = Vec::new();
-
-    //     while let Some(pkt) = seek_pkt.next() {
-    //         if self.eval(&pkt) {
-    //             let mut record = Record::default();
-    //             for field in &self.model.select {
-    //                 if let Some(field_value) = get_field_type(field.id, pkt.get_field(field.id)) {
-    //                     record.add_field(Field {
-    //                         name: field.name.clone(),
-    //                         field: field_value,
-    //                     });
-    //                 }
-    //             }
-
-    //             if let Some(ts) = get_field_type(FRAME_TIMESTAMP, pkt.get_field(FRAME_TIMESTAMP)) {
-    //                 record.add_field(Field {
-    //                     name: String::from("frame.timestamp"),
-    //                     field: ts,
-    //                 });
-    //             }
-
-    //             packet_ptr.push(record);
-
-    //             if !self.model.aggregate {
-    //                 counter += 1;
-    //                 if top_limit == counter {
-    //                     // if self.model.top == counter {
-    //                     break;
-    //                 }
-    //             }
-    //         }
-    //     }
-
-    //     packet_ptr
-    // }
 
     pub fn eval(&self, pkt: &Packet) -> bool {
         let result = self.eval_expression(&self.model.filter, &pkt).unwrap();
@@ -342,5 +304,3 @@ impl Display for EvalError {
         }
     }
 }
-
-// pub type Result<T> = std::result::Result<T, EvalError>;
