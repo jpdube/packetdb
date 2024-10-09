@@ -1,19 +1,22 @@
-use crate::config;
+use crate::config::CONFIG;
 use crate::packet_ptr::PacketPtr;
 use crate::parse::PqlStatement;
 use crate::pcapfile::PcapFile;
+use anyhow::Result;
 use byteorder::{BigEndian, ByteOrder, WriteBytesExt};
 use frame::fields;
 use frame::ipv4_address::IPv4;
 use frame::packet::Packet;
-use log::info;
+use log::{error, info};
 use rayon::prelude::*;
-use rusqlite::{Connection, Result};
+use rusqlite::Connection;
 use std::collections::{HashMap, HashSet};
+use std::fs;
 use std::fs::File;
 use std::io::BufReader;
 use std::io::BufWriter;
 use std::io::Read;
+use std::path::Path;
 use std::time::Instant;
 use std::{f64, fmt};
 
@@ -71,8 +74,7 @@ impl ProtoStat {
     }
 
     pub fn save(&mut self) -> Result<()> {
-        let mut conn =
-            Connection::open(format!("{}/packetdb.db", &config::CONFIG.master_index_path))?;
+        let mut conn = Connection::open(format!("{}/packetdb.db", &CONFIG.master_index_path))?;
 
         let tx = conn.transaction()?;
         tx.prepare(STAT_SQL)?;
@@ -100,8 +102,7 @@ impl ProtoStat {
     }
 
     pub fn get_count_stats(&self, proto: u32) -> usize {
-        let conn =
-            Connection::open(format!("{}/packetdb.db", &config::CONFIG.master_index_path)).unwrap();
+        let conn = Connection::open(format!("{}/packetdb.db", &CONFIG.master_index_path)).unwrap();
 
         let mut stmt = conn
             .prepare("select cast (avg(count) as int) from proto_stats where (proto & ?) = ?;")
@@ -137,7 +138,7 @@ pub struct IndexManager {}
 
 impl IndexManager {
     pub fn search_index(&mut self, pql: &PqlStatement, file_id: u32) -> PacketPtr {
-        let idx_filename = &format!("{}/{}.pidx", &config::CONFIG.index_path, file_id);
+        let idx_filename = &format!("{}/{}.pidx", &CONFIG.index_path, file_id);
         let mut file = BufReader::new(File::open(idx_filename).unwrap());
         let mut buffer = [0; 20];
         let mut packet_ptr = PacketPtr::default();
@@ -191,8 +192,8 @@ impl IndexManager {
     }
 
     pub fn index_file(&self, filename: u32) -> MasterIndex {
-        let mut pfile = PcapFile::new(filename, &config::CONFIG.db_path);
-        let idx_filename = &format!("{}/{}.pidx", &config::CONFIG.index_path, filename);
+        let mut pfile = PcapFile::new(filename, &CONFIG.db_path);
+        let idx_filename = &format!("{}/{}.pidx", &CONFIG.index_path, filename);
         let mut writer = BufWriter::new(File::create(idx_filename).unwrap());
         let mut mindex = MasterIndex::default();
         let mut first_index = false;
@@ -286,18 +287,44 @@ impl IndexManager {
         index
     }
 
-    pub fn create_index(&self) {
-        let result: Vec<MasterIndex> = (0..config::CONFIG.block_size)
-            .into_par_iter()
-            .map(|pkt| self.index_file(pkt as u32))
-            .collect();
+    fn get_packet_files(&self) -> Result<Vec<u32>> {
+        let pcap_path = format!("{}", &CONFIG.db_path);
+        let paths = fs::read_dir(pcap_path).unwrap();
 
-        self.save_master(result);
+        let mut file_id_list: Vec<u32> = Vec::new();
+
+        for path in paths {
+            let id: u32 = Path::new(&path.unwrap().file_name())
+                .file_stem()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .parse::<u32>()?;
+
+            file_id_list.push(id);
+        }
+        file_id_list.sort();
+        file_id_list.reverse();
+        Ok(file_id_list)
+    }
+
+    pub fn create_index(&self) {
+        match self.get_packet_files() {
+            Ok(files_list) => {
+                let result: Vec<MasterIndex> = (files_list)
+                    .into_par_iter()
+                    .map(|pkt| self.index_file(pkt as u32))
+                    .collect();
+
+                self.save_master(result);
+            }
+            Err(msg) => error!("Error index files: {}", msg),
+        }
     }
 
     pub fn save_master(&self, master_index: Vec<MasterIndex>) {
         let mut writer = BufWriter::new(
-            File::create(format!("{}/master.pidx", config::CONFIG.master_index_path)).unwrap(),
+            File::create(format!("{}/master.pidx", CONFIG.master_index_path)).unwrap(),
         );
         for p in master_index {
             writer.write_u32::<BigEndian>(p.start_timestamp).unwrap();
@@ -332,7 +359,7 @@ impl IndexManager {
     pub fn search_master_index(&self, start_ts: u32, end_ts: u32) -> Vec<MasterIndex> {
         let mut index_list: Vec<MasterIndex> = Vec::new();
 
-        let idx_filename = &format!("{}/master.pidx", &config::CONFIG.master_index_path);
+        let idx_filename = &format!("{}/master.pidx", &CONFIG.master_index_path);
         let mut file = BufReader::new(File::open(idx_filename).unwrap());
         let mut buffer = [0; 12];
         let mut start_found = false;
