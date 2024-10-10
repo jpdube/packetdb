@@ -19,6 +19,7 @@ pub struct SeekPacket {
 impl SeekPacket {
     pub fn new(packet_list: PacketPtr) -> Self {
         let fname = &format!("{}/{}.pcap", config::CONFIG.db_path, packet_list.file_id);
+
         Self {
             file: BufReader::new(File::open(fname).unwrap()),
             index: 0,

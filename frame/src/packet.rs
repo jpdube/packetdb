@@ -9,7 +9,7 @@ use crate::packet_display::PacketDisplay;
 use crate::tcp::Tcp;
 use crate::udp::UdpFrame;
 
-use byteorder::{BigEndian, ByteOrder};
+use byteorder::{BigEndian, ByteOrder, LittleEndian};
 
 // const IP_HDR_LEN_POS: usize = 0x0e;
 // const TCP_HDR_LEN_POS: usize = 0x2e;
@@ -66,10 +66,14 @@ impl Packet {
     }
 
     pub fn set_packet(&mut self, packet: Vec<u8>, header: [u8; 16], file_id: u32, pkt_ptr: u32) {
-        self.header.ts_sec = BigEndian::read_u32(&header[0..4]);
-        self.header.ts_usec = BigEndian::read_u32(&header[4..8]);
-        self.header.inc_len = BigEndian::read_u32(&header[8..12]);
-        self.header.orig_len = BigEndian::read_u32(&header[12..16]);
+        self.header.ts_sec = LittleEndian::read_u32(&header[0..4]);
+        self.header.ts_usec = LittleEndian::read_u32(&header[4..8]);
+        self.header.inc_len = LittleEndian::read_u32(&header[8..12]);
+        self.header.orig_len = LittleEndian::read_u32(&header[12..16]);
+        // self.header.ts_sec = BigEndian::read_u32(&header[0..4]);
+        // self.header.ts_usec = BigEndian::read_u32(&header[4..8]);
+        // self.header.inc_len = BigEndian::read_u32(&header[8..12]);
+        // self.header.orig_len = BigEndian::read_u32(&header[12..16]);
         self.file_id = file_id;
         self.pkt_ptr = pkt_ptr;
 
