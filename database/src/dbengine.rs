@@ -96,17 +96,17 @@ impl DbEngine {
 
         let avg_file = proto_stat.get_count_stats(search_proto);
 
-        let mut chunk_size: usize = 2;
+        let mut chunk_size: usize = 1;
 
         if avg_file != 0 {
-            chunk_size = (&expr.top + &expr.offset) / avg_file;
+            chunk_size = ((&expr.top + &expr.offset) / avg_file) + 1;
             println!(
                 "Chunk size raw: Proto: {search_proto}, top: {}, Avg: {avg_file}, chunk: {chunk_size}",
                 &expr.top
             );
 
             if chunk_size == 0 {
-                chunk_size = 2;
+                chunk_size = 1;
             }
 
             if chunk_size > 8 {
