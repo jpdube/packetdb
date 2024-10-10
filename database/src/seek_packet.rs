@@ -1,4 +1,4 @@
-use byteorder::{BigEndian, ByteOrder};
+use byteorder::{ByteOrder, LittleEndian};
 use frame::packet::Packet;
 use std::fs::File;
 use std::io::prelude::*;
@@ -43,7 +43,7 @@ impl SeekPacket {
             return None;
         }
 
-        self.psize = BigEndian::read_u32(&pheader[12..16]) as usize;
+        self.psize = LittleEndian::read_u32(&pheader[12..16]) as usize;
         self.data.resize(self.psize, 0);
         self.file.read_exact(&mut self.data).unwrap();
         self.relative_ptr = self.file.stream_position().unwrap();
