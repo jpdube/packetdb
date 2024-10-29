@@ -3,7 +3,7 @@ use frame::packet::Packet;
 use std::fs::File;
 use std::io::{BufReader, Read};
 
-// const HEADER_BE: u32 = 0xa1b2c3d4;
+const HEADER_BE: u32 = 0xa1b2c3d4;
 const HEADER_LE: u32 = 0xd4c3b2a1;
 
 pub struct PcapFile {
@@ -48,9 +48,12 @@ impl PcapFile {
 
         if self.magic_no == HEADER_LE {
             psize = LittleEndian::read_u32(&pheader[12..16]) as usize;
-        } else {
+        } else if self.magic_no == HEADER_BE {
             psize = BigEndian::read_u32(&pheader[12..16]) as usize;
+        } else {
+            psize = 0;
         }
+
         data.resize(psize, 0);
         self.file.read_exact(&mut data).unwrap();
 
