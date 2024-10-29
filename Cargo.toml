@@ -19,6 +19,10 @@ actix-web = { version = "4", features = ["openssl"] }
 openssl = { version = "0.10.66", features = ["v110"] }
 actix-cors = "0.6.4"
 anyhow = "1.0.75"
+jsonwebtoken = "9.3.0"
+chrono = "0.4.38"
+argon2 = "0.5.3"
+
 
 # [build]
 # rustflags = ["-Z", "threads=8"]

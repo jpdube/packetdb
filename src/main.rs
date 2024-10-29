@@ -1,18 +1,14 @@
-use actix_cors::Cors;
+pub mod api_server;
+pub mod jwebtoken;
+
 use database::config::CONFIG;
 use database::dbengine::DbEngine;
 use log::info;
-use serde_json::Value;
-use std::collections::BTreeMap;
 use std::{env, process};
 
+use crate::api_server::web_main;
+// use actix_web::main;
 use clap::Parser;
-
-use actix_web::{
-    http::header, middleware::Logger, post, web, App, HttpResponse, HttpServer, Responder,
-};
-use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
-use serde::{Deserialize, Serialize};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -22,29 +18,6 @@ struct Args {
 
     #[arg(short, long, default_value_t = false)]
     index: bool,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct Command {
-    command: String,
-}
-
-#[derive(Serialize, Debug)]
-pub struct CmdResponse<'a> {
-    success: bool,
-    result: Vec<BTreeMap<&'a str, Value>>,
-}
-
-#[post("/execute")]
-async fn execute(name: web::Json<Command>) -> impl Responder {
-    let mut db = DbEngine::new();
-    let response = db.run(&name.command).unwrap().clone();
-    let result = CmdResponse {
-        success: true,
-        result: response.to_json(),
-    };
-
-    HttpResponse::Ok().json(result)
 }
 
 fn process_params() {
@@ -66,49 +39,19 @@ fn process_params() {
     info!("Config: {}", CONFIG.db_path);
 }
 
+// fn main() {
+//     about();
+//     process_params();
+// }
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    web_main().await?;
-    Ok(())
-}
-
-async fn web_main() -> std::io::Result<()> {
-    // load TLS keys
-    // to create a self-signed temporary cert for testing:
-    // `openssl req -x509 -newkey rsa:4096 -nodes -keyout key.pem -out cert.pem -days 365 -subj '/CN=localhost'`
+    // let hash = get_hash_pwd("stileto99+");
+    // println!("Hash is: {}", hash);
+    // println!("Is hash valid: {}", validate_pwd("stileto99+", &hash));
     about();
     process_params();
-
-    let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
-    builder
-        .set_private_key_file("./misc/key.pem", SslFiletype::PEM)
-        .unwrap();
-    builder
-        .set_certificate_chain_file("./misc/cert.pem")
-        .unwrap();
-
-    HttpServer::new(move || {
-        App::new()
-            .wrap(
-                Cors::default()
-                    .allowed_origin("http://localhost:9000")
-                    .allowed_origin_fn(|origin, _req_head| {
-                        origin.as_bytes().ends_with(b".localhost")
-                    })
-                    .allowed_methods(vec!["GET", "POST"])
-                    .allowed_headers(vec![header::AUTHORIZATION, header::ACCEPT])
-                    .allowed_header(header::CONTENT_TYPE)
-                    .allowed_header(header::AUTHORIZATION)
-                    .supports_credentials()
-                    .max_age(3600),
-            )
-            .wrap(Logger::default())
-            .service(execute)
-    })
-    // .bind("0.0.0.0:9001")?
-    .bind_openssl("0.0.0.0:7443", builder)?
-    .run()
-    .await
+    web_main().await?;
+    Ok(())
 }
 
 fn about() {
