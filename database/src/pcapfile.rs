@@ -46,6 +46,8 @@ impl PcapFile {
             return None;
         }
 
+        //--- Must determine what to do when psize is zero. The file pointer will
+        //--- not advance and we will spin on our self
         match self.magic_no {
             HEADER_LE => psize = LittleEndian::read_u32(&pheader[12..16]) as usize,
             HEADER_BE => psize = BigEndian::read_u32(&pheader[12..16]) as usize,
