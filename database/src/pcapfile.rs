@@ -46,12 +46,10 @@ impl PcapFile {
             return None;
         }
 
-        if self.magic_no == HEADER_LE {
-            psize = LittleEndian::read_u32(&pheader[12..16]) as usize;
-        } else if self.magic_no == HEADER_BE {
-            psize = BigEndian::read_u32(&pheader[12..16]) as usize;
-        } else {
-            psize = 0;
+        match self.magic_no {
+            HEADER_LE => psize = LittleEndian::read_u32(&pheader[12..16]) as usize,
+            HEADER_BE => psize = BigEndian::read_u32(&pheader[12..16]) as usize,
+            _ => psize = 0,
         }
 
         data.resize(psize, 0);
