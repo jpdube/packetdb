@@ -227,8 +227,9 @@ impl IndexManager {
         }
         let duration = start.elapsed();
         info!(
-            "Index file {} Total process time: {:3.3}ms Per packet: {:3.3}us",
+            "Index file {} Process {} packets in: {:3.3}ms Per packet: {:3.3}us",
             filename,
+            count,
             duration.as_millis(),
             (duration.as_secs_f64() / count as f64) * 1_000_000.0
         );
