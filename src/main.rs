@@ -7,7 +7,6 @@ use log::info;
 use std::{env, process};
 
 use crate::api_server::web_main;
-// use actix_web::main;
 use clap::Parser;
 
 #[derive(Parser, Debug)]
@@ -39,15 +38,8 @@ fn process_params() {
     info!("Config: {}", CONFIG.db_path);
 }
 
-// fn main() {
-//     about();
-//     process_params();
-// }
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    // let hash = get_hash_pwd("stileto99+");
-    // println!("Hash is: {}", hash);
-    // println!("Is hash valid: {}", validate_pwd("stileto99+", &hash));
     about();
     process_params();
     web_main().await?;
