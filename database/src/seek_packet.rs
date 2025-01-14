@@ -71,7 +71,11 @@ impl SeekPacket {
 
         // self.psize = BigEndian::read_u32(&pheader[12..16]) as usize;
         self.data.resize(self.psize, 0);
-        self.file.read_exact(&mut self.data).unwrap();
+
+        if self.file.read_exact(&mut self.data).is_err() {
+            return None;
+        }
+
         self.relative_ptr = self.file.stream_position().unwrap();
 
         let mut pkt = Packet::new();
