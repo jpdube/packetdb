@@ -35,6 +35,17 @@ impl Aggregate {
         }
     }
 
+    pub fn field_id(&self) -> u32 {
+        match self {
+            Self::Count(_) => 0,
+            Self::Avg(field, _) => *field,
+            Self::Min(field, _) => *field,
+            Self::Max(field, _) => *field,
+            Self::Sum(field, _) => *field,
+            Self::Bandwidth(field, _) => *field,
+        }
+    }
+
     fn count(&self, pkt_list: &Vec<Packet>) -> usize {
         pkt_list.len()
     }
