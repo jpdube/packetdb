@@ -100,7 +100,7 @@ impl Interpreter {
             if self.eval(&pkt) {
                 result.push(pkt);
 
-                if !self.model.aggregate {
+                if !self.model.has_aggregate() {
                     counter += 1;
                     if top_limit == counter {
                         // if self.model.top == counter {
