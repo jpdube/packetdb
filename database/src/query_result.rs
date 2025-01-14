@@ -15,6 +15,7 @@ pub struct QueryResult {
     result: Cursor,
     offset: usize,
     groupby: GroupBy,
+    aggregate: AggregateResult,
 }
 
 impl QueryResult {
@@ -25,12 +26,12 @@ impl QueryResult {
             result: Cursor::default(),
             offset: 0,
             groupby: GroupBy::new(model.clone()),
+            aggregate: AggregateResult::new(model.clone()),
             model,
         }
     }
 
     pub fn count_reach(&self) -> bool {
-        // println!("COUNT REACHED: {}:{}", self.result.len(), self.model.top);
         if self.model.has_groupby() {
             self.groupby.count_reach()
         } else {
@@ -41,6 +42,8 @@ impl QueryResult {
     pub fn add(&mut self, pkt: Packet) {
         if self.model.has_groupby() {
             self.groupby.add(pkt.clone());
+        } else if self.model.has_aggregate() && !self.model.has_groupby() {
+            self.aggregate.add(pkt.clone());
         }
 
         if self.model.offset > 0 && self.offset < self.model.offset {
@@ -85,9 +88,51 @@ impl QueryResult {
         debug!("Start ts: {}, end ts: {}", self.ts_start, self.ts_end);
         if self.model.has_groupby() {
             return self.groupby.get_result();
+        } else if self.model.has_aggregate() && !self.model.has_groupby() {
+            return self.aggregate.get_result();
         } else {
             return self.result.clone();
         }
+    }
+}
+
+pub struct AggregateResult {
+    model: PqlStatement,
+    pkt_list: Vec<Packet>,
+    result: Cursor,
+}
+
+impl AggregateResult {
+    pub fn new(model: PqlStatement) -> Self {
+        Self {
+            model,
+            pkt_list: Vec::new(),
+            result: Cursor::default(),
+        }
+    }
+
+    pub fn add(&mut self, packet: Packet) {
+        self.pkt_list.push(packet);
+    }
+
+    pub fn count_reach(&self) -> bool {
+        self.pkt_list.len() >= self.model.top
+    }
+
+    pub fn get_result(&mut self) -> Cursor {
+        let mut record = Record::default();
+        for aggr in &self.model.aggr_list {
+            let aggr_field = Field {
+                name: aggr.as_of().clone(),
+                field: FieldType::Number(aggr.compute(&self.pkt_list)),
+            };
+
+            record.add_field(aggr_field);
+        }
+
+        self.result.add_record(record.clone());
+
+        self.result.clone()
     }
 }
 
@@ -132,8 +177,6 @@ impl GroupBy {
         let mut record: Record;
 
         for (k, grp) in self.grp_result.iter() {
-            // debug!("GroupBy RESULT: Key: {:?}, Len: {}", k, grp.len());
-
             record = Record::default();
 
             for (idx, gfield) in k.iter().enumerate() {
@@ -154,9 +197,7 @@ impl GroupBy {
                 record.add_field(aggr_field);
             }
 
-            // debug!("AGGREGATE LIST: {:#?}", self.model.groupby_fields);
             for aggr in &self.model.aggr_list {
-                // debug!("Aggregate loop: {:#?}", aggr);
                 let aggr_field = Field {
                     name: aggr.as_of().clone(),
                     field: FieldType::Number(aggr.compute(grp)),
@@ -166,8 +207,6 @@ impl GroupBy {
             }
             self.result.add_record(record.clone());
         }
-
-        // debug!("Aggr result: {:#?}", self.result);
 
         self.result.clone()
     }

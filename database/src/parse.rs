@@ -91,7 +91,7 @@ pub struct PqlStatement {
     pub offset: usize,
     pub interval: Option<Interval>,
     pub search_type: HashSet<IndexField>,
-    pub aggregate: bool,
+    // pub aggregate: bool,
     pub ip_list: Vec<IPv4>,
     pub aggr_list: Vec<Aggregate>,
     pub groupby_fields: Vec<SelectField>,
@@ -100,6 +100,10 @@ pub struct PqlStatement {
 impl PqlStatement {
     pub fn has_groupby(&self) -> bool {
         self.groupby_fields.len() != 0
+    }
+
+    pub fn has_aggregate(&self) -> bool {
+        self.aggr_list.len() != 0
     }
 }
 
@@ -132,7 +136,7 @@ impl Default for PqlStatement {
             offset: 0,
             interval: None,
             search_type: HashSet::new(),
-            aggregate: false,
+            // aggregate: false,
             ip_list: Vec::new(),
             aggr_list: Vec::new(),
             groupby_fields: Vec::new(),
