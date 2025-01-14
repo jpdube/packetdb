@@ -8,6 +8,7 @@ pub mod ipv4_address;
 pub mod layer;
 pub mod mac_address;
 pub mod packet;
+pub mod packet_builder;
 pub mod packet_display;
 pub mod pfield;
 pub mod tcp;
