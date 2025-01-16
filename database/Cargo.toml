@@ -23,6 +23,3 @@ ipnet = "2.5.1"
 anyhow = "1.0.75"
 rusqlite = "0.31.0"
 
-[profile.release]
-strip = true
-opt-level = 3
