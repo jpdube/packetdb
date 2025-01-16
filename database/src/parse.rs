@@ -92,6 +92,7 @@ pub struct PqlStatement {
     pub interval: Option<Interval>,
     pub search_type: HashSet<IndexField>,
     pub ip_list: Vec<IPv4>,
+    pub has_distinct: bool,
     pub aggr_list: Vec<Aggregate>,
     pub groupby_fields: Vec<SelectField>,
 }
@@ -111,14 +112,20 @@ impl fmt::Display for PqlStatement {
         if let Some(interval) = &self.interval {
             write!(
                 f,
-                "Select {:?} From: {:?} Where: {:?} Interval: {} Top: {} Offset: {}",
-                self.select, self.from, self.filter, interval, self.top, self.offset
+                "Select {}{:?} From: {:?} Where: {:?} Interval: {} Top: {} Offset: {}",
+                if self.has_distinct { "DISTINCT" } else { "" },
+                self.select,
+                self.from,
+                self.filter,
+                interval,
+                self.top,
+                self.offset
             )
         } else {
             write!(
                 f,
-                "Select {:?} From: {:?} Where: {:?} Top: {} Offset: {} Group By: {:?} Aggregate: {:?}",
-                self.select, self.from, self.filter, self.top, self.offset, self.groupby_fields, self.aggr_list,
+                "Select {} {:?}  From: {:?} Where: {:?} Top: {} Offset: {} Group By: {:?} Aggregate: {:?}",
+                if self.has_distinct {"DISTINCT"} else {""}, self.select, self.from, self.filter, self.top, self.offset, self.groupby_fields, self.aggr_list,
             )
         }
     }
@@ -135,7 +142,7 @@ impl Default for PqlStatement {
             offset: 0,
             interval: None,
             search_type: HashSet::new(),
-            // aggregate: false,
+            has_distinct: false,
             ip_list: Vec::new(),
             aggr_list: Vec::new(),
             groupby_fields: Vec::new(),
@@ -361,6 +368,9 @@ impl Parse {
         if self.accept(Keyword::Select).is_some() {
             loop {
                 debug!("Select loop");
+                if self.accept(Keyword::Distinct).is_some() {
+                    self.query.has_distinct = true;
+                }
                 if let Some(aggr) = self.parse_aggregate() {
                     println!("AGGREGATE: {:?}", aggr);
                     self.query.aggr_list.push(aggr);

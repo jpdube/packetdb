@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::usize;
 
 use frame::packet::Packet;
@@ -16,6 +16,7 @@ pub struct QueryResult {
     offset: usize,
     groupby: GroupBy,
     aggregate: AggregateResult,
+    distinct_list: HashSet<String>,
 }
 
 impl QueryResult {
@@ -28,14 +29,17 @@ impl QueryResult {
             groupby: GroupBy::new(model.clone()),
             aggregate: AggregateResult::new(model.clone()),
             model,
+            distinct_list: HashSet::new(),
         }
     }
 
     pub fn count_reach(&self) -> bool {
         if self.model.has_groupby() {
-            self.groupby.count_reach()
+            return self.groupby.count_reach();
+        } else if self.model.has_distinct {
+            return self.distinct_list.len() >= self.model.top;
         } else {
-            self.result.len() >= self.model.top
+            return self.result.len() >= self.model.top;
         }
     }
 
@@ -52,12 +56,18 @@ impl QueryResult {
         }
 
         let mut record = Record::default();
+        let mut distinct_key = String::new();
+
         for field in &self.model.select {
             if let Some(field_value) = get_field_type(field.id, pkt.get_field(field.id)) {
                 record.add_field(Field {
                     name: field.name.clone(),
-                    field: field_value,
+                    field: field_value.clone(),
                 });
+
+                if self.model.has_distinct {
+                    distinct_key = format!("{}|{}", distinct_key, field_value.to_string());
+                }
             }
         }
 
@@ -81,7 +91,14 @@ impl QueryResult {
             self.ts_end = ts;
         }
 
-        self.result.add_record(record);
+        if self.model.has_distinct {
+            if !self.distinct_list.contains(&distinct_key) {
+                self.result.add_record(record);
+                self.distinct_list.insert(distinct_key.clone());
+            }
+        } else {
+            self.result.add_record(record);
+        }
     }
 
     pub fn get_result(&mut self) -> Cursor {
