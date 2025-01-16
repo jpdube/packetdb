@@ -91,7 +91,6 @@ pub struct PqlStatement {
     pub offset: usize,
     pub interval: Option<Interval>,
     pub search_type: HashSet<IndexField>,
-    // pub aggregate: bool,
     pub ip_list: Vec<IPv4>,
     pub aggr_list: Vec<Aggregate>,
     pub groupby_fields: Vec<SelectField>,
