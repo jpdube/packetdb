@@ -158,9 +158,7 @@ pub enum Expression {
     LabelByte(u32, usize, usize),
     Array(Vec<u8>),
     Boolean(bool),
-    // Const(String),
     Integer(u32),
-    // Float(f32),
     IPv4(u32, u8),
     Timestamp(u32),
     MacAddress(u64),
@@ -186,14 +184,11 @@ impl fmt::Display for Expression {
             }
             Self::Integer(value) => write!(f, "Integer({})", value),
             Self::Timestamp(value) => write!(f, "Timestamp({})", value),
-            // Self::Float(value) => write!(f, "Float({})", value),
             Self::IPv4(ip_addr, cidr) => write!(f, "IPv4({})", IPv4::new(*ip_addr, *cidr as u8)),
             Self::Boolean(value) => write!(f, "Bool: {}", value),
-            // Self::Const(const_str) => write!(f, "Const({})", const_str),
             Self::MacAddress(mac_addr) => write!(f, "Mac({})", MacAddr::set_from_int(mac_addr)),
             Self::Array(array_bytes) => write!(f, "Array({:?})", array_bytes),
             Self::NoOp => write!(f, "NoOp"),
-            // _ => write!(f, "Undefined"),
         }
     }
 }
@@ -252,7 +247,7 @@ impl Parse {
         }
     }
 
-    fn peek(&mut self, keyword: Keyword) -> Option<Token> {
+    fn peek(&mut self, keyword: Keyword) -> bool {
         self.peek_keyword = Some(keyword.to_owned());
         if self.lookahead.is_none() {
             self.lookahead = self.next();
@@ -260,26 +255,27 @@ impl Parse {
         }
 
         if self.lookahead.as_mut().unwrap().token == keyword {
-            self.lookahead.clone()
+            true
+        } else {
+            false
+        }
+    }
+
+    fn accept(&mut self, keyword: Keyword) -> Option<Token> {
+        if self.peek(keyword) {
+            self.prev_token = self.lookahead.to_owned();
+            self.lookahead = None;
+            self.prev_token.clone()
         } else {
             None
         }
     }
 
-    fn accept(&mut self, keyword: Keyword) -> Option<Token> {
-        let tok = self.peek(keyword);
-        if tok.is_some() {
-            self.prev_token = self.lookahead.to_owned();
-            self.lookahead = None;
-        }
-        tok
-    }
-
     fn expect(&mut self, keyword: Keyword) -> Option<Token> {
-        let tok = self.peek(keyword.to_owned());
-        if tok.is_some() {
+        if self.peek(keyword.to_owned()) {
+            let ret_tok = self.lookahead.clone();
             self.lookahead = None;
-            tok
+            ret_tok
         } else {
             self.has_error = true;
             let msg = format!(
@@ -382,7 +378,7 @@ impl Parse {
                         });
                     }
                 }
-                if self.peek(Keyword::Comma).is_some() {
+                if self.peek(Keyword::Comma) {
                     self.accept(Keyword::Comma);
                 } else {
                     break;
@@ -393,7 +389,7 @@ impl Parse {
                 debug!("From");
                 while let Some(ffield) = self.expect(Keyword::Identifier) {
                     self.query.from.push(ffield.value);
-                    if self.peek(Keyword::Comma).is_some() {
+                    if self.peek(Keyword::Comma) {
                         self.accept(Keyword::Comma);
                     } else {
                         break;
@@ -407,43 +403,44 @@ impl Parse {
             }
 
             //--- Interval
-            if self.peek(Keyword::Interval).is_some() {
+            if self.peek(Keyword::Interval) {
                 debug!("Interval");
                 self.accept(Keyword::Interval);
                 let mut ts_start: u32 = 0;
                 let mut ts_end: u32 = 0;
-                if let Some(_start_ts) = self.peek(Keyword::Timestamp) {
-                    self.accept(Keyword::Timestamp);
-                    if let Some(start_ts) = self.get_timestamp(&_start_ts.value) {
-                        ts_start = start_ts;
+                if self.peek(Keyword::Timestamp) {
+                    if let Some(_start_ts) = self.expect(Keyword::Timestamp) {
+                        self.accept(Keyword::Timestamp);
+                        if let Some(start_ts) = self.get_timestamp(&_start_ts.value) {
+                            ts_start = start_ts;
+                        }
                     }
                 }
-
-                if let Some(_start_ts) = self.peek(Keyword::Now) {
+                if self.peek(Keyword::Now) {
                     self.accept(Keyword::Now);
                     ts_start = self.get_now();
                 }
 
                 self.expect(Keyword::To);
 
-                if let Some(_end_ts) = self.peek(Keyword::Timestamp) {
-                    self.accept(Keyword::Timestamp);
+                if self.peek(Keyword::Timestamp) {
+                    let _end_ts = self.expect(Keyword::Timestamp).unwrap();
                     if let Some(end_ts) = self.get_timestamp(&_end_ts.value) {
                         ts_end = end_ts;
                     }
                 }
 
-                if self.peek(Keyword::Now).is_some() {
+                if self.peek(Keyword::Now) {
                     self.accept(Keyword::Now);
                     // ts_end = self.get_now();
 
-                    if self.peek(Keyword::Minus).is_some() {
+                    if self.peek(Keyword::Minus) {
                         self.accept(Keyword::Minus);
-                        if let Some(ts_value) = self.peek(Keyword::Integer) {
-                            self.accept(Keyword::Integer);
+                        if self.peek(Keyword::Integer) {
+                            let ts_value = self.expect(Keyword::Integer).unwrap();
                             let offset = ts_value.value.parse::<u8>().unwrap();
-                            if let Some(ts_modifier) = self.peek(Keyword::Identifier) {
-                                self.accept(Keyword::Identifier);
+                            if self.peek(Keyword::Identifier) {
+                                let ts_modifier = self.expect(Keyword::Identifier).unwrap();
                                 ts_end = self.get_now_ts(offset, &ts_modifier.value);
                             }
                         }
@@ -456,7 +453,7 @@ impl Parse {
                 });
             }
 
-            if self.peek(Keyword::GroupBy).is_some() {
+            if self.peek(Keyword::GroupBy) {
                 debug!("Group By");
                 self.accept(Keyword::GroupBy);
 
@@ -469,7 +466,7 @@ impl Parse {
                             });
                         }
                     }
-                    if self.peek(Keyword::Comma).is_some() {
+                    if self.peek(Keyword::Comma) {
                         self.accept(Keyword::Comma);
                     } else {
                         break;
@@ -477,7 +474,7 @@ impl Parse {
                 }
             }
 
-            if self.peek(Keyword::Offset).is_some() {
+            if self.peek(Keyword::Offset) {
                 self.accept(Keyword::Offset);
                 if let Some(tok) = self.accept(Keyword::Integer) {
                     println!("Offset: {:?}", tok);
@@ -486,7 +483,7 @@ impl Parse {
                     println!("Expected integer");
                 }
             }
-            if self.peek(Keyword::Top).is_some() {
+            if self.peek(Keyword::Top) {
                 self.accept(Keyword::Top);
                 if let Some(tok) = self.accept(Keyword::Integer) {
                     self.query.top = tok.value.parse::<usize>().unwrap();
@@ -660,25 +657,25 @@ impl Parse {
     }
 
     fn parse_factor(&mut self) -> Option<Expression> {
-        if self.peek(Keyword::Integer).is_some() {
+        if self.peek(Keyword::Integer) {
             self.parse_int()
-        } else if self.peek(Keyword::Timestamp).is_some() {
+        } else if self.peek(Keyword::Timestamp) {
             self.parse_timestamp()
-        } else if self.peek(Keyword::IndexStart).is_some() {
+        } else if self.peek(Keyword::IndexStart) {
             self.parse_array()
-        } else if self.peek(Keyword::Constant).is_some() {
+        } else if self.peek(Keyword::Constant) {
             self.parse_constant()
-        } else if self.peek(Keyword::IpV4).is_some() {
+        } else if self.peek(Keyword::IpV4) {
             self.parse_ipv4()
-        } else if self.peek(Keyword::MacAddress).is_some() {
+        } else if self.peek(Keyword::MacAddress) {
             self.parse_mac_address()
-        } else if self.peek(Keyword::Identifier).is_some() {
+        } else if self.peek(Keyword::Identifier) {
             self.parse_label()
-        } else if self.peek(Keyword::True).is_some() {
+        } else if self.peek(Keyword::True) {
             self.parse_bool_true()
-        } else if self.peek(Keyword::False).is_some() {
+        } else if self.peek(Keyword::False) {
             self.parse_bool_false()
-        } else if self.peek(Keyword::Lparen).is_some() {
+        } else if self.peek(Keyword::Lparen) {
             // println!("Grouping");
             self.parse_grouping()
         } else {
@@ -734,7 +731,6 @@ impl Parse {
                 }
                 _ => None,
             }
-            // Some(Expression::Integer(tok.value.parse().unwrap()))
         } else {
             None
         }
@@ -763,7 +759,7 @@ impl Parse {
     fn parse_ipv4(&mut self) -> Option<Expression> {
         let mut cidr: u8 = 32;
         if let Some(tok) = self.accept(Keyword::IpV4) {
-            if self.peek(Keyword::Mask).is_some() {
+            if self.peek(Keyword::Mask) {
                 self.accept(Keyword::Mask);
                 if let Some(mask) = self.accept(Keyword::Integer) {
                     cidr = mask.value.parse().unwrap();
@@ -780,15 +776,6 @@ impl Parse {
         }
     }
 
-    // fn parse_float(&mut self) -> Option<Expression> {
-    //     // println!("Parse FLOAT");
-    //     if let Some(tok) = self.accept(Keyword::Float) {
-    //         Some(Expression::Float(tok.value.parse().unwrap()))
-    //     } else {
-    //         None
-    //     }
-    // }
-
     fn parse_array(&mut self) -> Option<Expression> {
         let mut index_values: Vec<u8> = Vec::new();
 
@@ -797,7 +784,7 @@ impl Parse {
                 if let Some(tok) = self.accept(Keyword::Integer) {
                     index_values.push(tok.value.parse::<u8>().unwrap());
                 }
-                if self.peek(Keyword::Comma).is_none() {
+                if !self.peek(Keyword::Comma) {
                     _ = self.expect(Keyword::IndexEnd);
                     break;
                 } else {
@@ -846,7 +833,7 @@ impl Parse {
                     id: field,
                 });
             }
-            if self.peek(Keyword::IndexStart).is_some() {
+            if self.peek(Keyword::IndexStart) {
                 return self.parse_label_byte(tok);
             }
             self.add_type(&tok.value);
