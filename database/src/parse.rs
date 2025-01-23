@@ -279,9 +279,9 @@ impl Parse {
         } else {
             self.has_error = true;
             let msg = format!(
-                "Error expected: [{:?}] found: [{:?}]",
+                "Error expected: [{:?}]",
                 self.peek_keyword.as_ref().unwrap(),
-                self.lookahead.as_ref().unwrap().token
+                // self.lookahead.as_ref().unwrap().token,
             );
             self.error_list.push(ErrorMsg {
                 message: msg,
@@ -361,7 +361,7 @@ impl Parse {
 
         self.token_list = tokenizer.tokenize(&pql).clone();
 
-        if self.accept(Keyword::Select).is_some() {
+        if self.expect(Keyword::Select).is_some() {
             loop {
                 debug!("Select loop");
                 if self.accept(Keyword::Distinct).is_some() {
@@ -385,7 +385,7 @@ impl Parse {
                 }
             }
 
-            if self.accept(Keyword::From).is_some() {
+            if self.expect(Keyword::From).is_some() {
                 debug!("From");
                 while let Some(ffield) = self.expect(Keyword::Identifier) {
                     self.query.from.push(ffield.value);
