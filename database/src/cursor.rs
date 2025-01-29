@@ -15,6 +15,7 @@ pub enum FieldType {
     Timestamp(usize),
     Str(String),
     MacAddr(u64),
+    Bool(bool),
     // Binary(Vec<u8>),
 }
 
@@ -26,6 +27,7 @@ impl fmt::Display for FieldType {
             Self::MacAddr(address) => write!(f, "{}", MacAddr::set_from_int(address)),
             Self::Timestamp(ts) => write!(f, "{}", timestamp_str(ts)),
             Self::Str(value) => write!(f, "{}", value),
+            Self::Bool(value) => write!(f, "{}", value),
             // Self::Binary(value) => write!(f, "{:?}", value),
         }
     }
@@ -51,6 +53,7 @@ impl Field {
             FieldType::MacAddr(value) => json!(MacAddr::set_from_int(value).to_string()),
             FieldType::Str(value) => json!(value),
             FieldType::Timestamp(value) => json!(timestamp_str(&value)),
+            FieldType::Bool(value) => json!(value),
         }
     }
 }
