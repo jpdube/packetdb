@@ -51,7 +51,7 @@ impl PcapFile {
         match self.magic_no {
             HEADER_LE => psize = LittleEndian::read_u32(&pheader[12..16]) as usize,
             HEADER_BE => psize = BigEndian::read_u32(&pheader[12..16]) as usize,
-            _ => psize = 0,
+            _ => psize = LittleEndian::read_u32(&pheader[12..16]) as usize,
         }
 
         data.resize(psize, 0);
