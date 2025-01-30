@@ -74,6 +74,11 @@ impl Packet {
         // self.header.ts_usec = BigEndian::read_u32(&header[4..8]);
         // self.header.inc_len = BigEndian::read_u32(&header[8..12]);
         // self.header.orig_len = BigEndian::read_u32(&header[12..16]);
+
+        if packet.len() < self.header.inc_len as usize {
+            return;
+        }
+
         self.file_id = file_id;
         self.pkt_ptr = pkt_ptr;
 
