@@ -112,11 +112,12 @@ impl fmt::Display for PqlStatement {
         if let Some(interval) = &self.interval {
             write!(
                 f,
-                "Select {}{:?} From: {:?} Where: {:?} Interval: {} Top: {} Offset: {}",
+                "Select {}{:?} From: {:?} Where: {:?} [{:?}] Interval: {} Top: {} Offset: {}",
                 if self.has_distinct { "DISTINCT" } else { "" },
                 self.select,
                 self.from,
                 self.filter,
+                self.filter_fields,
                 interval,
                 self.top,
                 self.offset
@@ -124,8 +125,8 @@ impl fmt::Display for PqlStatement {
         } else {
             write!(
                 f,
-                "Select {} {:?}  From: {:?} Where: {:?} Top: {} Offset: {} Group By: {:?} Aggregate: {:?}",
-                if self.has_distinct {"DISTINCT"} else {""}, self.select, self.from, self.filter, self.top, self.offset, self.groupby_fields, self.aggr_list,
+                "Select {} {:?}  From: {:?} Where: {:?} {:?} Top: {} Offset: {} Group By: {:?} Aggregate: {:?}",
+                if self.has_distinct {"DISTINCT"} else {""}, self.select, self.from, self.filter, self.filter_fields, self.top, self.offset, self.groupby_fields, self.aggr_list,
             )
         }
     }
