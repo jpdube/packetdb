@@ -42,7 +42,7 @@ impl PcapFile {
             self.magic_no = BigEndian::read_u32(&gheader[0..4]);
         }
 
-        if !self.file.read_exact(&mut pheader).is_ok() {
+        if self.file.read_exact(&mut pheader).is_err() {
             return None;
         }
 
