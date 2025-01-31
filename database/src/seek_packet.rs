@@ -11,18 +11,18 @@ use crate::packet_ptr::PacketPtr;
 const HEADER_BE: u32 = 0xa1b2c3d4;
 const HEADER_LE: u32 = 0xd4c3b2a1;
 
-pub struct SeekPacket {
+pub struct SeekPacket<'a> {
     file: BufReader<File>,
     index: usize,
-    plist: PacketPtr,
+    plist: &'a PacketPtr,
     data: Vec<u8>,
     relative_ptr: u64,
     psize: usize,
     magic_no: u32,
 }
 
-impl SeekPacket {
-    pub fn new(packet_list: PacketPtr) -> Self {
+impl<'a> SeekPacket<'a> {
+    pub fn new(packet_list: &'a PacketPtr) -> Self {
         let fname = &format!("{}/{}.pcap", config::CONFIG.db_path, packet_list.file_id);
 
         let mut magic_file = BufReader::new(File::open(fname).unwrap());

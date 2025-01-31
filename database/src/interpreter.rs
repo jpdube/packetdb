@@ -91,7 +91,7 @@ impl Interpreter {
     }
 
     pub fn run_pgm_seek(&self, packet_list: &PacketPtr, top_limit: usize) -> Vec<Packet> {
-        let mut seek_pkt = SeekPacket::new(packet_list.clone());
+        let mut seek_pkt = SeekPacket::new(packet_list);
         let mut counter: usize = 0;
         // let mut packet_ptr: Vec<Record> = Vec::new();
         let mut result: Vec<Packet> = Vec::new();
