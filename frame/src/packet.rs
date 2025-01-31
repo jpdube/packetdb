@@ -65,15 +65,25 @@ impl Packet {
         Packet::default()
     }
 
-    pub fn set_packet(&mut self, packet: Vec<u8>, header: [u8; 16], file_id: u32, pkt_ptr: u32) {
-        self.header.ts_sec = LittleEndian::read_u32(&header[0..4]);
-        self.header.ts_usec = LittleEndian::read_u32(&header[4..8]);
-        self.header.inc_len = LittleEndian::read_u32(&header[8..12]);
-        self.header.orig_len = LittleEndian::read_u32(&header[12..16]);
-        // self.header.ts_sec = BigEndian::read_u32(&header[0..4]);
-        // self.header.ts_usec = BigEndian::read_u32(&header[4..8]);
-        // self.header.inc_len = BigEndian::read_u32(&header[8..12]);
-        // self.header.orig_len = BigEndian::read_u32(&header[12..16]);
+    pub fn set_packet(
+        &mut self,
+        packet: Vec<u8>,
+        header: [u8; 16],
+        file_id: u32,
+        pkt_ptr: u32,
+        little_endian: bool,
+    ) {
+        if little_endian {
+            self.header.ts_sec = LittleEndian::read_u32(&header[0..4]);
+            self.header.ts_usec = LittleEndian::read_u32(&header[4..8]);
+            self.header.inc_len = LittleEndian::read_u32(&header[8..12]);
+            self.header.orig_len = LittleEndian::read_u32(&header[12..16]);
+        } else {
+            self.header.ts_sec = BigEndian::read_u32(&header[0..4]);
+            self.header.ts_usec = BigEndian::read_u32(&header[4..8]);
+            self.header.inc_len = BigEndian::read_u32(&header[8..12]);
+            self.header.orig_len = BigEndian::read_u32(&header[12..16]);
+        }
 
         if packet.len() < self.header.inc_len as usize {
             return;

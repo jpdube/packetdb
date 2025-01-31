@@ -63,9 +63,16 @@ impl SeekPacket {
 
         //--- Must determine what to do when psize is zero. The file pointer will
         //--- not advance and we will spin on our self
+        let mut little_endian = true;
         match self.magic_no {
-            HEADER_LE => self.psize = LittleEndian::read_u32(&pheader[12..16]) as usize,
-            HEADER_BE => self.psize = BigEndian::read_u32(&pheader[12..16]) as usize,
+            HEADER_LE => {
+                self.psize = LittleEndian::read_u32(&pheader[12..16]) as usize;
+                little_endian = true;
+            }
+            HEADER_BE => {
+                self.psize = BigEndian::read_u32(&pheader[12..16]) as usize;
+                little_endian = false;
+            }
             _ => self.psize = 0,
         }
 
@@ -84,6 +91,7 @@ impl SeekPacket {
             pheader,
             self.plist.file_id,
             self.plist.pkt_ptr[self.index] as u32,
+            little_endian,
         );
         self.index += 1;
 

@@ -32,6 +32,7 @@ impl PcapFile {
         let mut gheader = [0; 24];
         let mut pheader = [0; 16];
         let mut data = Vec::new();
+        let mut little_endian: bool = true;
 
         let psize: usize;
 
@@ -49,8 +50,14 @@ impl PcapFile {
         //--- Must determine what to do when psize is zero. The file pointer will
         //--- not advance and we will spin on our self
         match self.magic_no {
-            HEADER_LE => psize = LittleEndian::read_u32(&pheader[12..16]) as usize,
-            HEADER_BE => psize = BigEndian::read_u32(&pheader[12..16]) as usize,
+            HEADER_LE => {
+                psize = LittleEndian::read_u32(&pheader[12..16]) as usize;
+                little_endian = true;
+            }
+            HEADER_BE => {
+                psize = BigEndian::read_u32(&pheader[12..16]) as usize;
+                little_endian = false;
+            }
             _ => psize = LittleEndian::read_u32(&pheader[12..16]) as usize,
         }
 
@@ -58,7 +65,7 @@ impl PcapFile {
         self.file.read_exact(&mut data).unwrap();
 
         let mut pkt = Packet::new();
-        pkt.set_packet(data, pheader, self.file_id, self.pkt_ptr);
+        pkt.set_packet(data, pheader, self.file_id, self.pkt_ptr, little_endian);
         self.pkt_ptr += 16 + (psize as u32);
 
         Some(pkt)
