@@ -173,7 +173,6 @@ pub enum Expression {
     LabelByte(u32, usize, usize),
     Array(Vec<u8>),
     ArrayLong(Vec<u64>),
-    // ArrayIpv4(Vec<Box<Expression>>),
     Boolean(bool),
     Integer(u32),
     Long(u64),
@@ -302,7 +301,6 @@ impl Parse {
             let msg = format!(
                 "Error expected: [{:?}]",
                 self.peek_keyword.as_ref().unwrap(),
-                // self.lookahead.as_ref().unwrap().token,
             );
             self.error_list.push(ErrorMsg {
                 message: msg,
