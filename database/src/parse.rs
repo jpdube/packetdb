@@ -16,13 +16,15 @@ use log::debug;
 use std::collections::HashSet;
 use std::{fmt, usize};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Operator {
     Add,
     Substract,
     Multiply,
     Mask,
     Equal,
+    In,
+    NotIn,
     NE,
     LT,
     LE,
@@ -49,6 +51,8 @@ impl fmt::Display for Operator {
             Self::LAND => write!(f, " AND "),
             Self::LOR => write!(f, " OR "),
             Self::Equal => write!(f, " == "),
+            Self::In => write!(f, " IN "),
+            Self::NotIn => write!(f, " NOT IN "),
             Self::NE => write!(f, " != "),
             Self::LT => write!(f, " < "),
             Self::LE => write!(f, " <= "),
@@ -95,6 +99,9 @@ pub struct PqlStatement {
     pub has_distinct: bool,
     pub aggr_list: Vec<Aggregate>,
     pub groupby_fields: Vec<SelectField>,
+    pub id_search: Vec<u64>,
+    prev_label: String,
+    prev_op: Operator,
 }
 
 impl PqlStatement {
@@ -104,6 +111,10 @@ impl PqlStatement {
 
     pub fn has_aggregate(&self) -> bool {
         self.aggr_list.len() != 0
+    }
+
+    pub fn has_id_search(&self) -> bool {
+        self.id_search.len() > 0
     }
 }
 
@@ -147,6 +158,9 @@ impl Default for PqlStatement {
             ip_list: Vec::new(),
             aggr_list: Vec::new(),
             groupby_fields: Vec::new(),
+            id_search: Vec::new(),
+            prev_label: String::new(),
+            prev_op: Operator::NotIn,
         }
     }
 }
@@ -158,8 +172,11 @@ pub enum Expression {
     Label(u32),
     LabelByte(u32, usize, usize),
     Array(Vec<u8>),
+    ArrayLong(Vec<u64>),
+    // ArrayIpv4(Vec<Box<Expression>>),
     Boolean(bool),
     Integer(u32),
+    Long(u64),
     IPv4(u32, u8),
     Timestamp(u32),
     MacAddress(u64),
@@ -184,11 +201,14 @@ impl fmt::Display for Expression {
                 write!(f, "Label byte({},{},{})", lbl, offset, length)
             }
             Self::Integer(value) => write!(f, "Integer({})", value),
+            Self::Long(value) => write!(f, "Logn({})", value),
             Self::Timestamp(value) => write!(f, "Timestamp({})", value),
             Self::IPv4(ip_addr, cidr) => write!(f, "IPv4({})", IPv4::new(*ip_addr, *cidr as u8)),
             Self::Boolean(value) => write!(f, "Bool: {}", value),
             Self::MacAddress(mac_addr) => write!(f, "Mac({})", MacAddr::set_from_int(mac_addr)),
             Self::Array(array_bytes) => write!(f, "Array({:?})", array_bytes),
+            Self::ArrayLong(values) => write!(f, "Array Long({:?})", values),
+            // Self::ArrayIpv4(array_value) => write!(f, "Array of IPV4({:?})", array_value),
             Self::NoOp => write!(f, "NoOp"),
         }
     }
@@ -364,7 +384,6 @@ impl Parse {
 
         if self.expect(Keyword::Select).is_some() {
             loop {
-                debug!("Select loop");
                 if self.accept(Keyword::Distinct).is_some() {
                     self.query.has_distinct = true;
                 }
@@ -592,6 +611,21 @@ impl Parse {
                 Box::new(leftval),
                 Box::new(self.parse_factor().unwrap()),
             ))
+        } else if self.accept(Keyword::In).is_some() {
+            debug!("IN Operator");
+            self.query.prev_op = Operator::In;
+            Some(Expression::BinOp(
+                Operator::In,
+                Box::new(leftval),
+                Box::new(self.parse_factor().unwrap()),
+            ))
+        } else if self.accept(Keyword::NotIn).is_some() {
+            debug!("NOT IN Operator");
+            Some(Expression::BinOp(
+                Operator::NotIn,
+                Box::new(leftval),
+                Box::new(self.parse_factor().unwrap()),
+            ))
         } else if self.accept(Keyword::Lt).is_some() {
             Some(Expression::BinOp(
                 Operator::LT,
@@ -702,11 +736,21 @@ impl Parse {
 
     fn parse_int(&mut self) -> Option<Expression> {
         if let Some(tok) = self.accept(Keyword::Integer) {
-            Some(Expression::Integer(tok.value.parse().unwrap()))
+            if let Ok(int_val) = tok.value.parse::<u32>() {
+                return Some(Expression::Integer(int_val));
+            } else if let Ok(long_val) = tok.value.parse::<u64>() {
+                debug!("Found Long: {}", long_val);
+                return Some(Expression::Long(long_val));
+            } else {
+                return None;
+            }
+            // Expression::Integer(tok.value.parse().unwrap())
+            // Some(Expression::Integer(tok.value.parse().unwrap()))
         } else {
             None
         }
     }
+
     fn parse_constant(&mut self) -> Option<Expression> {
         if let Some(tok) = self.accept(Keyword::Constant) {
             match tok.value.as_str() {
@@ -777,7 +821,35 @@ impl Parse {
         }
     }
 
+    // fn parse_list(&mut self) -> Option<Expression> {
+    //     // let mut index_values: Vec<u8> = Vec::new();
+
+    //     let mut index_values: Vec<Box<Expression>> = Vec::new();
+    //     if self.accept(Keyword::IndexStart).is_some() {
+    //         loop {
+    //             if self.peek(Keyword::IpV4) {
+    //                 if let Some(ipv4) = self.parse_ipv4() {
+    //                     index_values.push(Box::new(ipv4));
+    //                 }
+    //                 if !self.peek(Keyword::Comma) {
+    //                     _ = self.expect(Keyword::IndexEnd);
+    //                     break;
+    //                 } else {
+    //                     self.expect(Keyword::Comma);
+    //                 }
+    //             }
+    //         }
+
+    //         return Some(Expression::ArrayIpv4(index_values.clone()));
+    //     } else {
+    //         None
+    //     }
+    // }
+
     fn parse_array(&mut self) -> Option<Expression> {
+        if self.query.prev_label == "frame.id" {
+            return self.parse_long_array();
+        }
         let mut index_values: Vec<u8> = Vec::new();
 
         if self.accept(Keyword::IndexStart).is_some() {
@@ -794,6 +866,38 @@ impl Parse {
             }
 
             return Some(Expression::Array(index_values.clone()));
+        } else {
+            None
+        }
+    }
+
+    fn parse_long_array(&mut self) -> Option<Expression> {
+        let mut index_values: Vec<u64> = Vec::new();
+
+        if self.accept(Keyword::IndexStart).is_some() {
+            loop {
+                if let Some(tok) = self.accept(Keyword::Integer) {
+                    let long_value = tok.value.parse::<u64>().unwrap();
+                    index_values.push(long_value);
+
+                    if self.query.prev_label == "frame.id" && self.query.prev_op == Operator::In {
+                        self.query.id_search.push(long_value);
+                    }
+                }
+                if !self.peek(Keyword::Comma) {
+                    _ = self.expect(Keyword::IndexEnd);
+                    break;
+                } else {
+                    self.expect(Keyword::Comma);
+                }
+            }
+
+            debug!(
+                "LONG Array list:  {}:{:?}",
+                self.query.prev_label, self.query.id_search
+            );
+
+            return Some(Expression::ArrayLong(index_values));
         } else {
             None
         }
@@ -839,6 +943,8 @@ impl Parse {
             }
             self.add_type(&tok.value);
             if let Some(field) = string_to_int(&tok.value) {
+                self.query.prev_label = tok.value.clone();
+                debug!("PREV LABEL: {}", self.query.prev_label);
                 return Some(Expression::Label(field));
             }
         }

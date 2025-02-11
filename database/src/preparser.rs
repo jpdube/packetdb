@@ -62,6 +62,7 @@ impl Preparser {
             self.get_as();
             self.get_groupby();
             self.get_label();
+            self.not_in();
 
             if let Some(tok) = self.advance() {
                 self.token_list.push(tok.clone());
@@ -69,6 +70,28 @@ impl Preparser {
         }
 
         self.token_list.clone()
+    }
+
+    fn not_in(&mut self) {
+        let column;
+        let line;
+
+        if self.peek_at(0, Keyword::Not).is_some() && self.peek_at(1, Keyword::In).is_some() {
+            let tok = self.advance().unwrap();
+            column = tok.column;
+            line = tok.line;
+
+            self.advance();
+
+            let token = Token {
+                token: Keyword::NotIn,
+                value: "not in".to_string(),
+                column,
+                line,
+            };
+
+            self.token_list.push(token);
+        }
     }
 
     fn get_count(&mut self) {

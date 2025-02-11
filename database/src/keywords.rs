@@ -65,6 +65,9 @@ pub enum Keyword {
     Var,
     Assign,
     Print,
+    Not,
+    In,
+    NotIn,
 }
 
 impl fmt::Display for Keyword {

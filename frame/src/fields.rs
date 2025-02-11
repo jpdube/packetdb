@@ -89,6 +89,7 @@ pub fn string_to_int(field_str: &str) -> Option<u32> {
         "frame.inclen" => Some(FRAME_INC_LEN),
         "frame.file_id" => Some(FRAME_FILE_ID),
         "frame.pkt_ptr" => Some(FRAME_PKT_PTR),
+        "frame.id" => Some(FRAME_ID),
 
         //--- Ethernet
         "eth.src" => Some(ETH_SRC_MAC),

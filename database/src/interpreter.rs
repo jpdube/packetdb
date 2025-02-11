@@ -16,6 +16,7 @@ pub enum Object {
     MacAddress(u64),
     _Label(u32),
     ByteArray(Vec<u8>),
+    LongArray(Vec<u64>),
     // _Label(String),
     Null,
 }
@@ -32,6 +33,7 @@ impl Display for Object {
             Object::Boolean(value) => write!(f, "Bool: {}", value),
             Object::_Label(value) => write!(f, "Label: {:x}", value),
             Object::ByteArray(value) => write!(f, "Byte array: {:?}", value),
+            Object::LongArray(value) => write!(f, "Long array: {:?}", value),
             Object::Timestamp(value) => write!(f, "Timestamp: {:x}", value),
             Object::MacAddress(mac) => write!(f, "Mac: {:x}", mac),
             Object::Null => write!(f, "null"),
@@ -49,6 +51,7 @@ impl Object {
             Object::Timestamp(_) => "Timestamp",
             Object::MacAddress(_) => "MacAddress",
             Object::ByteArray(_) => "ByteArray",
+            Object::LongArray(_) => "LongArray",
             Object::Null => "Null",
         }
         .to_string()
@@ -121,6 +124,8 @@ impl Interpreter {
     fn eval_expression(&self, expression: &Expression, pkt: &Packet) -> Result<Object, EvalError> {
         match expression {
             Expression::Integer(i) => Ok(Object::Integer(*i as u64)),
+            Expression::ArrayLong(values) => Ok(Object::LongArray(values.clone())),
+            Expression::Long(i) => Ok(Object::Integer(*i as u64)),
             Expression::Timestamp(t) => Ok(Object::Timestamp(*t)),
             Expression::Label(value) => Ok(Object::Integer(pkt.get_field(*value) as u64)),
             Expression::LabelByte(field, offset, len) => {
@@ -150,6 +155,9 @@ impl Interpreter {
             (Object::Integer(i), Object::Integer(j)) => {
                 self.eval_integer_infix_expression(operator, *i, *j)
             }
+            (Object::Integer(i), Object::LongArray(j)) => {
+                self.eval_larray_infix_expression(operator, *i, j.clone())
+            }
             (Object::Boolean(b0), Object::Boolean(b1)) => {
                 self.eval_boolean_infix_expression(operator, *b0, *b1)
             }
@@ -173,6 +181,30 @@ impl Interpreter {
             (_, _) => Err(EvalError::TypeMismatch(
                 format!("{} {} {}", left.debug_type(), operator, right.debug_type()),
                 "eval_infix_expression".to_string(),
+            )),
+        }
+    }
+
+    fn value_in_long_array(&self, target: u64, long_array: Vec<u64>) -> bool {
+        long_array.contains(&target)
+    }
+
+    fn eval_larray_infix_expression(
+        &self,
+        operator: &Operator,
+        left_array: u64,
+        right_array: Vec<u64>,
+    ) -> Result<Object, EvalError> {
+        match operator {
+            Operator::In => Ok(Object::get_bool(
+                self.value_in_long_array(left_array, right_array),
+            )),
+            Operator::NotIn => Ok(Object::get_bool(
+                !self.value_in_long_array(left_array, right_array),
+            )),
+            _ => Err(EvalError::UnknownOperator(
+                format!("{}", operator),
+                "eval_integer_infix_expression".to_string(),
             )),
         }
     }

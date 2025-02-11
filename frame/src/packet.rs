@@ -215,6 +215,8 @@ impl Packet {
     }
 
     pub fn get_field(&self, field: u32) -> usize {
+        // let (id_file, id_ptr) = self.decode_id(self.get_id());
+        // println!("DECODED ID: {},{}", id_file, id_ptr);
         if self.field_type(field, fields::ETH_BASE) && self.eth_packet.is_some() {
             self.eth_packet.as_ref().unwrap().get_field(field)
         } else if self.field_type(field, fields::ARP_BASE) && self.arp_packet.is_some() {
@@ -235,9 +237,26 @@ impl Packet {
                 fields::FRAME_INC_LEN => self.inc_len() as usize,
                 fields::FRAME_FILE_ID => self.file_id as usize,
                 fields::FRAME_PKT_PTR => self.pkt_ptr as usize,
+                fields::FRAME_ID => self.get_id() as usize,
                 _ => usize::MAX,
             }
         }
+    }
+
+    pub fn get_id(&self) -> u64 {
+        let mut result: u64 = self.file_id as u64;
+
+        result = result << 32;
+        result = result | self.pkt_ptr as u64;
+
+        result
+    }
+
+    pub fn decode_id(&self, id: u64) -> (u32, u32) {
+        let file_id: u32 = (id >> 32) as u32;
+        let pkt_ptr: u32 = (id & 0x0000ffff) as u32;
+
+        (file_id, pkt_ptr)
     }
 
     pub fn get_field_byte(&self, field: u32, offset: usize, len: usize) -> Vec<u8> {
@@ -263,9 +282,9 @@ impl Packet {
         pkt
     }
 
-    pub fn get_id(&self) -> String {
-        format!("{}:{}", self.file_id, self.pkt_ptr)
-    }
+    // pub fn get_id(&self) -> String {
+    //     format!("{}:{}", self.file_id, self.pkt_ptr)
+    // }
 
     //----------------------------------------------------
     //--- Frame section

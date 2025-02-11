@@ -83,6 +83,8 @@ pub fn get_keywords(str_token: &str) -> Option<Keyword> {
         "sum" => Some(Keyword::Sum),
         "avg" => Some(Keyword::Average),
         "bandwidth" => Some(Keyword::Bandwidth),
+        "in" => Some(Keyword::In),
+        "not" => Some(Keyword::Not),
 
         _ => None,
     }

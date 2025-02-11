@@ -71,10 +71,11 @@ impl QueryResult {
             }
         }
 
-        let pkt_id = pkt.get_id();
+        let pkt_id = pkt.get_id() as u64;
+        // println!("FRAME ID: {:x}", pkt_id);
         record.add_field(Field {
             name: String::from("frame.id"),
-            field: FieldType::Str(pkt_id),
+            field: FieldType::Number(pkt_id as usize),
         });
 
         let ts = pkt.get_field(FRAME_TIMESTAMP);

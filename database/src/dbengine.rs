@@ -4,7 +4,9 @@ use crate::exec_plan::ExecutionPlan;
 use crate::index_manager::{IndexManager, ProtoStat};
 use crate::interpreter::Interpreter;
 use crate::parse::{Parse, PqlStatement};
+use crate::pcapfile::PcapFile;
 use crate::query_result::QueryResult;
+use frame::packet::Packet;
 
 use anyhow::Result;
 use log::{debug, info};
@@ -44,25 +46,40 @@ impl DbEngine {
             println!("Chunk size: {}", self.chunk_size(&expr));
             let nbr_cores = self.chunk_size(&expr);
 
-            match self.get_index_files() {
-                Ok(pkt_list) => {
-                    while !query_result.count_reach() {
-                        for chunk_id in pkt_list.chunks(nbr_cores) {
-                            file_count += nbr_cores;
+            if expr.has_id_search() {
+                debug!("In ID search");
+                let pkt_result = self.get_id_packets(expr.id_search);
+                for p in pkt_result {
+                    query_result.add(p);
+                }
 
-                            let interp_result: Vec<_> = chunk_id
-                                .into_par_iter()
-                                .map(|file_id| {
-                                    let mut pkt_index = IndexManager::default();
-                                    let ptr = pkt_index.search_index(&expr, *file_id);
+                self.exec_plan.stop();
+                self.exec_plan.show();
+                Ok(query_result.get_result())
+            } else {
+                match self.get_index_files() {
+                    Ok(pkt_list) => {
+                        while !query_result.count_reach() {
+                            for chunk_id in pkt_list.chunks(nbr_cores) {
+                                file_count += nbr_cores;
 
-                                    interpreter.run_pgm_seek(&ptr, expr.top)
-                                })
-                                .collect();
+                                let interp_result: Vec<_> = chunk_id
+                                    .into_par_iter()
+                                    .map(|file_id| {
+                                        let mut pkt_index = IndexManager::default();
+                                        let ptr = pkt_index.search_index(&expr, *file_id);
 
-                            for c in interp_result {
-                                for r in c {
-                                    query_result.add(r);
+                                        interpreter.run_pgm_seek(&ptr, expr.top)
+                                    })
+                                    .collect();
+
+                                for c in interp_result {
+                                    for r in c {
+                                        query_result.add(r);
+                                        if query_result.count_reach() {
+                                            break;
+                                        }
+                                    }
                                     if query_result.count_reach() {
                                         break;
                                     }
@@ -71,22 +88,38 @@ impl DbEngine {
                                     break;
                                 }
                             }
-                            if query_result.count_reach() {
-                                break;
-                            }
+                            info!("Nbr files searched: {}", file_count);
                         }
-                        info!("Nbr files searched: {}", file_count);
                     }
+                    Err(e) => println!("Error with index error:{}", e),
                 }
-                Err(e) => println!("Error with index error:{}", e),
-            }
 
-            self.exec_plan.stop();
-            self.exec_plan.show();
-            Ok(query_result.get_result())
+                self.exec_plan.stop();
+                self.exec_plan.show();
+                Ok(query_result.get_result())
+            }
         } else {
             Err(String::from("Error reading database"))
         }
+    }
+
+    fn get_id_packets(&self, id_list: Vec<u64>) -> Vec<Packet> {
+        let mut result: Vec<Packet> = Vec::new();
+
+        for id in id_list {
+            let file_id: u32 = (id >> 32) as u32;
+            let ptr: u32 = (id & 0xffff) as u32;
+            debug!("ID search for {}:{}", file_id, ptr);
+            let mut pcapfile = PcapFile::new(file_id, &CONFIG.db_path);
+
+            if let Some(pkt) = pcapfile.seek(ptr) {
+                debug!("ID pkt ID: {}", pkt.get_field(7));
+                result.push(pkt);
+            }
+        }
+        // debug!("ID seek result: {:#?}", result);
+
+        result
     }
 
     fn chunk_size(&self, expr: &PqlStatement) -> usize {

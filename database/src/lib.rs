@@ -7,6 +7,7 @@ pub mod index_manager;
 pub mod interpreter;
 pub mod keywords;
 pub mod lexer;
+pub mod packet_id;
 pub mod packet_ptr;
 pub mod parse;
 pub mod pcapfile;
