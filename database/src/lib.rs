@@ -1,6 +1,7 @@
 pub mod aggregate;
 pub mod config;
 pub mod cursor;
+pub mod dbconfig;
 pub mod dbengine;
 pub mod exec_plan;
 pub mod index_manager;

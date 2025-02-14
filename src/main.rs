@@ -8,6 +8,7 @@ use std::{env, process};
 
 use crate::api_server::web_main;
 use clap::Parser;
+use sniffer::capture::capture;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -38,13 +39,20 @@ fn process_params() {
     info!("Config: {}", CONFIG.db_path);
 }
 
-#[actix_web::main]
-async fn main() -> std::io::Result<()> {
+fn main() {
     about();
-    process_params();
-    web_main().await?;
-    Ok(())
+    match capture("en0") {
+        Ok(_) => println!("Success"),
+        Err(msg) => println!("Error: {}", msg),
+    }
 }
+// #[actix_web::main]
+// async fn main() -> std::io::Result<()> {
+//     about();
+//     process_params();
+//     web_main().await?;
+//     Ok(())
+// }
 
 fn about() {
     println!("-----------------------");
