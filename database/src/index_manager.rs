@@ -340,9 +340,6 @@ impl IndexManager {
             .append(true)
             .open(index_file)
             .unwrap();
-        // let mut writer = BufWriter::new(
-        //     File::open(index_file).unwrap(),
-        // );
         writer
             .write_u32::<BigEndian>(master_index.start_timestamp)
             .unwrap();
