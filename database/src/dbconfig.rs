@@ -1,5 +1,5 @@
 use crate::config::CONFIG;
-// use anyhow::Result;
+use anyhow::Result;
 use rusqlite::Connection;
 
 struct FileID {
@@ -10,17 +10,17 @@ struct FileID {
 pub struct DBConfig {}
 
 impl DBConfig {
-    pub fn next_fileid(&mut self) -> u32 {
-        let conn = Connection::open(format!("{}/master.db", &CONFIG.master_index_path)).unwrap();
+    pub fn next_fileid(&mut self) -> Result<u32> {
+        let path = format!("{}/master.db", &CONFIG.master_index_path);
 
-        let mut stmt = conn
-            .prepare("select file_id from config where id = 1;")
-            .unwrap();
+        let conn = Connection::open(path)?;
+
+        let mut stmt = conn.prepare("select file_id from config where id = 1;")?;
 
         let fileid_iter = stmt
             .query_map([], |row| {
                 Ok(FileID {
-                    file_id: row.get(0).unwrap(),
+                    file_id: row.get(0)?,
                 })
             })
             .unwrap();
@@ -30,16 +30,10 @@ impl DBConfig {
             file_id = c.unwrap().file_id;
         }
 
-        self.increment_fileid(file_id as u32);
+        let inc_sql = "update config set file_id = ? where id = 1;";
 
-        file_id as u32
-    }
+        let _ = conn.execute(inc_sql, [file_id + 1]);
 
-    fn increment_fileid(&mut self, file_id: u32) {
-        let conn = Connection::open(format!("{}/master.db", &CONFIG.master_index_path)).unwrap();
-
-        let sql = "update config set file_id = ? where id = 1;";
-
-        let _ = conn.execute(sql, [file_id + 1]);
+        Ok(file_id as u32)
     }
 }
