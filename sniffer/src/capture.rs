@@ -1,3 +1,4 @@
+use anyhow::Result;
 use byteorder::{LittleEndian, WriteBytesExt};
 use database::config::CONFIG;
 use database::dbconfig::DBConfig;
@@ -24,7 +25,7 @@ struct PacketRef {
     ts_us: u32,
 }
 
-pub fn capture(device_name: &str) -> Result<(), pcap::Error> {
+pub fn capture(device_name: &str) -> Result<()> {
     println!("Capture device: {}", device_name);
     let (tx_packet, rx_packet) = mpsc::channel();
     let (tx_db, rx_db) = mpsc::channel();
@@ -90,7 +91,7 @@ pub fn capture(device_name: &str) -> Result<(), pcap::Error> {
             packet: packet.data.to_vec(),
         };
 
-        let _ = tx_packet.send(pkt).unwrap();
+        let _ = tx_packet.send(pkt)?;
     }
 
     Ok(())
