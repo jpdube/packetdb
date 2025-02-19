@@ -1,14 +1,14 @@
 pub mod api_server;
 pub mod jwebtoken;
 
+use crate::api_server::web_main;
 use database::config::CONFIG;
 use database::dbengine::DbEngine;
 use log::info;
+use sniffer::capture::capture;
 use std::{env, process};
 
-use crate::api_server::web_main;
 use clap::Parser;
-use sniffer::capture::capture;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -18,6 +18,9 @@ struct Args {
 
     #[arg(short, long, default_value_t = false)]
     index: bool,
+
+    #[arg(short, long, default_value_t = String::new())]
+    capture: String,
 }
 
 fn process_params() {
@@ -30,6 +33,13 @@ fn process_params() {
         env::set_var("PACKETDB_CONFIG", args.config);
     }
 
+    if args.capture.len() > 0 {
+        match capture(&args.capture) {
+            Ok(()) => println!("Capture sucessfull"),
+            Err(msg) => eprintln!("Error capturing: {}", msg),
+        }
+    }
+
     if args.index {
         let db = DbEngine::new();
         db.create_index();
@@ -39,20 +49,13 @@ fn process_params() {
     info!("Config: {}", CONFIG.db_path);
 }
 
-fn main() {
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
     about();
-    match capture("en0") {
-        Ok(_) => println!("Success"),
-        Err(msg) => println!("Error: {}", msg),
-    }
+    process_params();
+    web_main().await?;
+    Ok(())
 }
-// #[actix_web::main]
-// async fn main() -> std::io::Result<()> {
-//     about();
-//     process_params();
-//     web_main().await?;
-//     Ok(())
-// }
 
 fn about() {
     println!("-----------------------");
