@@ -8,9 +8,7 @@ use std::io::prelude::*;
 use std::io::{BufWriter, Write};
 use std::sync::mpsc;
 use std::thread;
-// use std::time::SystemTime;
 
-// const BUFFER_SIZE: usize = 32;
 const MAX_PACKETS_PER_FILE: u32 = 50_000;
 
 const GLOBAL_HDR: [u8; 24] = [
@@ -33,7 +31,6 @@ pub fn capture(device_name: &str) -> Result<(), pcap::Error> {
     println!("Capture device: {}", device_name);
     let (tx_packet, rx_packet) = mpsc::channel();
     let (tx_db, rx_db) = mpsc::channel();
-    // let channel_list: Vec<(tx_packet, rx_packet)> = Vec::new();
 
     thread::spawn(move || {
         let index_mgr: IndexManager = IndexManager::default();
@@ -86,14 +83,7 @@ pub fn capture(device_name: &str) -> Result<(), pcap::Error> {
         }
     });
 
-    // for dev in list {
-    // println!("Device: {:?}", dev);
-    // if dev.name == *device_name {
-    // println!("Device list: {:#?}", list);
-
     println!("Starting capture on interface");
-    // let cap1 = Capture::from_device("en0")?;
-    // let mut cap = cap1.open()?;
     let mut cap = Capture::from_device(device_name)
         .unwrap()
         .promisc(true)
@@ -102,7 +92,6 @@ pub fn capture(device_name: &str) -> Result<(), pcap::Error> {
 
     println!("Starting packet capture");
     while let Ok(packet) = cap.next_packet() {
-        // println!("Received packet: {:?}", packet);
         let pkt = PacketRef {
             orig_len: packet.header.len,
             cap_len: packet.header.caplen,
@@ -112,7 +101,8 @@ pub fn capture(device_name: &str) -> Result<(), pcap::Error> {
             file_id: 0,
             pkt_ptr: 0,
         };
-        let _ = tx_packet.send(pkt.clone()).unwrap();
+
+        let _ = tx_packet.send(pkt).unwrap();
     }
 
     Ok(())
