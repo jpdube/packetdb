@@ -9,6 +9,7 @@ use frame::ipv4_address::IPv4;
 use frame::packet::Packet;
 use log::{error, info};
 use rayon::prelude::*;
+use remove_dir_all::remove_dir_contents;
 use rusqlite::Connection;
 use std::collections::{HashMap, HashSet};
 use std::fs;
@@ -191,6 +192,14 @@ impl IndexManager {
         ((cindex & search_value) == search_value) && ip_found
     }
 
+    pub fn index_one_file(&self, file_id: u32) -> bool {
+        let master_index = self.index_file(file_id);
+
+        self.save_master(master_index);
+
+        true
+    }
+
     pub fn index_file(&self, filename: u32) -> MasterIndex {
         let mut pfile = PcapFile::new(filename, &CONFIG.db_path);
         let idx_filename = &format!("{}/{}.pidx", &CONFIG.index_path, filename);
@@ -310,6 +319,7 @@ impl IndexManager {
     }
 
     pub fn create_index(&self) {
+        remove_dir_contents(&CONFIG.index_path).unwrap();
         match self.get_packet_files() {
             Ok(files_list) => {
                 let result: Vec<MasterIndex> = (files_list)
@@ -317,16 +327,37 @@ impl IndexManager {
                     .map(|pkt| self.index_file(pkt as u32))
                     .collect();
 
-                self.save_master(result);
+                self.create_master(result);
             }
             Err(msg) => error!("Error index files: {}", msg),
         }
     }
 
-    pub fn save_master(&self, master_index: Vec<MasterIndex>) {
-        let mut writer = BufWriter::new(
-            File::create(format!("{}/master.pidx", CONFIG.master_index_path)).unwrap(),
-        );
+    pub fn save_master(&self, master_index: MasterIndex) {
+        let index_file = format!("{}/master.pidx", CONFIG.master_index_path);
+        let mut writer = fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(index_file)
+            .unwrap();
+        // let mut writer = BufWriter::new(
+        //     File::open(index_file).unwrap(),
+        // );
+        writer
+            .write_u32::<BigEndian>(master_index.start_timestamp)
+            .unwrap();
+        writer
+            .write_u32::<BigEndian>(master_index.end_timestamp)
+            .unwrap();
+        writer
+            .write_u32::<BigEndian>(master_index.file_ptr)
+            .unwrap();
+    }
+
+    pub fn create_master(&self, master_index: Vec<MasterIndex>) {
+        let index_file = format!("{}/master.pidx", CONFIG.master_index_path);
+        println!("Master index file: {}", index_file);
+        let mut writer = BufWriter::new(File::create(index_file).unwrap());
         for p in master_index {
             writer.write_u32::<BigEndian>(p.start_timestamp).unwrap();
             writer.write_u32::<BigEndian>(p.end_timestamp).unwrap();
