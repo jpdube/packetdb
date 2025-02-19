@@ -22,4 +22,5 @@ byteorder = "1.4.3"
 ipnet = "2.5.1"
 anyhow = "1.0.75"
 rusqlite = "0.31.0"
+remove_dir_all = "1.0.0"
 
