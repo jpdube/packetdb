@@ -102,7 +102,7 @@ pub async fn web_main() -> std::io::Result<()> {
     .await
 }
 
-fn get_hash_pwd(password: &str) -> String {
+fn _get_hash_pwd(password: &str) -> String {
     let salt = SaltString::generate(&mut OsRng);
 
     let argon2 = Argon2::default();
@@ -113,7 +113,7 @@ fn get_hash_pwd(password: &str) -> String {
         .to_string()
 }
 
-fn validate_pwd(password: &str, password_hash: &str) -> bool {
+fn _validate_pwd(password: &str, password_hash: &str) -> bool {
     let parsed_hash = PasswordHash::new(&password_hash).unwrap();
     Argon2::default()
         .verify_password(password.as_bytes(), &parsed_hash)
