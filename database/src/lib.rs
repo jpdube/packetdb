@@ -5,6 +5,7 @@ pub mod dbconfig;
 pub mod dbengine;
 pub mod exec_plan;
 pub mod index_manager;
+pub mod init_db;
 pub mod interpreter;
 pub mod keywords;
 pub mod lexer;

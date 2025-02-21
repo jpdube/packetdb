@@ -4,6 +4,7 @@ pub mod jwebtoken;
 use crate::api_server::web_main;
 use database::config::CONFIG;
 use database::dbengine::DbEngine;
+use database::init_db::InitDb;
 use log::info;
 use sniffer::capture::capture;
 use std::{env, process};
@@ -31,6 +32,8 @@ fn process_params() {
 
     if args.config.len() > 0 {
         env::set_var("PACKETDB_CONFIG", args.config);
+        let init_db = InitDb::default();
+        init_db.init_db().unwrap();
     }
 
     if args.capture.len() > 0 {
@@ -52,6 +55,7 @@ fn process_params() {
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     about();
+
     process_params();
     web_main().await?;
     Ok(())
