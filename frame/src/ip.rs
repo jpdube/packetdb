@@ -5,13 +5,23 @@ use crate::packet_display::PacketDisplay;
 use byteorder::{BigEndian, ByteOrder};
 
 #[derive(Debug, Clone, Default)]
-pub struct IpFrame {
-    ip_packet: Vec<u8>,
+pub struct IpFrame<'a> {
+    // ip_packet: Vec<u8>,
+    ip_packet: &'a [u8],
 }
 
-impl IpFrame {
-    pub fn set_packet(&mut self, packet: Vec<u8>) {
-        self.ip_packet = packet.clone();
+impl<'a> IpFrame<'a> {
+    pub fn new(packet: &'a [u8]) -> Self {
+        Self { ip_packet: packet }
+    }
+
+    // pub fn set_packet(&mut self, packet: &'a Vec<u8>) {
+    //     self.ip_packet = &packet;
+    // }
+
+    pub fn attach(&mut self, packet: &'a [u8]) {
+        // self.ip_packet = packet;
+        // println!("IPV4: {:x?}", packet);
     }
 
     pub fn _offset(&self) -> usize {
@@ -45,7 +55,7 @@ impl IpFrame {
     }
 }
 
-impl Layer for IpFrame {
+impl<'a> Layer for IpFrame<'a> {
     fn get_name(&self) -> String {
         "ip".to_string()
     }
@@ -67,7 +77,7 @@ impl Layer for IpFrame {
     }
 }
 
-impl PacketDisplay for IpFrame {
+impl<'a> PacketDisplay for IpFrame<'a> {
     fn summary(&self) -> String {
         let result: String;
 
