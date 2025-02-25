@@ -35,16 +35,23 @@ pub struct Options {
 }
 
 #[derive(Default, Debug, Clone)]
-pub struct Tcp {
-    raw_packet: Vec<u8>,
+pub struct Tcp<'a> {
+    raw_packet: &'a [u8],
+    // raw_packet: Vec<u8>,
     options: Options,
 }
 
-impl Tcp {
-    pub fn set_packet(&mut self, packet: Vec<u8>) {
-        self.raw_packet = packet.clone();
-        self.decode_options();
+impl<'a> Tcp<'a> {
+    pub fn new(packet: &'a [u8]) -> Self {
+        Self {
+            raw_packet: packet,
+            options: Options::default(),
+        }
     }
+    // pub fn set_packet(&mut self, packet: Vec<u8>) {
+    //     self.raw_packet = packet.clone();
+    //     self.decode_options();
+    // }
 
     pub fn seq_no(&self) -> u32 {
         BigEndian::read_u32(&self.raw_packet[4..8])
@@ -205,7 +212,7 @@ impl Tcp {
     }
 }
 
-impl Layer for Tcp {
+impl<'a> Layer for Tcp<'a> {
     fn get_field(&self, field: u32) -> usize {
         match field {
             fields::TCP_SRC_PORT => self.sport() as usize,
@@ -257,7 +264,7 @@ impl Layer for Tcp {
     }
 }
 
-impl PacketDisplay for Tcp {
+impl<'a> PacketDisplay for Tcp<'a> {
     fn summary(&self) -> String {
         let result: String;
 
