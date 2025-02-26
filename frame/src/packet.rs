@@ -8,6 +8,7 @@ use crate::layer::Layer;
 use crate::packet_display::PacketDisplay;
 use crate::tcp::Tcp;
 use crate::udp::UdpFrame;
+use indexmap::IndexMap;
 
 use byteorder::{BigEndian, ByteOrder, LittleEndian};
 
@@ -61,25 +62,17 @@ pub struct LayerInfo {
     end_pos: usize,
 }
 
-pub struct Frame {
-    frame_list: Vec<LayerInfo>,
-    packet: Vec<u8>,
-}
-
 #[derive(Default, Debug, Clone)]
 pub struct Packet {
     header: PcapHeader,
     raw_packet: Vec<u8>,
     eth_packet: Option<EtherFrame>,
-    // ip_packet: Option<IpFrame>,
-    // tcp_packet: Option<Tcp>,
-    udp_packet: Option<UdpFrame>,
     icmp_packet: Option<Icmp>,
     arp_packet: Option<Arp>,
     pub file_id: u32,
     pub pkt_ptr: u32,
 
-    frame_list: Vec<LayerInfo>,
+    frame_list: IndexMap<LayerType, LayerInfo>,
 }
 
 impl Packet {
@@ -88,37 +81,49 @@ impl Packet {
     }
 
     pub fn add_layer(&mut self, layer: LayerInfo) {
-        self.frame_list.push(layer);
+        self.frame_list.insert(layer.layer_type.clone(), layer);
     }
 
     pub fn get_layer(&self, layer: LayerType) -> Option<&LayerInfo> {
-        for (index, frame) in self.frame_list.iter().enumerate() {
-            if frame.layer_type == layer {
-                return Some(&self.frame_list[index]);
-            }
-        }
-
-        return None;
+        self.frame_list.get(&layer)
     }
 
     pub fn get_layer_bytes(&self, layer: LayerType) -> Option<&[u8]> {
-        for frame in self.frame_list.iter() {
-            if frame.layer_type == layer {
-                return Some(&self.raw_packet[frame.start_pos..frame.end_pos]);
-            }
+        if let Some(frame) = self.frame_list.get(&layer) {
+            return Some(&self.raw_packet[frame.start_pos..frame.end_pos]);
         }
 
         return None;
     }
 
     pub fn has_layer(&self, layer: LayerType) -> bool {
-        for frame in self.frame_list.iter() {
-            if frame.layer_type == layer {
-                return true;
-            }
-        }
+        self.frame_list.contains_key(&layer)
+    }
 
-        return false;
+    fn get_ipv4_packet(&self) -> Option<IpFrame> {
+        if let Some(raw_pkt) = self.get_layer_bytes(LayerType::IPv4) {
+            return Some(IpFrame::new(raw_pkt));
+        } else {
+            return None;
+        }
+    }
+
+    fn get_tcp_packet(&self) -> Option<Tcp> {
+        if let Some(raw_pkt) = self.get_layer_bytes(LayerType::TCP) {
+            let mut tcp = Tcp::default();
+            tcp.set_packet(raw_pkt);
+            return Some(tcp);
+        } else {
+            return None;
+        }
+    }
+
+    fn get_udp_packet(&self) -> Option<UdpFrame> {
+        if let Some(raw_pkt) = self.get_layer_bytes(LayerType::UDP) {
+            return Some(UdpFrame::new(raw_pkt));
+        } else {
+            return None;
+        }
     }
 
     pub fn print_layers(&self) {
@@ -198,32 +203,19 @@ impl Packet {
         }
 
         if ether.ethertype() == ETHER_IPV4_PROTO {
-            // let mut ip_packet = IpFrame::default();
-
-            // ip_packet.set_packet(&self.raw_packet[vo..vo + ip_header_len].to_vec());
-            // self.ip_packet = Some(ip_packet);
-
             //--- Add IPV4 layer
             self.add_layer(LayerInfo {
                 layer_type: LayerType::IPv4,
                 start_pos: vo,
                 end_pos: vo + ip_header_len,
             });
-
-            // let mut ip2 = IpFrame::default();
-            // ip2.attach(&self.raw_packet[self.frame_list[2].start_pos..self.frame_list[2].end_pos]);
         }
         self.eth_packet = Some(ether);
 
         if let Some(ip_layer) = &self.get_layer_bytes(LayerType::IPv4) {
-            // if let Some(p) = &self.ip_packet {
             let p = IpFrame::new(ip_layer);
             match p.get_field(fields::IPV4_PROTOCOL) as u8 {
                 IP_TCP_PROTO => {
-                    // let mut tcp_packet = Tcp::default();
-                    // tcp_packet.set_packet(self.raw_packet[vo + ip_header_len..].to_vec());
-                    // self.tcp_packet = Some(tcp_packet);
-
                     //--- Add TCP layer
                     self.add_layer(LayerInfo {
                         layer_type: LayerType::TCP,
@@ -232,9 +224,9 @@ impl Packet {
                     });
                 }
                 IP_UDP_PROTO => {
-                    let mut udp_packet = UdpFrame::default();
-                    udp_packet.set_packet(self.raw_packet[vo + ip_header_len..].to_vec());
-                    self.udp_packet = Some(udp_packet);
+                    // let mut udp_packet = UdpFrame::default();
+                    // udp_packet.set_packet(self.raw_packet[vo + ip_header_len..].to_vec());
+                    // self.udp_packet = Some(udp_packet);
 
                     //--- Add UDP layer
                     self.add_layer(LayerInfo {
@@ -274,7 +266,7 @@ impl Packet {
     }
 
     pub fn has_udp(&self) -> bool {
-        self.udp_packet.is_some()
+        self.has_layer(LayerType::UDP)
     }
 
     pub fn has_tcp(&self) -> bool {
@@ -286,56 +278,36 @@ impl Packet {
     }
 
     pub fn has_https(&self) -> bool {
-        if let Some(p) = self.get_layer_bytes(LayerType::TCP) {
-            let pkt = Tcp::new(p);
+        if let Some(pkt) = self.get_tcp_packet() {
             return pkt.is_https();
         } else {
             false
         }
-        // if let Some(pkt) = &self.tcp_packet {
-        //     return pkt.is_https();
-        // }
-        // false
     }
     pub fn has_http(&self) -> bool {
-        if let Some(p) = self.get_layer_bytes(LayerType::TCP) {
-            let pkt = Tcp::new(p);
+        if let Some(pkt) = self.get_tcp_packet() {
             return pkt.is_http();
         } else {
             false
         }
-        // if let Some(pkt) = &self.tcp_packet {
-        //     return pkt.is_http();
-        // }
-        // false
     }
     pub fn has_ssh(&self) -> bool {
-        if let Some(p) = self.get_layer_bytes(LayerType::TCP) {
-            let pkt = Tcp::new(p);
+        if let Some(pkt) = self.get_tcp_packet() {
             return pkt.is_ssh();
         } else {
             false
         }
-        // if let Some(pkt) = &self.tcp_packet {
-        //     return pkt.is_ssh();
-        // }
-        // false
     }
     pub fn has_telnet(&self) -> bool {
-        if let Some(p) = self.get_layer_bytes(LayerType::TCP) {
-            let pkt = Tcp::new(p);
+        if let Some(pkt) = self.get_tcp_packet() {
             return pkt.is_telnet();
         } else {
             false
         }
-        // if let Some(pkt) = &self.tcp_packet {
-        //     return pkt.is_telnet();
-        // }
-        // false
     }
 
     pub fn has_dns(&self) -> bool {
-        if let Some(pkt) = &self.udp_packet {
+        if let Some(pkt) = &self.get_udp_packet() {
             return pkt.is_dns();
         }
 
@@ -343,7 +315,7 @@ impl Packet {
     }
 
     pub fn has_dhcp(&self) -> bool {
-        if let Some(pkt) = &self.udp_packet {
+        if let Some(pkt) = &self.get_udp_packet() {
             return pkt.is_dhcp();
         }
 
@@ -355,32 +327,28 @@ impl Packet {
     }
 
     pub fn get_field(&self, field: u32) -> usize {
-        // let (id_file, id_ptr) = self.decode_id(self.get_id());
-        // println!("DECODED ID: {},{}", id_file, id_ptr);
         if self.field_type(field, fields::ETH_BASE) && self.eth_packet.is_some() {
             self.eth_packet.as_ref().unwrap().get_field(field)
         } else if self.field_type(field, fields::ARP_BASE) && self.arp_packet.is_some() {
             self.arp_packet.as_ref().unwrap().get_field(field)
         } else if self.field_type(field, fields::TCP_BASE) && self.has_layer(LayerType::TCP) {
-            if let Some(tcp_bytes) = self.get_layer_bytes(LayerType::TCP) {
-                let tcp_packet = Tcp::new(tcp_bytes);
+            if let Some(tcp_packet) = self.get_tcp_packet() {
                 return tcp_packet.get_field(field);
             } else {
                 0
             }
-            // self.tcp_packet.as_ref().unwrap().get_field(field)
         } else if self.field_type(field, fields::IPV4_BASE) && self.has_layer(LayerType::IPv4) {
-            if let Some(ip_bytes) = self.get_layer_bytes(LayerType::IPv4) {
-                let ip_packet = IpFrame::new(ip_bytes);
+            if let Some(ip_packet) = self.get_ipv4_packet() {
                 return ip_packet.get_field(field);
             } else {
                 0
             }
-            // self.ip_packet.as_ref().unwrap().get_field(field)
-            // } else if self.field_type(field, fields::IPV4_BASE) && self.ip_packet.is_some() {
-            //     self.ip_packet.as_ref().unwrap().get_field(field)
-        } else if self.field_type(field, fields::UDP_BASE) && self.udp_packet.is_some() {
-            self.udp_packet.as_ref().unwrap().get_field(field)
+        } else if self.field_type(field, fields::UDP_BASE) && self.has_layer(LayerType::UDP) {
+            if let Some(udp_packet) = self.get_udp_packet() {
+                udp_packet.get_field(field)
+            } else {
+                0
+            }
         } else if self.field_type(field, fields::ICMP_BASE) && self.icmp_packet.is_some() {
             self.icmp_packet.as_ref().unwrap().get_field(field)
         } else {
@@ -415,17 +383,13 @@ impl Packet {
 
     pub fn get_field_byte(&self, field: u32, offset: usize, len: usize) -> Vec<u8> {
         if self.field_type(field, fields::TCP_BASE) && self.has_layer(LayerType::TCP) {
-            if let Some(tcp_bytes) = self.get_layer_bytes(LayerType::TCP) {
-                let ip_packet = Tcp::new(tcp_bytes);
+            if let Some(ip_packet) = self.get_tcp_packet() {
                 return ip_packet.payload_range(offset, len);
             }
-
-        // if self.field_type(field, fields::TCP_BASE) && self.tcp_packet.is_some() {
-        //     let pkt_array = self.tcp_packet.as_ref().unwrap().payload_range(offset, len);
-        //     return pkt_array;
-        } else if self.field_type(field, fields::UDP_BASE) && self.udp_packet.is_some() {
-            let pkt_array = self.udp_packet.as_ref().unwrap().payload_range(offset, len);
-            return pkt_array;
+        } else if self.field_type(field, fields::UDP_BASE) && self.has_layer(LayerType::UDP) {
+            if let Some(udp_packet) = self.get_udp_packet() {
+                return udp_packet.payload_range(offset, len);
+            }
         } else if self.field_type(field, fields::ICMP_BASE) && self.icmp_packet.is_some() {
             let pkt_array = self
                 .icmp_packet
@@ -473,27 +437,19 @@ impl PacketDisplay for Packet {
         }
 
         if self.eth_packet.is_some() {
-            if let Some(ip_bytes) = self.get_layer_bytes(LayerType::IPv4) {
-                let ip = IpFrame::new(ip_bytes);
+            if let Some(ip) = self.get_ipv4_packet() {
                 result += &format!("  {}{}", ip.summary(), "\n");
             }
-            // if let Some(ip) = &self.ip_packet {
-            //     result += &format!("  {}{}", ip.summary(), "\n");
-            // }
         }
 
-        if let Some(ip_bytes) = self.get_layer_bytes(LayerType::IPv4) {
-            let ip = IpFrame::new(ip_bytes);
-            // if let Some(ip) = &self.ip_packet {
+        if let Some(ip) = self.get_ipv4_packet() {
             if ip.proto() == IP_TCP_PROTO {
-                if let Some(tcp_pkt) = self.get_layer_bytes(LayerType::TCP) {
-                    let tcp = Tcp::new(tcp_pkt);
-                    // if let Some(tcp) = &self.tcp_packet {
+                if let Some(tcp) = self.get_tcp_packet() {
                     result += &format!("    {}\n", &tcp.summary());
                 }
             }
             if ip.proto() == IP_UDP_PROTO {
-                if let Some(udp) = &self.udp_packet {
+                if let Some(udp) = self.get_udp_packet() {
                     result += &format!("    {}\n", &udp.summary());
                 }
             }

@@ -5,14 +5,18 @@ use byteorder::{BigEndian, ByteOrder};
 const _UDP_HEADER_LEN: u8 = 8;
 
 #[derive(Debug, Default, Clone)]
-pub struct UdpFrame {
-    raw_packet: Vec<u8>,
+pub struct UdpFrame<'a> {
+    raw_packet: &'a [u8],
+    // raw_packet: Vec<u8>,
 }
 
-impl UdpFrame {
-    pub fn set_packet(&mut self, packet: Vec<u8>) {
-        self.raw_packet = packet;
+impl<'a> UdpFrame<'a> {
+    pub fn new(packet: &'a [u8]) -> Self {
+        Self { raw_packet: packet }
     }
+    // pub fn set_packet(&mut self, packet: Vec<u8>) {
+    //     self.raw_packet = packet;
+    // }
 
     pub fn dport(&self) -> u16 {
         BigEndian::read_u16(&self.raw_packet[2..4])
@@ -46,7 +50,7 @@ impl UdpFrame {
     }
 }
 
-impl Layer for UdpFrame {
+impl<'a> Layer for UdpFrame<'a> {
     fn get_field(&self, field: u32) -> usize {
         match field {
             fields::UDP_SRC_PORT => self.sport() as usize,
@@ -66,7 +70,7 @@ impl Layer for UdpFrame {
     }
 }
 
-impl PacketDisplay for UdpFrame {
+impl<'a> PacketDisplay for UdpFrame<'a> {
     fn summary(&self) -> String {
         let result: String;
 
