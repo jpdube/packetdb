@@ -15,15 +15,6 @@ impl<'a> IpFrame<'a> {
         Self { ip_packet: packet }
     }
 
-    // pub fn set_packet(&mut self, packet: &'a Vec<u8>) {
-    //     self.ip_packet = &packet;
-    // }
-
-    pub fn attach(&mut self, packet: &'a [u8]) {
-        // self.ip_packet = packet;
-        // println!("IPV4: {:x?}", packet);
-    }
-
     pub fn _offset(&self) -> usize {
         (self.header_len() * 4) as usize
     }
