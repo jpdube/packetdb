@@ -97,14 +97,18 @@ IP Fields:
 // }
 
 #[derive(Default, Debug, Clone)]
-pub struct Icmp {
-    raw_packet: Vec<u8>,
+pub struct Icmp<'a> {
+    raw_packet: &'a [u8],
+    // raw_packet: Vec<u8>,
 }
 
-impl Icmp {
-    pub fn set_packet(&mut self, packet: Vec<u8>) {
-        self.raw_packet = packet;
+impl<'a> Icmp<'a> {
+    pub fn new(packet: &'a [u8]) -> Self {
+        Self { raw_packet: packet }
     }
+    // pub fn set_packet(&mut self, packet: Vec<u8>) {
+    //     self.raw_packet = packet;
+    // }
 
     pub fn itype(&self) -> u8 {
         self.raw_packet[0]
@@ -131,7 +135,7 @@ impl Icmp {
     }
 }
 
-impl Layer for Icmp {
+impl<'a> Layer for Icmp<'a> {
     fn get_field(&self, field: u32) -> usize {
         match field {
             fields::ICMP_TYPE => self.itype() as usize,
@@ -151,7 +155,7 @@ impl Layer for Icmp {
     }
 }
 
-impl PacketDisplay for Icmp {
+impl<'a> PacketDisplay for Icmp<'a> {
     fn summary(&self) -> String {
         let result: String;
 
