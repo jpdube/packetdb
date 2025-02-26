@@ -8,14 +8,13 @@ use byteorder::{BigEndian, ByteOrder};
 const ETHER_8021Q: u16 = 0x8100;
 
 #[derive(Debug, Clone, Default)]
-pub struct EtherFrame {
-    raw_packet: Vec<u8>,
-    name: String,
+pub struct EtherFrame<'a> {
+    raw_packet: &'a [u8],
 }
 
-impl EtherFrame {
-    pub fn set_packet(&mut self, packet: Vec<u8>) {
-        self.raw_packet = packet.clone();
+impl<'a> EtherFrame<'a> {
+    pub fn new(packet: &'a [u8]) -> Self {
+        Self { raw_packet: packet }
     }
 
     pub fn dst(&self) -> u64 {
@@ -51,21 +50,16 @@ impl EtherFrame {
     }
 }
 
-impl Layer for EtherFrame {
+impl<'a> Layer for EtherFrame<'a> {
     fn get_name(&self) -> String {
-        return self.name.clone();
+        "eth".to_string()
     }
 
-    // fn get_field(&self, field: u32) -> FieldResult {
     fn get_field(&self, field: u32) -> usize {
         match field {
-            // fields::ETH_SRC_MAC => FieldResult::Uint(self.src() as usize),
             fields::ETH_SRC_MAC => self.src() as usize,
-            // fields::ETH_DST_MAC => FieldResult::Uint(self.dst() as usize),
             fields::ETH_DST_MAC => self.dst() as usize,
-            // fields::ETH_PROTO => FieldResult::Uint(self.ethertype() as usize),
             fields::ETH_PROTO => self.ethertype() as usize,
-            // fields::ETH_VLAN_ID => FieldResult::Uint(self.vlan_id() as usize),
             fields::ETH_VLAN_ID => self.vlan_id() as usize,
             _ => 0,
         }
@@ -76,7 +70,7 @@ impl Layer for EtherFrame {
     }
 }
 
-impl PacketDisplay for EtherFrame {
+impl<'a> PacketDisplay for EtherFrame<'a> {
     fn summary(&self) -> String {
         let result: String;
 
