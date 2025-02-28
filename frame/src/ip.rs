@@ -6,7 +6,6 @@ use byteorder::{BigEndian, ByteOrder};
 
 #[derive(Debug, Clone, Default)]
 pub struct IpFrame<'a> {
-    // ip_packet: Vec<u8>,
     ip_packet: &'a [u8],
 }
 

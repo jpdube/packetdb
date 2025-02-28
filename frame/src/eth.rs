@@ -7,7 +7,7 @@ use byteorder::{BigEndian, ByteOrder};
 
 const ETHER_8021Q: u16 = 0x8100;
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct EtherFrame<'a> {
     raw_packet: &'a [u8],
 }

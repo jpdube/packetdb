@@ -42,12 +42,6 @@ pub struct Tcp<'a> {
 }
 
 impl<'a> Tcp<'a> {
-    // pub fn new(packet: &'a [u8]) -> Self {
-    //     Self {
-    //         raw_packet: packet,
-    //         options: Options::default(),
-    //     }
-    // }
     pub fn set_packet(&mut self, packet: &'a [u8]) {
         self.raw_packet = packet;
         self.decode_options();
