@@ -3,9 +3,10 @@ use std::usize;
 
 use frame::packet::Packet;
 
-use crate::cursor::{get_field_type, Cursor, Field, FieldType, Record};
+use crate::cursor::{Cursor, Record};
 use crate::parse::PqlStatement;
 use frame::fields::FRAME_TIMESTAMP;
+use frame::pfield::{get_field_type, Field, FieldType};
 use log::debug;
 
 pub struct QueryResult {
