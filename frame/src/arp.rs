@@ -5,6 +5,7 @@ use crate::ipv4_address::IPv4;
 use crate::layer::Layer;
 use crate::mac_address::MacAddr;
 use crate::packet_display::PacketDisplay;
+use crate::pfield::{Field, FieldType};
 
 /*
 *
@@ -65,18 +66,23 @@ impl Layer for Arp {
         self.name.clone()
     }
 
-    fn get_field(&self, field: u32) -> usize {
+    fn get_field(&self, field: u32) -> Option<Field> {
         match field {
-            fields::ARP_HTYPE => self.get_htype() as usize,
-            fields::ARP_PTYPE => self.get_ptype() as usize,
-            fields::ARP_HLEN => self.get_hlen() as usize,
-            fields::ARP_PLEN => self.get_plen() as usize,
-            fields::ARP_OPCODE => self.get_opcode() as usize,
-            fields::ARP_SHA => self.get_sha() as usize,
-            fields::ARP_SPA => self.get_spa() as usize,
-            fields::ARP_THA => self.get_tha() as usize,
-            fields::ARP_TPA => self.get_tpa() as usize,
-            _ => 0,
+            fields::ARP_HTYPE => Some(Field::set_field(FieldType::Int16(self.get_htype()), field)),
+            fields::ARP_PTYPE => Some(Field::set_field(FieldType::Int16(self.get_ptype()), field)),
+            fields::ARP_HLEN => Some(Field::set_field(FieldType::Int8(self.get_hlen()), field)),
+            fields::ARP_PLEN => Some(Field::set_field(FieldType::Int8(self.get_hlen()), field)),
+
+            fields::ARP_OPCODE => {
+                Some(Field::set_field(FieldType::Int16(self.get_opcode()), field))
+            }
+            fields::ARP_SHA => Some(Field::set_field(FieldType::MacAddr(self.get_sha()), field)),
+            fields::ARP_THA => Some(Field::set_field(FieldType::MacAddr(self.get_tha()), field)),
+
+            fields::ARP_SPA => Some(Field::set_field(FieldType::Ipv4(self.get_spa(), 32), field)),
+            fields::ARP_TPA => Some(Field::set_field(FieldType::Ipv4(self.get_tpa(), 32), field)),
+
+            _ => None,
         }
     }
 

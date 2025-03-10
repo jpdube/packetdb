@@ -6,13 +6,13 @@ use frame::packet::Packet;
 use crate::cursor::{Cursor, Record};
 use crate::parse::PqlStatement;
 use frame::fields::FRAME_TIMESTAMP;
-use frame::pfield::{get_field_type, Field, FieldType};
+use frame::pfield::{Field, FieldType};
 use log::debug;
 
 pub struct QueryResult {
     model: PqlStatement,
-    ts_start: usize,
-    ts_end: usize,
+    ts_start: u32,
+    ts_end: u32,
     result: Cursor,
     offset: usize,
     groupby: GroupBy,
@@ -23,7 +23,7 @@ pub struct QueryResult {
 impl QueryResult {
     pub fn new(model: PqlStatement) -> Self {
         Self {
-            ts_start: usize::max_value(),
+            ts_start: u32::max_value(),
             ts_end: 0,
             result: Cursor::default(),
             offset: 0,
@@ -60,11 +60,11 @@ impl QueryResult {
         let mut distinct_key = String::new();
 
         for field in &self.model.select {
-            if let Some(field_value) = get_field_type(field.id, pkt.get_field(field.id)) {
-                record.add_field(Field {
-                    name: field.name.clone(),
-                    field: field_value.clone(),
-                });
+            if let Some(field_value) = pkt.get_field(field.id) {
+                record.add_field(Field::set_field_with_name(
+                    field_value.field.clone(),
+                    field.name.clone(),
+                ));
 
                 if self.model.has_distinct {
                     distinct_key = format!("{}|{}", distinct_key, field_value.to_string());
@@ -73,24 +73,23 @@ impl QueryResult {
         }
 
         let pkt_id = pkt.get_id() as u64;
-        // println!("FRAME ID: {:x}", pkt_id);
-        record.add_field(Field {
-            name: String::from("frame.id"),
-            field: FieldType::Number(pkt_id as usize),
-        });
+        record.add_field(Field::set_field_with_name(
+            FieldType::Int64(pkt_id),
+            String::from("frame.id"),
+        ));
 
-        let ts = pkt.get_field(FRAME_TIMESTAMP);
-        record.add_field(Field {
-            name: String::from("frame.timestamp"),
-            field: get_field_type(FRAME_TIMESTAMP, ts).unwrap(),
-        });
+        if let Some(ts_temp) = pkt.get_field(FRAME_TIMESTAMP) {
+            let mut ts = ts_temp;
+            ts.name = String::from("frame.timestamp");
+            record.add_field(ts.clone());
 
-        if ts < self.ts_start {
-            self.ts_start = ts;
-        }
+            if ts.to_u32() < self.ts_start {
+                self.ts_start = ts.to_u32();
+            }
 
-        if ts > self.ts_end {
-            self.ts_end = ts;
+            if ts.to_u32() > self.ts_end {
+                self.ts_end = ts.to_u32();
+            }
         }
 
         if self.model.has_distinct {
@@ -141,10 +140,10 @@ impl AggregateResult {
     pub fn get_result(&mut self) -> Cursor {
         let mut record = Record::default();
         for aggr in &self.model.aggr_list {
-            let aggr_field = Field {
-                name: aggr.as_of().clone(),
-                field: FieldType::Number(aggr.compute(&self.pkt_list)),
-            };
+            let aggr_field = Field::set_field_with_name(
+                FieldType::Int64(aggr.compute(&self.pkt_list) as u64),
+                aggr.as_of().clone(),
+            );
 
             record.add_field(aggr_field);
         }
@@ -175,10 +174,12 @@ impl GroupBy {
     }
 
     pub fn add(&mut self, pkt: Packet) {
-        let mut key = Vec::new();
+        let mut key: Vec<usize> = Vec::new();
 
         for k in &self.model.groupby_fields {
-            key.push(pkt.get_field(k.id));
+            if let Some(field_id) = pkt.get_field(k.id) {
+                key.push(field_id.to_u64() as usize);
+            }
         }
 
         if let Some(aggr_key) = self.grp_result.get_mut(&key) {
@@ -203,27 +204,25 @@ impl GroupBy {
                 let field_value: FieldType;
 
                 if field_name.contains("ip") {
-                    field_value = FieldType::Ipv4(*gfield as u32);
+                    field_value = FieldType::Ipv4(*gfield as u32, 32);
                 } else {
-                    field_value = FieldType::Number(*gfield);
+                    field_value = FieldType::Int64(*gfield as u64);
                 }
 
-                let aggr_field = Field {
-                    name: field_name,
-                    field: field_value,
-                };
+                let aggr_field = Field::set_field_with_name(field_value, field_name);
 
                 record.add_field(aggr_field);
             }
 
             for aggr in &self.model.aggr_list {
-                let aggr_field = Field {
-                    name: aggr.as_of().clone(),
-                    field: FieldType::Number(aggr.compute(grp)),
-                };
+                let aggr_field = Field::set_field_with_name(
+                    FieldType::Int32(aggr.compute(grp) as u32),
+                    aggr.as_of().clone(),
+                );
 
                 record.add_field(aggr_field);
             }
+
             self.result.add_record(record.clone());
         }
 

@@ -2,6 +2,7 @@ use crate::fields;
 use crate::ipv4_address::IPv4;
 use crate::layer::Layer;
 use crate::packet_display::PacketDisplay;
+use crate::pfield::{Field, FieldType};
 use byteorder::{BigEndian, ByteOrder};
 
 #[derive(Debug, Clone, Default)]
@@ -50,15 +51,17 @@ impl<'a> Layer for IpFrame<'a> {
         "ip".to_string()
     }
 
-    fn get_field(&self, field: u32) -> usize {
+    fn get_field(&self, field: u32) -> Option<Field> {
         match field {
-            fields::IPV4_SRC_ADDR => self.src() as usize,
-            fields::IPV4_DST_ADDR => self.dst() as usize,
-            fields::IPV4_TOS => self.tos() as usize,
-            fields::IPV4_TTL => self.ttl() as usize,
-            fields::IPV4_PROTOCOL => self.proto() as usize,
-            fields::IPV4_HEADER_LEN => self.header_len() as usize,
-            _ => 0,
+            fields::IPV4_SRC_ADDR => Some(Field::set_field(FieldType::Ipv4(self.src(), 32), field)),
+            fields::IPV4_DST_ADDR => Some(Field::set_field(FieldType::Ipv4(self.dst(), 32), field)),
+            fields::IPV4_TOS => Some(Field::set_field(FieldType::Int8(self.tos()), field)),
+            fields::IPV4_TTL => Some(Field::set_field(FieldType::Int8(self.ttl()), field)),
+            fields::IPV4_PROTOCOL => Some(Field::set_field(FieldType::Int8(self.proto()), field)),
+            fields::IPV4_HEADER_LEN => {
+                Some(Field::set_field(FieldType::Int8(self.header_len()), field))
+            }
+            _ => None,
         }
     }
 

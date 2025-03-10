@@ -113,7 +113,7 @@ impl DbEngine {
             let mut pcapfile = PcapFile::new(file_id, &CONFIG.db_path);
 
             if let Some(pkt) = pcapfile.seek(ptr) {
-                debug!("ID pkt ID: {}", pkt.get_field(7));
+                debug!("ID pkt ID: {}", pkt.get_field(7).unwrap().to_usize());
                 result.push(pkt);
             }
         }

@@ -2,6 +2,7 @@ use crate::fields;
 use crate::layer::Layer;
 use crate::packet_display::PacketDisplay;
 
+use crate::pfield::{Field, FieldType};
 use byteorder::{BigEndian, ByteOrder};
 
 const OPTION_EOL: u16 = 0;
@@ -207,45 +208,84 @@ impl<'a> Tcp<'a> {
 }
 
 impl<'a> Layer for Tcp<'a> {
-    fn get_field(&self, field: u32) -> usize {
+    fn get_field(&self, field: u32) -> Option<Field> {
         match field {
-            fields::TCP_SRC_PORT => self.sport() as usize,
-            fields::TCP_DEST_PORT => self.dport() as usize,
-            fields::TCP_ACK_NO => self.ack_no() as usize,
-            fields::TCP_SEQ_NO => self.seq_no() as usize,
-            fields::TCP_FLAGS_ACK => self.flag_ack() as usize,
-            fields::TCP_FLAGS_PUSH => self.flag_push() as usize,
-            fields::TCP_FLAGS_SYN => self.flag_syn() as usize,
-            fields::TCP_FLAGS_RESET => self.flag_rst() as usize,
-            fields::TCP_FLAGS_FIN => self.flag_fin() as usize,
-            fields::TCP_FLAGS_URG => self.flag_urg() as usize,
-            fields::TCP_WIN_SIZE => self.win_size() as usize,
-            fields::TCP_HDR_LEN => self.hdr_len() as usize,
-            fields::TCP_PAYLOAD_LEN => self.payload_len() as usize,
-            // fields::TCP_PAYLOAD => self.payload() as usize,
-            fields::TCP_OPTIONS_WIN_SCALE => self.options.winscale as usize,
-            fields::TCP_OPTIONS_WIN_SCALE_MUL => self.options.win_multiplier as usize,
-            fields::TCP_OPTIONS_SACK => self.options.sack as usize,
-            fields::TCP_OPTIONS_SACK_COUNT => self.options.sack_list.len() as usize,
-            fields::TCP_OPTIONS_SCALE_LE => {
-                if self.options.sack_list.len() > 0 {
-                    self.options.sack_list[0].left as usize
-                } else {
-                    0
-                }
+            fields::TCP_SRC_PORT => Some(Field::set_field(FieldType::Int16(self.sport()), field)),
+            fields::TCP_DEST_PORT => Some(Field::set_field(FieldType::Int16(self.dport()), field)),
+            fields::TCP_ACK_NO => Some(Field::set_field(FieldType::Int32(self.ack_no()), field)),
+            fields::TCP_SEQ_NO => Some(Field::set_field(FieldType::Int32(self.seq_no()), field)),
+            fields::TCP_FLAGS_ACK => {
+                Some(Field::set_field(FieldType::Bool(self.flag_ack()), field))
             }
-            fields::TCP_OPTIONS_SCALE_RE => {
-                if self.options.sack_list.len() > 0 {
-                    self.options.sack_list[0].right as usize
-                } else {
-                    0
-                }
+            fields::TCP_FLAGS_PUSH => {
+                Some(Field::set_field(FieldType::Bool(self.flag_push()), field))
             }
-            fields::TCP_OPTIONS_MSS => self.options.mss as usize,
-            fields::TCP_OPTIONS_TIMESTAMP_TSVAL => self.options.timestamp.tsval as usize,
-            // fields::TCP_OPTIONS_TIMESTAMP_TSVAL => self.options.timestamp.tsval as usize,
-            fields::TCP_OPTIONS_TIMESTAMP_TSECR => self.options.timestamp.tsecr as usize,
-            _ => 0,
+
+            fields::TCP_FLAGS_SYN => {
+                Some(Field::set_field(FieldType::Bool(self.flag_syn()), field))
+            }
+            fields::TCP_FLAGS_RESET => {
+                Some(Field::set_field(FieldType::Bool(self.flag_rst()), field))
+            }
+            fields::TCP_FLAGS_FIN => {
+                Some(Field::set_field(FieldType::Bool(self.flag_fin()), field))
+            }
+            fields::TCP_FLAGS_URG => {
+                Some(Field::set_field(FieldType::Bool(self.flag_urg()), field))
+            }
+            fields::TCP_WIN_SIZE => {
+                Some(Field::set_field(FieldType::Int16(self.win_size()), field))
+            }
+            fields::TCP_HDR_LEN => Some(Field::set_field(FieldType::Int8(self.hdr_len()), field)),
+            fields::TCP_PAYLOAD_LEN => Some(Field::set_field(
+                FieldType::Int16(self.payload_len()),
+                field,
+            )),
+
+            fields::TCP_OPTIONS_WIN_SCALE => Some(Field::set_field(
+                FieldType::Int8(self.options.winscale),
+                field,
+            )),
+
+            fields::TCP_OPTIONS_WIN_SCALE_MUL => Some(Field::set_field(
+                FieldType::Int16(self.options.win_multiplier),
+                field,
+            )),
+
+            fields::TCP_OPTIONS_SACK => {
+                Some(Field::set_field(FieldType::Bool(self.options.sack), field))
+            }
+
+            fields::TCP_OPTIONS_SACK_COUNT => Some(Field::set_field(
+                FieldType::Int16(self.options.sack_list.len() as u16),
+                field,
+            )),
+
+            fields::TCP_OPTIONS_SCALE_LE => Some(Field::set_field(
+                FieldType::Int32(self.options.sack_list[0].left),
+                field,
+            )),
+
+            fields::TCP_OPTIONS_SCALE_RE => Some(Field::set_field(
+                FieldType::Int32(self.options.sack_list[0].right),
+                field,
+            )),
+
+            fields::TCP_OPTIONS_MSS => {
+                Some(Field::set_field(FieldType::Int16(self.options.mss), field))
+            }
+
+            fields::TCP_OPTIONS_TIMESTAMP_TSVAL => Some(Field::set_field(
+                FieldType::Int32(self.options.timestamp.tsval),
+                field,
+            )),
+
+            fields::TCP_OPTIONS_TIMESTAMP_TSECR => Some(Field::set_field(
+                FieldType::Int32(self.options.timestamp.tsecr),
+                field,
+            )),
+
+            _ => None,
         }
     }
 

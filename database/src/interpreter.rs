@@ -127,7 +127,9 @@ impl Interpreter {
             Expression::ArrayLong(values) => Ok(Object::LongArray(values.clone())),
             Expression::Long(i) => Ok(Object::Integer(*i as u64)),
             Expression::Timestamp(t) => Ok(Object::Timestamp(*t)),
-            Expression::Label(value) => Ok(Object::Integer(pkt.get_field(*value) as u64)),
+            Expression::Label(value) => {
+                Ok(Object::Integer(pkt.get_field(*value).unwrap().to_u64()))
+            }
             Expression::LabelByte(field, offset, len) => {
                 Ok(Object::ByteArray(pkt.get_field_byte(*field, *offset, *len)))
             }

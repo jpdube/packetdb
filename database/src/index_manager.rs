@@ -214,7 +214,7 @@ impl IndexManager {
 
         while let Some(pkt) = pfile.next() {
             count += 1;
-            ts = pkt.get_field(fields::FRAME_TIMESTAMP) as u32;
+            ts = pkt.get_field(fields::FRAME_TIMESTAMP).unwrap().to_u32();
 
             if !first_index {
                 first_index = true;
@@ -228,10 +228,11 @@ impl IndexManager {
             proto_stat.add(pindex);
 
             writer
-                .write_u32::<BigEndian>(pkt.get_field(fields::IPV4_DST_ADDR) as u32)
+                .write_u32::<BigEndian>(pkt.get_field(fields::IPV4_DST_ADDR).unwrap().to_u32())
                 .unwrap();
+
             writer
-                .write_u32::<BigEndian>(pkt.get_field(fields::IPV4_SRC_ADDR) as u32)
+                .write_u32::<BigEndian>(pkt.get_field(fields::IPV4_SRC_ADDR).unwrap().to_u32())
                 .unwrap();
         }
         let duration = start.elapsed();

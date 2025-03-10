@@ -2,6 +2,7 @@ use crate::fields;
 use crate::layer::Layer;
 use crate::mac_address::MacAddr;
 use crate::packet_display::PacketDisplay;
+use crate::pfield::{Field, FieldType};
 
 use byteorder::{BigEndian, ByteOrder};
 
@@ -55,13 +56,13 @@ impl<'a> Layer for EtherFrame<'a> {
         "eth".to_string()
     }
 
-    fn get_field(&self, field: u32) -> usize {
+    fn get_field(&self, field: u32) -> Option<Field> {
         match field {
-            fields::ETH_SRC_MAC => self.src() as usize,
-            fields::ETH_DST_MAC => self.dst() as usize,
-            fields::ETH_PROTO => self.ethertype() as usize,
-            fields::ETH_VLAN_ID => self.vlan_id() as usize,
-            _ => 0,
+            fields::ETH_SRC_MAC => Some(Field::set_field(FieldType::MacAddr(self.src()), field)),
+            fields::ETH_DST_MAC => Some(Field::set_field(FieldType::MacAddr(self.dst()), field)),
+            fields::ETH_PROTO => Some(Field::set_field(FieldType::Int16(self.ethertype()), field)),
+            fields::ETH_VLAN_ID => Some(Field::set_field(FieldType::Int16(self.vlan_id()), field)),
+            _ => None,
         }
     }
 

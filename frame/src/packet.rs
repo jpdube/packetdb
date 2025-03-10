@@ -6,6 +6,7 @@ use crate::icmp::Icmp;
 use crate::ip::IpFrame;
 use crate::layer::Layer;
 use crate::packet_display::PacketDisplay;
+use crate::pfield::{Field, FieldType};
 use crate::tcp::Tcp;
 use crate::udp::UdpFrame;
 use indexmap::IndexMap;
@@ -226,32 +227,36 @@ impl Packet {
     fn process_ipv4(&mut self, vo: usize, ip_header_len: usize) {
         if let Some(ip_layer) = &self.get_layer_bytes(LayerType::IPv4) {
             let p = IpFrame::new(ip_layer);
-            match p.get_field(fields::IPV4_PROTOCOL) as u8 {
-                IP_TCP_PROTO => {
-                    //--- Add TCP layer
-                    self.add_layer(LayerInfo {
-                        layer_type: LayerType::TCP,
-                        start_pos: vo + ip_header_len,
-                        end_pos: self.raw_packet.len(),
-                    });
+            if let Some(proto) = p.get_field(fields::IPV4_PROTOCOL) {
+                match proto.to_u8() {
+                    IP_TCP_PROTO => {
+                        //--- Add TCP layer
+                        self.add_layer(LayerInfo {
+                            layer_type: LayerType::TCP,
+                            start_pos: vo + ip_header_len,
+                            end_pos: self.raw_packet.len(),
+                        });
+                    }
+
+                    IP_UDP_PROTO => {
+                        //--- Add UDP layer
+                        self.add_layer(LayerInfo {
+                            layer_type: LayerType::UDP,
+                            start_pos: vo + ip_header_len,
+                            end_pos: self.raw_packet.len(),
+                        });
+                    }
+                    IP_ICMP_PROTO => {
+                        //--- Add ICMP layer
+                        self.add_layer(LayerInfo {
+                            layer_type: LayerType::ICMP,
+                            start_pos: vo + ip_header_len,
+                            end_pos: self.raw_packet.len(),
+                        });
+                    }
+
+                    _ => {}
                 }
-                IP_UDP_PROTO => {
-                    //--- Add UDP layer
-                    self.add_layer(LayerInfo {
-                        layer_type: LayerType::UDP,
-                        start_pos: vo + ip_header_len,
-                        end_pos: self.raw_packet.len(),
-                    });
-                }
-                IP_ICMP_PROTO => {
-                    //--- Add ICMP layer
-                    self.add_layer(LayerInfo {
-                        layer_type: LayerType::ICMP,
-                        start_pos: vo + ip_header_len,
-                        end_pos: self.raw_packet.len(),
-                    });
-                }
-                _ => {}
             }
         }
     }
@@ -329,12 +334,12 @@ impl Packet {
         (field & 0xffff0000) == field_base
     }
 
-    pub fn get_field(&self, field: u32) -> usize {
+    pub fn get_field(&self, field: u32) -> Option<Field> {
         if self.field_type(field, fields::ETH_BASE) && self.has_layer(LayerType::ETH) {
             if let Some(eth_packet) = self.get_eth_packet() {
                 return eth_packet.get_field(field);
             } else {
-                0
+                None
             }
         } else if self.field_type(field, fields::ARP_BASE) && self.arp_packet.is_some() {
             self.arp_packet.as_ref().unwrap().get_field(field)
@@ -342,37 +347,50 @@ impl Packet {
             if let Some(tcp_packet) = self.get_tcp_packet() {
                 return tcp_packet.get_field(field);
             } else {
-                0
+                None
             }
         } else if self.field_type(field, fields::IPV4_BASE) && self.has_layer(LayerType::IPv4) {
             if let Some(ip_packet) = self.get_ipv4_packet() {
                 return ip_packet.get_field(field);
             } else {
-                0
+                None
             }
         } else if self.field_type(field, fields::UDP_BASE) && self.has_layer(LayerType::UDP) {
             if let Some(udp_packet) = self.get_udp_packet() {
                 udp_packet.get_field(field)
             } else {
-                0
+                None
             }
         } else if self.field_type(field, fields::ICMP_BASE) && self.has_layer(LayerType::ICMP) {
             if let Some(pkt_bytes) = self.get_layer_bytes(LayerType::ICMP) {
                 let icmp = Icmp::new(pkt_bytes);
                 icmp.get_field(field)
             } else {
-                0
+                None
             }
         } else {
             match field {
-                fields::FRAME_TIMESTAMP => self.timestamp() as usize,
-                fields::FRAME_OFFSET => self.ts_offset() as usize,
-                fields::FRAME_ORIG_LEN => self.orig_len() as usize,
-                fields::FRAME_INC_LEN => self.inc_len() as usize,
-                fields::FRAME_FILE_ID => self.file_id as usize,
-                fields::FRAME_PKT_PTR => self.pkt_ptr as usize,
-                fields::FRAME_ID => self.get_id() as usize,
-                _ => usize::MAX,
+                fields::FRAME_TIMESTAMP => {
+                    Some(Field::set_field(FieldType::Int32(self.timestamp()), field))
+                }
+                fields::FRAME_OFFSET => {
+                    Some(Field::set_field(FieldType::Int32(self.ts_offset()), field))
+                }
+                fields::FRAME_ORIG_LEN => {
+                    Some(Field::set_field(FieldType::Int32(self.orig_len()), field))
+                }
+                fields::FRAME_INC_LEN => {
+                    Some(Field::set_field(FieldType::Int32(self.inc_len()), field))
+                }
+                fields::FRAME_FILE_ID => {
+                    Some(Field::set_field(FieldType::Int32(self.file_id), field))
+                }
+                fields::FRAME_PKT_PTR => {
+                    Some(Field::set_field(FieldType::Int32(self.pkt_ptr), field))
+                }
+                fields::FRAME_ID => Some(Field::set_field(FieldType::Int64(self.get_id()), field)),
+
+                _ => None,
             }
         }
     }

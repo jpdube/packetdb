@@ -1,6 +1,7 @@
 use crate::fields;
 use crate::layer::Layer;
 use crate::packet_display::PacketDisplay;
+use crate::pfield::{Field, FieldType};
 
 use byteorder::{BigEndian, ByteOrder};
 /*
@@ -136,13 +137,16 @@ impl<'a> Icmp<'a> {
 }
 
 impl<'a> Layer for Icmp<'a> {
-    fn get_field(&self, field: u32) -> usize {
+    fn get_field(&self, field: u32) -> Option<Field> {
         match field {
-            fields::ICMP_TYPE => self.itype() as usize,
-            fields::ICMP_CODE => self.code() as usize,
-            fields::ICMP_IDENTIFIER => self.identifier() as usize,
-            fields::ICMP_SEQ_NO => self.seq_no() as usize,
-            _ => 0xffff,
+            fields::ICMP_TYPE => Some(Field::set_field(FieldType::Int8(self.itype()), field)),
+            fields::ICMP_CODE => Some(Field::set_field(FieldType::Int8(self.code()), field)),
+            fields::ICMP_IDENTIFIER => {
+                Some(Field::set_field(FieldType::Int16(self.identifier()), field))
+            }
+
+            fields::ICMP_SEQ_NO => Some(Field::set_field(FieldType::Int16(self.seq_no()), field)),
+            _ => None,
         }
     }
 

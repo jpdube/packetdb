@@ -60,7 +60,11 @@ impl Aggregate {
         let mut result: usize = 0;
 
         for pkt in pkt_list {
-            result += pkt.get_field(*field_id);
+            if let Some(field) = pkt.get_field(*field_id) {
+                result += field.to_usize();
+            }
+
+            // result += pkt.get_field(*field_id);
         }
 
         result
@@ -70,7 +74,10 @@ impl Aggregate {
         let mut result: usize = 0;
 
         for pkt in pkt_list {
-            result += pkt.get_field(*field_id);
+            if let Some(field) = pkt.get_field(*field_id) {
+                result += field.to_usize();
+            }
+            // result += pkt.get_field(*field_id);
         }
 
         result / pkt_list.len()
@@ -80,9 +87,10 @@ impl Aggregate {
         let mut result: usize = usize::max_value();
 
         for pkt in pkt_list {
-            let r = pkt.get_field(*field_id);
-            if r < result {
-                result = r;
+            if let Some(r) = pkt.get_field(*field_id) {
+                if r.to_usize() < result {
+                    result = r.to_usize();
+                }
             }
         }
 
@@ -93,9 +101,10 @@ impl Aggregate {
         let mut result: usize = 0;
 
         for pkt in pkt_list {
-            let r = pkt.get_field(*field_id);
-            if r > result {
-                result = r;
+            if let Some(r) = pkt.get_field(*field_id) {
+                if r.to_usize() > result {
+                    result = r.to_usize();
+                }
             }
         }
 

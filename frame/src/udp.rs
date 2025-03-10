@@ -1,4 +1,5 @@
 use crate::layer::Layer;
+use crate::pfield::{Field, FieldType};
 use crate::{fields, packet_display::PacketDisplay};
 use byteorder::{BigEndian, ByteOrder};
 
@@ -51,13 +52,15 @@ impl<'a> UdpFrame<'a> {
 }
 
 impl<'a> Layer for UdpFrame<'a> {
-    fn get_field(&self, field: u32) -> usize {
+    fn get_field(&self, field: u32) -> Option<Field> {
         match field {
-            fields::UDP_SRC_PORT => self.sport() as usize,
-            fields::UDP_DEST_PORT => self.dport() as usize,
-            fields::UDP_LEN => self.length() as usize,
-            fields::UDP_CHEKCSUM => self.checksum() as usize,
-            _ => 0,
+            fields::UDP_SRC_PORT => Some(Field::set_field(FieldType::Int16(self.sport()), field)),
+            fields::UDP_DEST_PORT => Some(Field::set_field(FieldType::Int16(self.dport()), field)),
+            fields::UDP_LEN => Some(Field::set_field(FieldType::Int16(self.length()), field)),
+            fields::UDP_CHEKCSUM => {
+                Some(Field::set_field(FieldType::Int16(self.checksum()), field))
+            }
+            _ => None,
         }
     }
 
