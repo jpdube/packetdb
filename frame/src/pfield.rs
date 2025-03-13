@@ -13,7 +13,7 @@ pub enum FieldType {
     Int16(u16),
     Int8(u8),
     Ipv4(u32, u8),
-    Timestamp(usize),
+    Timestamp(u32),
     String(String),
     MacAddr(u64),
     Bool(bool),
@@ -155,7 +155,7 @@ impl Field {
     }
 }
 
-fn timestamp_str(ts: &usize) -> String {
+fn timestamp_str(ts: &u32) -> String {
     let naive = Utc.timestamp_opt(*ts as i64, 0).unwrap();
     let timestamp = naive.format("%Y-%m-%d %H:%M:%S");
     format!("{}", timestamp)
