@@ -85,6 +85,7 @@ pub fn get_keywords(str_token: &str) -> Option<Keyword> {
         "bandwidth" => Some(Keyword::Bandwidth),
         "in" => Some(Keyword::In),
         "not" => Some(Keyword::Not),
+        "like" => Some(Keyword::Like),
 
         _ => None,
     }

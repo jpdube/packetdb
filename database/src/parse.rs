@@ -25,6 +25,7 @@ pub enum Operator {
     Equal,
     In,
     NotIn,
+    Like,
     NE,
     LT,
     LE,
@@ -53,6 +54,7 @@ impl fmt::Display for Operator {
             Self::Equal => write!(f, " == "),
             Self::In => write!(f, " IN "),
             Self::NotIn => write!(f, " NOT IN "),
+            Self::Like => write!(f, " LIKE "),
             Self::NE => write!(f, " != "),
             Self::LT => write!(f, " < "),
             Self::LE => write!(f, " <= "),
@@ -179,6 +181,7 @@ pub enum Expression {
     IPv4(u32, u8),
     Timestamp(u32),
     MacAddress(u64),
+    String(String),
     NoOp,
 }
 
@@ -207,6 +210,7 @@ impl fmt::Display for Expression {
             Self::MacAddress(mac_addr) => write!(f, "Mac({})", MacAddr::set_from_int(mac_addr)),
             Self::Array(array_bytes) => write!(f, "Array({:?})", array_bytes),
             Self::ArrayLong(values) => write!(f, "Array Long({:?})", values),
+            Self::String(str_value) => write!(f, "String({})", str_value),
             // Self::ArrayIpv4(array_value) => write!(f, "Array of IPV4({:?})", array_value),
             Self::NoOp => write!(f, "NoOp"),
         }
@@ -624,6 +628,13 @@ impl Parse {
                 Box::new(leftval),
                 Box::new(self.parse_factor().unwrap()),
             ))
+        } else if self.accept(Keyword::Like).is_some() {
+            debug!("LIKE Operator");
+            Some(Expression::BinOp(
+                Operator::Like,
+                Box::new(leftval),
+                Box::new(self.parse_factor().unwrap()),
+            ))
         } else if self.accept(Keyword::Lt).is_some() {
             Some(Expression::BinOp(
                 Operator::LT,
@@ -692,6 +703,8 @@ impl Parse {
     fn parse_factor(&mut self) -> Option<Expression> {
         if self.peek(Keyword::Integer) {
             self.parse_int()
+        } else if self.peek(Keyword::String) {
+            self.parse_string()
         } else if self.peek(Keyword::Timestamp) {
             self.parse_timestamp()
         } else if self.peek(Keyword::IndexStart) {
@@ -727,6 +740,14 @@ impl Parse {
     fn parse_bool_false(&mut self) -> Option<Expression> {
         if self.accept(Keyword::False).is_some() {
             Some(Expression::Boolean(false))
+        } else {
+            None
+        }
+    }
+
+    fn parse_string(&mut self) -> Option<Expression> {
+        if let Some(tok) = self.accept(Keyword::String) {
+            Some(Expression::String(tok.value))
         } else {
             None
         }

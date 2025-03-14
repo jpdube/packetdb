@@ -6,6 +6,8 @@ use crate::parse::{Expression, Operator, PqlStatement};
 use crate::seek_packet::SeekPacket;
 use frame::ipv4_address::IPv4;
 use frame::packet::Packet;
+use frame::pfield::FieldType;
+use regex::Regex;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Object {
@@ -17,6 +19,7 @@ pub enum Object {
     _Label(u32),
     ByteArray(Vec<u8>),
     LongArray(Vec<u64>),
+    String(String),
     // _Label(String),
     Null,
 }
@@ -36,6 +39,7 @@ impl Display for Object {
             Object::LongArray(value) => write!(f, "Long array: {:?}", value),
             Object::Timestamp(value) => write!(f, "Timestamp: {:x}", value),
             Object::MacAddress(mac) => write!(f, "Mac: {:x}", mac),
+            Object::String(str) => write!(f, "String: {}", str),
             Object::Null => write!(f, "null"),
         }
     }
@@ -52,6 +56,7 @@ impl Object {
             Object::MacAddress(_) => "MacAddress",
             Object::ByteArray(_) => "ByteArray",
             Object::LongArray(_) => "LongArray",
+            Object::String(_) => "String",
             Object::Null => "Null",
         }
         .to_string()
@@ -126,9 +131,19 @@ impl Interpreter {
             Expression::Integer(i) => Ok(Object::Integer(*i as u64)),
             Expression::ArrayLong(values) => Ok(Object::LongArray(values.clone())),
             Expression::Long(i) => Ok(Object::Integer(*i as u64)),
+            Expression::String(s) => Ok(Object::String(s.clone())),
             Expression::Timestamp(t) => Ok(Object::Timestamp(*t)),
             Expression::Label(value) => {
-                Ok(Object::Integer(pkt.get_field(*value).unwrap().to_u64()))
+                let field_value = pkt.get_field(*value).unwrap();
+                match field_value.field {
+                    FieldType::Int8(_) => Ok(Object::Integer(field_value.to_u64())),
+                    FieldType::Int16(_) => Ok(Object::Integer(field_value.to_u64())),
+                    FieldType::Int32(_) => Ok(Object::Integer(field_value.to_u64())),
+                    FieldType::Int64(_) => Ok(Object::Integer(field_value.to_u64())),
+                    FieldType::String(_) => Ok(Object::String(field_value.to_string())),
+
+                    _ => Ok(Object::Integer(field_value.to_u64())),
+                }
             }
             Expression::LabelByte(field, offset, len) => {
                 Ok(Object::ByteArray(pkt.get_field_byte(*field, *offset, *len)))
@@ -156,6 +171,9 @@ impl Interpreter {
         match (&left, &right) {
             (Object::Integer(i), Object::Integer(j)) => {
                 self.eval_integer_infix_expression(operator, *i, *j)
+            }
+            (Object::String(i), Object::String(j)) => {
+                self.eval_string_infix_expression(operator, i, j)
             }
             (Object::Integer(i), Object::LongArray(j)) => {
                 self.eval_larray_infix_expression(operator, *i, j.clone())
@@ -285,6 +303,31 @@ impl Interpreter {
                 "eval_integer_infix_expression".to_string(),
             )),
         }
+    }
+
+    fn eval_string_infix_expression(
+        &self,
+        operator: &Operator,
+        i: &String,
+        j: &String,
+    ) -> Result<Object, EvalError> {
+        match operator {
+            Operator::Equal => Ok(Object::get_bool(i == j)),
+            Operator::NE => Ok(Object::get_bool(i != j)),
+            Operator::In => Ok(Object::get_bool(i.contains(j))),
+            Operator::NotIn => Ok(Object::get_bool(!i.contains(j))),
+            Operator::Like => Ok(Object::get_bool(self.like_string(i, j))),
+            _ => Err(EvalError::UnknownOperator(
+                format!("{}", operator),
+                "eval_string_infix_expression".to_string(),
+            )),
+        }
+    }
+
+    fn like_string(&self, source: &String, target: &String) -> bool {
+        let pattern = Regex::new(target).unwrap();
+
+        pattern.is_match(source)
     }
 
     fn eval_boolean_infix_expression(

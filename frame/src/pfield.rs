@@ -147,10 +147,10 @@ impl Field {
         }
     }
 
-    pub fn to_string(&self) -> &str {
+    pub fn to_string(&self) -> String {
         match &self.field {
-            FieldType::String(value) => value,
-            _ => "",
+            FieldType::String(value) => value.clone(),
+            _ => String::new(),
         }
     }
 }

@@ -68,6 +68,7 @@ pub enum Keyword {
     Not,
     In,
     NotIn,
+    Like,
 }
 
 impl fmt::Display for Keyword {
