@@ -210,6 +210,10 @@ impl<'a> Tcp<'a> {
 impl<'a> Layer for Tcp<'a> {
     fn get_field(&self, field: u32) -> Option<Field> {
         match field {
+            fields::TCP_PROTO_NAME => Some(Field::set_field(
+                FieldType::String(String::from("TCP Level 4")),
+                field,
+            )),
             fields::TCP_SRC_PORT => Some(Field::set_field(FieldType::Int16(self.sport()), field)),
             fields::TCP_DEST_PORT => Some(Field::set_field(FieldType::Int16(self.dport()), field)),
             fields::TCP_ACK_NO => Some(Field::set_field(FieldType::Int32(self.ack_no()), field)),
