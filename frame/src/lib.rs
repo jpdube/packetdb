@@ -2,6 +2,7 @@ pub mod arp;
 pub mod constant;
 pub mod eth;
 pub mod fields;
+pub mod frame;
 pub mod icmp;
 pub mod ip;
 pub mod ipv4_address;

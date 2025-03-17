@@ -2,40 +2,25 @@
 use crate::arp::Arp;
 use crate::eth::EtherFrame;
 use crate::fields;
+use crate::frame::Frame;
 use crate::icmp::Icmp;
 use crate::ip::IpFrame;
 use crate::layer::Layer;
 use crate::packet_display::PacketDisplay;
-use crate::pfield::{Field, FieldType};
+use crate::pfield::Field;
 use crate::tcp::Tcp;
 use crate::udp::UdpFrame;
 use indexmap::IndexMap;
 
-use byteorder::{BigEndian, ByteOrder, LittleEndian};
-
-// const IP_HDR_LEN_POS: usize = 0x0e;
-// const TCP_HDR_LEN_POS: usize = 0x2e;
-
-// const ETHERNET_HDR_LEN: usize = 0x0e;
-// const UDP_HEADER_LEN: u8 = 8;
+use byteorder::{BigEndian, ByteOrder};
 
 const ETHER_IPV4_PROTO: u16 = 0x0800;
-// const ETHER_IPV6_PROTO: u16 = 0x86DD;
 const ETHER_ARP_PROTO: u16 = 0x0806;
-// const ETHER_8021Q: u16 = 0x8100;
 
 const IP_TCP_PROTO: u8 = 0x06;
 const IP_UDP_PROTO: u8 = 0x11;
 const IP_ICMP_PROTO: u8 = 0x01;
 
-#[derive(Default, Debug, Clone, Eq, PartialEq)]
-pub struct PcapHeader {
-    pub ts_sec: u32,
-    pub ts_usec: u32,
-    pub inc_len: u32,
-    pub orig_len: u32,
-    pub header_len: u8,
-}
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum LayerType {
     FRAME,
@@ -65,12 +50,12 @@ pub struct LayerInfo {
 
 #[derive(Default, Debug, Clone)]
 pub struct Packet {
-    header: PcapHeader,
     raw_packet: Vec<u8>,
-    // eth_packet: Option<EtherFrame>,
     arp_packet: Option<Arp>,
     pub file_id: u32,
     pub pkt_ptr: u32,
+    header: [u8; 16],
+    little_endian: bool,
 
     frame_list: IndexMap<LayerType, LayerInfo>,
 }
@@ -89,8 +74,17 @@ impl Packet {
     }
 
     pub fn get_layer_bytes(&self, layer: LayerType) -> Option<&[u8]> {
-        if let Some(frame) = self.frame_list.get(&layer) {
-            return Some(&self.raw_packet[frame.start_pos..frame.end_pos]);
+        match layer {
+            LayerType::FRAME => {
+                if self.frame_list.get(&layer).is_some() {
+                    return Some(&self.header);
+                }
+            }
+            _ => {
+                if let Some(frame) = self.frame_list.get(&layer) {
+                    return Some(&self.raw_packet[frame.start_pos..frame.end_pos]);
+                }
+            }
         }
 
         return None;
@@ -134,6 +128,14 @@ impl Packet {
         }
     }
 
+    fn get_frame_packet(&self) -> Option<Frame> {
+        if let Some(raw_pkt) = self.get_layer_bytes(LayerType::FRAME) {
+            return Some(Frame::new(raw_pkt, self.little_endian));
+        } else {
+            return None;
+        }
+    }
+
     pub fn print_layers(&self) {
         println!("Layers: {:#?}", self.frame_list);
     }
@@ -146,19 +148,15 @@ impl Packet {
         pkt_ptr: u32,
         little_endian: bool,
     ) {
-        if little_endian {
-            self.header.ts_sec = LittleEndian::read_u32(&header[0..4]);
-            self.header.ts_usec = LittleEndian::read_u32(&header[4..8]);
-            self.header.inc_len = LittleEndian::read_u32(&header[8..12]);
-            self.header.orig_len = LittleEndian::read_u32(&header[12..16]);
-        } else {
-            self.header.ts_sec = BigEndian::read_u32(&header[0..4]);
-            self.header.ts_usec = BigEndian::read_u32(&header[4..8]);
-            self.header.inc_len = BigEndian::read_u32(&header[8..12]);
-            self.header.orig_len = BigEndian::read_u32(&header[12..16]);
-        }
+        self.header = header;
+        self.little_endian = little_endian;
+        self.add_layer(LayerInfo {
+            layer_type: LayerType::FRAME,
+            start_pos: 0,
+            end_pos: header.len(),
+        });
 
-        if packet.len() < self.header.inc_len as usize {
+        if packet.len() < self.get_frame_packet().unwrap().inc_len() as usize {
             return;
         }
 
@@ -179,8 +177,6 @@ impl Packet {
 
         ip_header_len = (self.raw_packet[vo] as usize & 0x0f) * 4;
 
-        // let mut ether = EtherFrame::default();
-        // ether.set_packet(packet[0..vo].to_vec());
         let ether = EtherFrame::new(&packet[0..vo]);
 
         //--- Added frame layer
@@ -219,7 +215,6 @@ impl Packet {
                 end_pos: vo + ip_header_len,
             });
         }
-        // self.eth_packet = Some(ether);
 
         self.process_ipv4(vo, ip_header_len);
     }
@@ -361,6 +356,12 @@ impl Packet {
             } else {
                 None
             }
+        } else if self.field_type(field, fields::FRAME_BASE) && self.has_layer(LayerType::FRAME) {
+            if let Some(frame_packet) = self.get_frame_packet() {
+                frame_packet.get_field(field)
+            } else {
+                None
+            }
         } else if self.field_type(field, fields::ICMP_BASE) && self.has_layer(LayerType::ICMP) {
             if let Some(pkt_bytes) = self.get_layer_bytes(LayerType::ICMP) {
                 let icmp = Icmp::new(pkt_bytes);
@@ -369,29 +370,7 @@ impl Packet {
                 None
             }
         } else {
-            match field {
-                fields::FRAME_TIMESTAMP => {
-                    Some(Field::set_field(FieldType::Int32(self.timestamp()), field))
-                }
-                fields::FRAME_OFFSET => {
-                    Some(Field::set_field(FieldType::Int32(self.ts_offset()), field))
-                }
-                fields::FRAME_ORIG_LEN => {
-                    Some(Field::set_field(FieldType::Int32(self.orig_len()), field))
-                }
-                fields::FRAME_INC_LEN => {
-                    Some(Field::set_field(FieldType::Int32(self.inc_len()), field))
-                }
-                fields::FRAME_FILE_ID => {
-                    Some(Field::set_field(FieldType::Int32(self.file_id), field))
-                }
-                fields::FRAME_PKT_PTR => {
-                    Some(Field::set_field(FieldType::Int32(self.pkt_ptr), field))
-                }
-                fields::FRAME_ID => Some(Field::set_field(FieldType::Int64(self.get_id()), field)),
-
-                _ => None,
-            }
+            None
         }
     }
 
@@ -433,27 +412,6 @@ impl Packet {
 
         let pkt: Vec<u8> = Vec::new();
         pkt
-    }
-
-    // pub fn get_id(&self) -> String {
-    //     format!("{}:{}", self.file_id, self.pkt_ptr)
-    // }
-
-    //----------------------------------------------------
-    //--- Frame section
-    //----------------------------------------------------
-    pub fn timestamp(&self) -> u32 {
-        self.header.ts_sec
-    }
-
-    pub fn ts_offset(&self) -> u32 {
-        self.header.ts_usec
-    }
-    pub fn orig_len(&self) -> u32 {
-        self.header.orig_len
-    }
-    pub fn inc_len(&self) -> u32 {
-        self.header.inc_len
     }
 }
 
