@@ -227,13 +227,17 @@ impl IndexManager {
             writer.write_u32::<BigEndian>(pindex).unwrap();
             proto_stat.add(pindex);
 
-            writer
-                .write_u32::<BigEndian>(pkt.get_field(fields::IPV4_DST_ADDR).unwrap().to_u32())
-                .unwrap();
+            if let Some(ip_dst) = pkt.get_field(fields::IPV4_DST_ADDR) {
+                writer.write_u32::<BigEndian>(ip_dst.to_u32()).unwrap();
+            } else {
+                writer.write_u32::<BigEndian>(0).unwrap();
+            }
 
-            writer
-                .write_u32::<BigEndian>(pkt.get_field(fields::IPV4_SRC_ADDR).unwrap().to_u32())
-                .unwrap();
+            if let Some(ip_src) = pkt.get_field(fields::IPV4_SRC_ADDR) {
+                writer.write_u32::<BigEndian>(ip_src.to_u32()).unwrap();
+            } else {
+                writer.write_u32::<BigEndian>(0).unwrap();
+            }
         }
         let duration = start.elapsed();
         info!(
