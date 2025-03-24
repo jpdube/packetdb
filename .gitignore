@@ -6,3 +6,4 @@ config/
 *.pem
 .DS_Store
 .idea
+.vscode
