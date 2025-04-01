@@ -20,7 +20,7 @@ struct Args {
     #[arg(short, long, default_value_t = false)]
     index: bool,
 
-    #[arg(short, long, default_value_t = String::new())]
+    #[arg(long, default_value_t = String::new())]
     capture: String,
 }
 
@@ -58,6 +58,7 @@ async fn main() -> std::io::Result<()> {
 
     process_params();
     web_main().await?;
+
     Ok(())
 }
 
