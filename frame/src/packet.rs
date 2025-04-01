@@ -1,5 +1,4 @@
 // #![allow(dead_code)]
-use crate::arp::Arp;
 use crate::eth::EtherFrame;
 use crate::fields;
 use crate::frame::Frame;
@@ -10,6 +9,7 @@ use crate::packet_display::PacketDisplay;
 use crate::pfield::Field;
 use crate::tcp::Tcp;
 use crate::udp::UdpFrame;
+use crate::{arp::Arp, dns::Dns};
 use indexmap::IndexMap;
 
 use byteorder::{BigEndian, ByteOrder};
@@ -104,8 +104,7 @@ impl Packet {
 
     fn get_tcp_packet(&self) -> Option<Tcp> {
         if let Some(raw_pkt) = self.get_layer_bytes(LayerType::TCP) {
-            let mut tcp = Tcp::default();
-            tcp.set_packet(raw_pkt);
+            let tcp = Tcp::new(raw_pkt);
             return Some(tcp);
         } else {
             return None;
@@ -131,6 +130,15 @@ impl Packet {
     fn get_frame_packet(&self) -> Option<Frame> {
         if let Some(raw_pkt) = self.get_layer_bytes(LayerType::FRAME) {
             return Some(Frame::new(raw_pkt, self.little_endian));
+        } else {
+            return None;
+        }
+    }
+
+    fn get_dns_packet(&self) -> Option<Dns> {
+        if let Some(raw_pkt) = self.get_layer_bytes(LayerType::DNS) {
+            let dns = Dns::new(raw_pkt);
+            return Some(dns);
         } else {
             return None;
         }
@@ -240,6 +248,17 @@ impl Packet {
                             start_pos: vo + ip_header_len,
                             end_pos: self.raw_packet.len(),
                         });
+
+                        if let Some(dns) = self.get_udp_packet() {
+                            if dns.is_dns() {
+                                // let dns_pkt = Dns::new(&dns._payload());
+                                self.add_layer(LayerInfo {
+                                    layer_type: LayerType::DNS,
+                                    start_pos: vo + ip_header_len + dns.header_len(),
+                                    end_pos: self.raw_packet.len(),
+                                });
+                            }
+                        }
                     }
                     IP_ICMP_PROTO => {
                         //--- Add ICMP layer
@@ -369,6 +388,12 @@ impl Packet {
             } else {
                 None
             }
+        } else if self.field_type(field, fields::DNS_BASE) && self.has_layer(LayerType::DNS) {
+            if let Some(dns_packet) = self.get_dns_packet() {
+                dns_packet.get_field(field)
+            } else {
+                None
+            }
         } else {
             None
         }
@@ -458,7 +483,7 @@ impl PacketDisplay for Packet {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-}
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
+// }
