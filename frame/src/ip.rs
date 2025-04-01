@@ -99,8 +99,7 @@ mod tests {
             0xe4, 0x56, 0x89, 0x7c, 0x50, 0x18, 0x20, 0x35, 0x7c, 0xbf, 0x00, 0x00,
         ];
 
-        let mut pkt = IpFrame::default();
-        pkt.set_packet(packet);
+        let pkt = IpFrame::new(&packet);
 
         assert_eq!(pkt.proto(), 0x06, "IP proto");
         assert_eq!(pkt.header_len(), 5, "IP Header len");
