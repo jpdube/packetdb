@@ -163,10 +163,6 @@ fn class_to_str(rtype: u16) -> String {
 pub struct Srv {
     service: String,
     protocol: String,
-    // rtype: u16,
-    // class: u16,
-    // ttl: u32,
-    // rdlength: u16,
     priority: u16,
     weight: u16,
     port: u16,
@@ -222,6 +218,7 @@ fn timestamp_str(ts: &u32) -> String {
     format!("{}", timestamp)
 }
 
+// TODO: Implement DNS additional records
 // #[derive(Debug)]
 // pub struct AdditionalRec {
 //     name: String,
@@ -297,22 +294,27 @@ impl fmt::Display for Answer {
 }
 
 impl<'a> Answer {
-    fn get_txt(&self, raw_data: &'a [u8], offset: usize, id: u16) -> (String, usize) {
+    fn get_txt(
+        &self,
+        raw_data: &'a [u8],
+        offset: usize,
+        id: u16,
+    ) -> Result<(String, usize), String> {
         let mut index = offset;
 
         let txt_len = raw_data[index] as usize;
         index += 1;
 
         match str::from_utf8(&raw_data[index..index + txt_len]) {
-            // match str::from_utf8(&raw_data[index..index + self.rdlength]) {
             Ok(txt_value) => {
                 let txt = String::from(txt_value);
-                return (txt.clone(), index + txt.len());
+                return Ok((txt.clone(), index + txt.len()));
             }
             Err(msg) => {
-                eprintln!("Error reading TXT field: {} ID: {:x}", msg, id);
-                print_hex(raw_data.to_vec());
-                return (String::new(), index + self.rdlength);
+                return Err(format!(
+                    "Error reading TXT field: {} ID: {:x}, Length: {}:{:x}",
+                    msg, id, txt_len, txt_len
+                ));
             }
         }
     }
@@ -348,13 +350,10 @@ impl<'a> Answer {
                 self.asize = index + 16;
             }
             DNS_TYPE_TXT => {
-                (self.txt, self.asize) = self.get_txt(raw_data, index, id);
-                // match str::from_utf8(&raw_data[index..index + self.rdlength]) {
-                //     Ok(txt_value) => self.txt = String::from(txt_value),
-                //     Err(msg) => eprintln!("Error reading TEXT field: {} at {:X}", msg, id),
-                // }
-
-                // self.asize = index + self.txt.len();
+                if let Ok((txt, size)) = self.get_txt(raw_data, index, id) {
+                    self.txt = txt;
+                    self.asize = size;
+                }
             }
 
             DNS_TYPE_SRV => {
@@ -482,20 +481,11 @@ impl<'a> Query {
         (self.name, label_size) = get_name(raw_data, offset, id);
 
         let mut index = offset + label_size;
-        // let mut index = offset + self.name.len() + 2;
-        // println!(
-        //     "Offset: {:x}, Index: {:x}, Name len: {:x}",
-        //     offset,
-        //     index,
-        //     self.name.len()
-        // );
         self.rtype = BigEndian::read_u16(&raw_data[index..index + 2]);
         index += 2;
         self.class = BigEndian::read_u16(&raw_data[index..index + 2]);
 
         self.qsize = self.name.len() + 2 + 2 + 2;
-
-        // println!("{}", self);
     }
 }
 
@@ -549,11 +539,11 @@ impl<'a> Dns<'a> {
         BigEndian::read_u16(&self.raw_packet[6..8])
     }
 
-    pub fn ns_count(&self) -> u16 {
+    pub fn authority_count(&self) -> u16 {
         BigEndian::read_u16(&self.raw_packet[8..10])
     }
 
-    pub fn authority_count(&self) -> u16 {
+    pub fn additional_count(&self) -> u16 {
         BigEndian::read_u16(&self.raw_packet[10..12])
     }
 
@@ -603,7 +593,7 @@ impl<'a> Dns<'a> {
 
     pub fn decode(&mut self) {
         self.offset = 12;
-        // println!("+++> ID: {:x}", self.id());
+
         self.process_queries();
         self.process_answers();
     }
@@ -670,7 +660,6 @@ impl<'a> Layer for Dns<'a> {
 
                 for answer in &self.answer_list {
                     field_list.push(Box::new(FieldType::String(answer.name.clone())));
-                    // field_list.push(Box::new(FieldType::Int16(12345)));
                 }
 
                 Some(Field::set_field(FieldType::FieldArray(field_list), field))
@@ -691,37 +680,21 @@ fn get_name(raw_packet: &[u8], start_pos: usize, id: u16) -> (String, usize) {
     let mut seperator = "";
     let mut label_ptr: u16;
     let mut label_offset = 0;
-    // let mut redir_count = 0;
     let mut ptr = false;
 
-    // println!("Get name ID: {:x}", id);
     temp_name = String::new();
     loop {
         count = raw_packet[offset] as usize;
-        // println!("Char count: {:x}", count);
 
         if count == 0 {
-            // if redir_count == 0 {
-            //     label_offset += 1;
-            // }
             break;
         }
         while count & 0xc0 == 0xc0 {
-            // redir_count += 1;
             ptr = true;
-
-            // if redir_count >= 1 {
-            //     label_offset += 2;
-            // }
 
             label_ptr = BigEndian::read_u16(&raw_packet[offset..offset + 2]);
             offset = (label_ptr & 0x3fff) as usize;
             count = raw_packet[offset] as usize;
-
-            // println!(
-            //     "-----> Label size: {:x}, Count: {:x}, Offset: {:x}, Value at offset: {:x}",
-            //     label_ptr, count, offset, raw_packet[offset],
-            // );
         }
 
         offset += 1;
@@ -744,8 +717,6 @@ fn get_name(raw_packet: &[u8], start_pos: usize, id: u16) -> (String, usize) {
         if temp_name.len() != 0 {
             seperator = "."
         }
-        // println!("Offset: {:0x}, Count: {:0x}", offset, count);
-        // print_hex(raw_packet[offset..offset + count].to_vec());
 
         match str::from_utf8(&raw_packet[offset..offset + count]) {
             Ok(name) => {
@@ -753,10 +724,6 @@ fn get_name(raw_packet: &[u8], start_pos: usize, id: u16) -> (String, usize) {
                 if !ptr {
                     label_offset = temp_name.len() + 1;
                 }
-                // if redir_count == 0 {
-                //     label_offset = temp_name.len() + 1;
-                // }
-                // println!("---> {}", temp_name);
             }
             Err(msg) => {
                 eprintln!(
@@ -776,81 +743,12 @@ fn get_name(raw_packet: &[u8], start_pos: usize, id: u16) -> (String, usize) {
         label_offset += 1;
     }
 
-    // println!("=====> Name: {}, Label offset: {}", temp_name, label_offset);
-
     return (temp_name, label_offset);
-}
-
-pub fn test_soa() {
-    let packet: Vec<u8> = vec![
-        0x88, 0x7, 0x81, 0x80, 0x0, 0x1, 0x0, 0x1, 0x0, 0x0, 0x0, 0x1, 0x3f, 0x75, 0x73, 0x72,
-        0x63, 0x75, 0x61, 0x61, 0x63, 0x61, 0x61, 0x6b, 0x70, 0x61, 0x69, 0x71, 0x64, 0x61, 0x68,
-        0x76, 0x73, 0x65, 0x61, 0x36, 0x73, 0x61, 0x71, 0x61, 0x61, 0x61, 0x7a, 0x6a, 0x67, 0x75,
-        0x69, 0x6a, 0x63, 0x34, 0x6c, 0x6d, 0x78, 0x75, 0x71, 0x6e, 0x33, 0x34, 0x69, 0x71, 0x64,
-        0x61, 0x65, 0x61, 0x61, 0x61, 0x61, 0x61, 0x33, 0x61, 0x61, 0x61, 0x61, 0x61, 0x32, 0x70,
-        0x30, 0x70, 0x76, 0x6c, 0x61, 0x61, 0x63, 0x61, 0x61, 0x77, 0x61, 0x61, 0x6a, 0x71, 0x61,
-        0x36, 0x37, 0x33, 0x70, 0x61, 0x70, 0x67, 0x68, 0x34, 0x37, 0x79, 0x74, 0x6a, 0x75, 0x74,
-        0x64, 0x35, 0x6a, 0x73, 0x33, 0x37, 0x61, 0x79, 0x75, 0x35, 0x73, 0x34, 0x6c, 0x6d, 0x62,
-        0x72, 0x79, 0x61, 0x69, 0x1, 0x61, 0x1, 0x6a, 0x2, 0x65, 0x35, 0x2, 0x73, 0x6b, 0x0, 0x0,
-        0x10, 0x0, 0x1, 0xc0, 0xc, 0x0, 0x10, 0x0, 0x1, 0x0, 0x0, 0x0, 0x78, 0x0, 0xad, 0xac, 0x41,
-        0x47, 0x41, 0x53, 0x4b, 0x67, 0x41, 0x43, 0x41, 0x42, 0x51, 0x41, 0x41, 0x41, 0x41, 0x41,
-        0x41, 0x41, 0x41, 0x41, 0x30, 0x67, 0x51, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41,
-        0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x49, 0x41, 0x41, 0x41,
-        0x42, 0x57, 0x41, 0x41, 0x41, 0x41, 0x51, 0x53, 0x34, 0x35, 0x57, 0x51, 0x45, 0x41, 0x45,
-        0x77, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41,
-        0x41, 0x41, 0x44, 0x43, 0x49, 0x32, 0x6c, 0x43, 0x66, 0x43, 0x5a, 0x37, 0x79, 0x51, 0x64,
-        0x42, 0x6f, 0x43, 0x51, 0x2b, 0x43, 0x49, 0x6c, 0x44, 0x55, 0x72, 0x6d, 0x76, 0x65, 0x6a,
-        0x37, 0x62, 0x73, 0x32, 0x45, 0x6d, 0x67, 0x46, 0x76, 0x33, 0x68, 0x45, 0x58, 0x5a, 0x53,
-        0x37, 0x34, 0x7a, 0x33, 0x73, 0x75, 0x6e, 0x6d, 0x2b, 0x52, 0x34, 0x56, 0x4b, 0x4c, 0x53,
-        0x4d, 0x4b, 0x47, 0x4f, 0x32, 0x37, 0x6c, 0x75, 0x42, 0x36, 0x62, 0x50, 0x38, 0x78, 0x33,
-        0x53, 0x2f, 0x64, 0x68, 0x36, 0x6c, 0x46, 0x74, 0x48, 0x78, 0x50, 0x45, 0x4e, 0x41, 0x33,
-        0x76, 0x37, 0x65, 0x42, 0x34, 0x47, 0x0, 0x0, 0x29, 0x2, 0x0, 0x0, 0x0, 0x80, 0x0, 0x0,
-        0x0,
-    ];
-
-    println!("------------------------------------------");
-    print_hex(packet.clone());
-    let dns = Dns::new(&packet);
-
-    assert_eq!(dns.answer_count(), 1, "DNS answer with long TXT");
-
-    println!("DNS: {:?}", dns);
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    // --- Original packet, extractions are used below
-    // -----------------------------------------------
-    // let packet: Vec<u8> = vec![
-    // 0x11, 0x7e, 0x81, 0x80, 0x00, 0x01, 0x00, 0x08, 0x00, 0x00, 0x00, 0x01, 0x20, 0x66, 0x38, 0x35, 0x39, 0x61, 0x35, 0x39, 0x64,
-    // 0x62, 0x36, 0x62, 0x37, 0x64, 0x30, 0x38, 0x62, 0x64, 0x33, 0x38, 0x38, 0x34, 0x62, 0x36, 0x39, 0x32, 0x31, 0x65, 0x35, 0x61,
-    // 0x35, 0x30, 0x64, 0x02, 0x66, 0x70, 0x07, 0x6d, 0x65, 0x61, 0x73, 0x75, 0x72, 0x65, 0x06, 0x6f, 0x66, 0x66, 0x69, 0x63, 0x65,
-    // 0x03, 0x63, 0x6f, 0x6d, 0x00, 0x00, 0x01, 0x00, 0x01, 0xc0, 0x0c, 0x00, 0x05, 0x00, 0x01, 0x00, 0x00, 0x00, 0x1e, 0x00, 0x0f,
-    // 0x07, 0x6f, 0x75, 0x74, 0x6c, 0x6f, 0x6f, 0x6b, 0x04, 0x6c, 0x69, 0x76, 0x65, 0xc0, 0x3f, 0xc0, 0x54, 0x00, 0x05, 0x00, 0x01,
-    // 0x00, 0x00, 0x00, 0xb6, 0x00, 0x17, 0x07, 0x6f, 0x75, 0x74, 0x6c, 0x6f, 0x6f, 0x6b, 0x02, 0x68, 0x61, 0x09, 0x6f, 0x66, 0x66,
-    // 0x69, 0x63, 0x65, 0x33, 0x36, 0x35, 0xc0, 0x3f, 0xc0, 0x6f, 0x00, 0x05, 0x00, 0x01, 0x00, 0x00, 0x00, 0x0d, 0x00, 0x12, 0x07,
-    // 0x6f, 0x75, 0x74, 0x6c, 0x6f, 0x6f, 0x6b, 0x07, 0x6d, 0x73, 0x2d, 0x61, 0x63, 0x64, 0x63, 0xc0, 0x38, 0xc0, 0x92, 0x00, 0x05,
-    // 0x00, 0x01, 0x00, 0x00, 0x00, 0x36, 0x00, 0x0a, 0x07, 0x59, 0x51, 0x42, 0x2d, 0x65, 0x66, 0x7a, 0xc0, 0x9a, 0xc0, 0xb0, 0x00,
-    // 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x04, 0x00, 0x04, 0x34, 0x60, 0x58, 0x92, 0xc0, 0xb0, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00,
-    // 0x00, 0x04, 0x00, 0x04, 0x34, 0x60, 0xe6, 0x32, 0xc0, 0xb0, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x04, 0x00, 0x04, 0x34,
-    // 0x60, 0xa3, 0xf2, 0xc0, 0xb0, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x04, 0x00, 0x04, 0x34, 0x60, 0x58, 0xb2, 0x00, 0x00,
-    // 0x29, 0x02, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00
-    // ];
-
-    //--- Response packet
-    // let packet: Vec<u8> = vec![
-    //     0x7f, 0x19, 0x85, 0x80, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x05, 0x5f,
-    //     0x6c, 0x64, 0x61, 0x70, 0x04, 0x5f, 0x74, 0x63, 0x70, 0x03, 0x70, 0x64, 0x63, 0x06,
-    //     0x5f, 0x6d, 0x73, 0x64, 0x63, 0x73, 0x07, 0x6c, 0x61, 0x6c, 0x6c, 0x69, 0x65, 0x72,
-    //     0x05, 0x6c, 0x6f, 0x63, 0x61, 0x6c, 0x00, 0x00, 0x21, 0x00, 0x01, 0xc0, 0x0c, 0x00,
-    //     0x21, 0x00, 0x01, 0x00, 0x00, 0x02, 0x58, 0x00, 0x21, 0x00, 0x00, 0x00, 0x64, 0x01,
-    //     0x85, 0x0b, 0x6d, 0x74, 0x6c, 0x2d, 0x73, 0x72, 0x76, 0x2d, 0x61, 0x64, 0x32, 0x07,
-    //     0x6c, 0x61, 0x6c, 0x6c, 0x69, 0x65, 0x72, 0x05, 0x6c, 0x6f, 0x63, 0x61, 0x6c, 0x00,
-    //     0xc0, 0x47, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x0e, 0x10, 0x00, 0x04, 0xc0, 0xa8,
-    //     0x02, 0xe6,
-    // ];
 
     #[test]
     fn dns_id() {
@@ -858,7 +756,12 @@ mod tests {
             0x11, 0x7e, 0x81, 0x80, 0x00, 0x01, 0x00, 0x08, 0x00, 0x00, 0x00, 0x01, 0x20, 0x66,
         ];
 
-        let pkt = Dns::new(&packet);
+        let pkt = Dns {
+            raw_packet: &packet,
+            answer_list: Vec::new(),
+            query_list: Vec::new(),
+            offset: 0,
+        };
 
         assert_eq!(pkt.id(), 0x117e, "DNS ID");
         assert_eq!(pkt.flags(), 0x8180, "DNS Flags");
@@ -871,7 +774,12 @@ mod tests {
             0x11, 0x7e, 0x81, 0x80, 0x00, 0x01, 0x00, 0x08, 0x00, 0x00, 0x00, 0x01, 0x20, 0x66,
         ];
 
-        let pkt = Dns::new(&packet);
+        let pkt = Dns {
+            raw_packet: &packet,
+            answer_list: Vec::new(),
+            query_list: Vec::new(),
+            offset: 0,
+        };
 
         assert_eq!(pkt.flags(), 0x8180, "DNS Flags");
     }
@@ -882,7 +790,12 @@ mod tests {
             0x11, 0x7e, 0x81, 0x80, 0x00, 0x01, 0x00, 0x08, 0x00, 0x00, 0x00, 0x01, 0x20, 0x66,
         ];
 
-        let pkt = Dns::new(&packet);
+        let pkt = Dns {
+            raw_packet: &packet,
+            answer_list: Vec::new(),
+            query_list: Vec::new(),
+            offset: 0,
+        };
 
         assert_eq!(pkt.question_count(), 1, "DNS Question");
     }
@@ -893,7 +806,12 @@ mod tests {
             0x11, 0x7e, 0x81, 0x80, 0x00, 0x01, 0x00, 0x08, 0x00, 0x00, 0x00, 0x01, 0x20, 0x66,
         ];
 
-        let pkt = Dns::new(&packet);
+        let pkt = Dns {
+            raw_packet: &packet,
+            answer_list: Vec::new(),
+            query_list: Vec::new(),
+            offset: 0,
+        };
 
         assert_eq!(pkt.is_query(), false, "DNS is query");
     }
@@ -904,7 +822,12 @@ mod tests {
             0x11, 0x7e, 0x81, 0x80, 0x00, 0x01, 0x00, 0x08, 0x00, 0x00, 0x00, 0x01, 0x20, 0x66,
         ];
 
-        let pkt = Dns::new(&packet);
+        let pkt = Dns {
+            raw_packet: &packet,
+            answer_list: Vec::new(),
+            query_list: Vec::new(),
+            offset: 0,
+        };
 
         assert_eq!(pkt.is_response(), true, "DNS is response");
     }
@@ -915,7 +838,12 @@ mod tests {
             0x11, 0x7e, 0x01, 0x00, 0x00, 0x01, 0x00, 0x08, 0x00, 0x00, 0x00, 0x01, 0x20, 0x66,
         ];
 
-        let pkt = Dns::new(&packet);
+        let pkt = Dns {
+            raw_packet: &packet,
+            answer_list: Vec::new(),
+            query_list: Vec::new(),
+            offset: 0,
+        };
 
         assert_eq!(pkt.is_query(), true, "DNS is query");
     }
@@ -926,7 +854,12 @@ mod tests {
             0x11, 0x7e, 0x01, 0x00, 0x00, 0x01, 0x00, 0x08, 0x00, 0x00, 0x00, 0x01, 0x20, 0x66,
         ];
 
-        let pkt = Dns::new(&packet);
+        let pkt = Dns {
+            raw_packet: &packet,
+            answer_list: Vec::new(),
+            query_list: Vec::new(),
+            offset: 0,
+        };
 
         assert_eq!(pkt.is_response(), false, "DNS is response");
     }
@@ -937,7 +870,12 @@ mod tests {
             0x11, 0x7e, 0x01, 0x00, 0x00, 0x01, 0x00, 0x08, 0x00, 0x00, 0x00, 0x01, 0x20, 0x66,
         ];
 
-        let pkt = Dns::new(&packet);
+        let pkt = Dns {
+            raw_packet: &packet,
+            answer_list: Vec::new(),
+            query_list: Vec::new(),
+            offset: 0,
+        };
 
         assert_eq!(pkt.opcode(), 0, "DNS is query");
     }
@@ -948,7 +886,12 @@ mod tests {
             0x7f, 0x19, 0x85, 0x80, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x05, 0x5f,
         ];
 
-        let pkt = Dns::new(&packet);
+        let pkt = Dns {
+            raw_packet: &packet,
+            answer_list: Vec::new(),
+            query_list: Vec::new(),
+            offset: 0,
+        };
 
         assert_eq!(pkt.is_authoritative(), true, "DNS is authoritative");
     }
@@ -959,7 +902,12 @@ mod tests {
             0x7f, 0x19, 0x85, 0x80, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x05, 0x5f,
         ];
 
-        let pkt = Dns::new(&packet);
+        let pkt = Dns {
+            raw_packet: &packet,
+            answer_list: Vec::new(),
+            query_list: Vec::new(),
+            offset: 0,
+        };
 
         assert_eq!(pkt.recursion_desired(), true, "DNS recursion desired");
     }
@@ -970,7 +918,12 @@ mod tests {
             0x7f, 0x19, 0x85, 0x80, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x05, 0x5f,
         ];
 
-        let pkt = Dns::new(&packet);
+        let pkt = Dns {
+            raw_packet: &packet,
+            answer_list: Vec::new(),
+            query_list: Vec::new(),
+            offset: 0,
+        };
 
         assert_eq!(
             pkt.recursion_available(),
@@ -985,7 +938,12 @@ mod tests {
             0x7f, 0x19, 0x85, 0x80, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x05, 0x5f,
         ];
 
-        let pkt = Dns::new(&packet);
+        let pkt = Dns {
+            raw_packet: &packet,
+            answer_list: Vec::new(),
+            query_list: Vec::new(),
+            offset: 0,
+        };
 
         assert_eq!(pkt.answer_authenticated(), false, "DNS is authenticated");
     }
@@ -996,7 +954,12 @@ mod tests {
             0x7f, 0x19, 0x85, 0x80, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x05, 0x5f,
         ];
 
-        let pkt = Dns::new(&packet);
+        let pkt = Dns {
+            raw_packet: &packet,
+            answer_list: Vec::new(),
+            query_list: Vec::new(),
+            offset: 0,
+        };
 
         assert_eq!(pkt.non_authenticated(), false, "DNS is non authenticated");
     }
@@ -1007,7 +970,12 @@ mod tests {
             0x7f, 0x19, 0x85, 0x80, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x05, 0x5f,
         ];
 
-        let pkt = Dns::new(&packet);
+        let pkt = Dns {
+            raw_packet: &packet,
+            answer_list: Vec::new(),
+            query_list: Vec::new(),
+            offset: 0,
+        };
 
         assert_eq!(pkt.reply_code(), 0, "DNS reply code = 0");
     }
@@ -1018,7 +986,12 @@ mod tests {
             0x7f, 0x19, 0x85, 0x80, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x05, 0x5f,
         ];
 
-        let pkt = Dns::new(&packet);
+        let pkt = Dns {
+            raw_packet: &packet,
+            answer_list: Vec::new(),
+            query_list: Vec::new(),
+            offset: 0,
+        };
 
         assert_eq!(pkt.question_count(), 1, "DNS question count");
     }
@@ -1030,9 +1003,14 @@ mod tests {
             0x6c, 0x64, 0x61, 0x70, 0x04, 0x5f, 0x74, 0x63, 0x70, 0x03, 0x70, 0x64, 0x63, 0x06,
         ];
 
-        let pkt = Dns::new(&packet);
+        let pkt = Dns {
+            raw_packet: &packet,
+            answer_list: Vec::new(),
+            query_list: Vec::new(),
+            offset: 0,
+        };
 
-        assert_eq!(pkt.authority_count(), 1, "DNS answer count");
+        assert_eq!(pkt.answer_count(), 1, "DNS answer count");
     }
 
     #[test]
@@ -1042,7 +1020,12 @@ mod tests {
             0x6c, 0x64, 0x61, 0x70, 0x04, 0x5f, 0x74, 0x63, 0x70, 0x03, 0x70, 0x64, 0x63, 0x06,
         ];
 
-        let pkt = Dns::new(&packet);
+        let pkt = Dns {
+            raw_packet: &packet,
+            answer_list: Vec::new(),
+            query_list: Vec::new(),
+            offset: 0,
+        };
 
         assert_eq!(pkt.answer_count(), 1, "DNS authority");
     }
@@ -1056,12 +1039,10 @@ mod tests {
             0x00, 0x00, 0x01, 0x00, 0x01,
         ];
 
-        let mut pkt = Dns::new(&packet);
-        pkt.process_queries();
+        let pkt = Dns::new(&packet);
 
         assert_eq!(pkt.query_list.len(), 1, "DNS question count should be 1");
 
-        // pkt.offset = 12;
         assert_eq!(
             pkt.query_list[0].name, "v10.events.data.microsoft.com",
             "DNS question name"
@@ -1082,8 +1063,7 @@ mod tests {
             0x02, 0xe6,
         ];
 
-        let mut pkt = Dns::new(&packet);
-        pkt.process_queries();
+        let pkt = Dns::new(&packet);
 
         assert_eq!(
             pkt.query_list[0].name, "_ldap._tcp.pdc._msdcs.lallier.local",
@@ -1100,8 +1080,6 @@ mod tests {
             0x5a, 0xe2, 0x24, 0x0, 0x0, 0x29, 0x2, 0x0, 0x0, 0x0, 0x80, 0x0, 0x0, 0x0,
         ];
         let mut pkt = Dns::new(&packet);
-        pkt.offset = 35;
-        pkt.process_answers();
 
         assert_eq!(
             pkt.answer_list[0].name, "pico.gtm.eset.COM",
@@ -1122,9 +1100,7 @@ mod tests {
             0x0, 0x82, 0x0, 0x4, 0x14, 0x36, 0x59, 0x6a,
         ];
 
-        let mut pkt = Dns::new(&packet);
-        pkt.offset = 44;
-        pkt.process_answers();
+        let pkt = Dns::new(&packet);
 
         assert_eq!(pkt.answer_list.len(), 3, "DNS question with 3 replies");
     }
@@ -1146,16 +1122,9 @@ mod tests {
             0x80, 0x0, 0x0, 0x0,
         ];
 
-        let mut pkt = Dns::new(&packet);
-        pkt.offset = 47;
-        pkt.process_answers();
+        let pkt = Dns::new(&packet);
 
         assert_eq!(pkt.answer_list.len(), 4, "DNS question with 4 replies");
-        // assert_eq!(
-        //     pkt.process_queries()[0].name,
-        //     "_ldap._tcp.pdc._msdcs.lallier.local",
-        //     "DNS question name"
-        // );
     }
 
     #[test]
@@ -1168,9 +1137,7 @@ mod tests {
             0x0, 0x0, 0x29, 0x2, 0x0, 0x0, 0x0, 0x80, 0x0, 0x0, 0x0,
         ];
 
-        let mut pkt = Dns::new(&packet);
-        pkt.offset = 45;
-        pkt.process_answers();
+        let pkt = Dns::new(&packet);
 
         assert_eq!(pkt.answer_list.len(), 1, "DNS answer 2 replies");
     }
@@ -1192,8 +1159,7 @@ mod tests {
             0x80, 0x0, 0x0, 0x0,
         ];
 
-        let mut pkt = Dns::new(&packet);
-        pkt.decode();
+        let pkt = Dns::new(&packet);
 
         assert_eq!(pkt.answer_list.len(), 4, "Answers list 4 record");
         assert_eq!(pkt.query_list.len(), 1, "Questions list 1 query");
@@ -1212,8 +1178,7 @@ mod tests {
             0x0, 0x4, 0xc0, 0xa8, 0x2, 0xe6,
         ];
 
-        let mut pkt = Dns::new(&packet);
-        pkt.decode();
+        let pkt = Dns::new(&packet);
 
         assert_eq!(pkt.answer_list.len(), 1, "Answers list 1 SRV record");
         assert_eq!(pkt.answer_list[0].srv.port, 389, "SRV port == 389");
@@ -1240,19 +1205,12 @@ mod tests {
 
         println!("------------------------------------------");
         print_hex(packet.clone());
-        let mut pkt = Dns::new(&packet);
-        pkt.decode();
-        // pkt.offset = 30;
-        // pkt.process_answers();
+        let pkt = Dns::new(&packet);
 
         assert_eq!(pkt.answer_list.len(), 5, "DNS question with 5 replies");
         println!("Answer list: {:#?}", pkt.answer_list)
-        // assert_eq!(
-        //     pkt.process_queries()[0].name,
-        //     "_ldap._tcp.pdc._msdcs.lallier.local",
-        //     "DNS question name"
-        // );
     }
+
     #[test]
     fn dns_query_rsig_answer() {
         let packet: Vec<u8> = vec![
@@ -1270,8 +1228,6 @@ mod tests {
         print_hex(packet.clone());
         let mut answer = Answer::default();
         answer.decode(&packet, 0, 0xff);
-        // pkt.offset = 30;
-        // pkt.process_answers();
 
         assert_eq!(answer.rrsig.is_some(), true, "DNS rrsig present");
         assert_eq!(
@@ -1322,10 +1278,7 @@ mod tests {
 
         println!("------------------------------------------");
         print_hex(packet.clone());
-        let mut pkt = Dns::new(&packet);
-        // pkt.decode();
-        pkt.offset = 0x2b;
-        pkt.process_answers();
+        let pkt = Dns::new(&packet);
 
         assert_eq!(pkt.answer_list.len(), 7, "DNS question with 7 replies");
         for a in pkt.answer_list {
@@ -1407,21 +1360,8 @@ mod tests {
         ];
 
         println!("------------------------------------------");
-        // print_hex(packet.clone());
-        // let mut answer = Answer::default();
-        // answer.decode(&packet, 0x36, 0xeeef);
-
-        // assert_eq!(answer., true, "DNS SOA answer");
-        // println!(
-        //     "SOA test: {}, Answer: {}",
-        //     answer.clone().soa.unwrap(),
-        //     answer.clone()
-        // );
         print_hex(packet.clone());
-        let mut pkt = Dns::new(&packet);
-        // pkt.decode();
-        pkt.offset = 0x35;
-        pkt.process_answers();
+        let pkt = Dns::new(&packet);
 
         assert_eq!(pkt.answer_list.len(), 7, "DNS question with 7 replies");
         for a in pkt.answer_list {
@@ -1442,27 +1382,14 @@ mod tests {
         ];
 
         println!("------------------------------------------");
-        // print_hex(packet.clone());
-        // let mut answer = Answer::default();
-        // answer.decode(&packet, 0x36, 0xeeef);
-
-        // assert_eq!(answer., true, "DNS SOA answer");
-        // println!(
-        //     "SOA test: {}, Answer: {}",
-        //     answer.clone().soa.unwrap(),
-        //     answer.clone()
-        // );
         print_hex(packet.clone());
-        let mut pkt = Dns::new(&packet);
-        // pkt.decode();
-        // pkt.offset = 0x34;
-        // pkt.process_answers();
+        let pkt = Dns::new(&packet);
 
-        // assert_eq!(pkt.answer_list.len(), 7, "DNS question with 7 replies");
         for a in pkt.answer_list {
             println!("{:#?}", a);
         }
     }
+
     #[test]
     fn dns_answer_aaaa() {
         let packet: Vec<u8> = vec![
@@ -1474,8 +1401,6 @@ mod tests {
         print_hex(packet.clone());
         let mut answer = Answer::default();
         answer.decode(&packet, 0, 0xff);
-        // pkt.offset = 30;
-        // pkt.process_answers();
 
         assert_eq!(
             answer.ipv6_addr, 0x20010500001300000000000000000063,
@@ -1503,8 +1428,6 @@ mod tests {
         print_hex(packet.clone());
         let mut query = Query::default();
         query.decode(&packet, 0, 0xfe);
-        // pkt.offset = 30;
-        // pkt.process_answers();
 
         assert_eq!(query.rtype, DNS_TYPE_TXT, "DNS ipv6 address");
 
@@ -1532,6 +1455,47 @@ mod tests {
         let dns = Dns::new(&packet);
 
         assert_eq!(dns.answer_count(), 0, "DNS ipv6 address");
+
+        println!("DNS: {:?}", dns);
+    }
+
+    #[test]
+    fn dns_query_with_long_question_name_long_answer() {
+        let packet: Vec<u8> = vec![
+            0x88, 0x7, 0x81, 0x80, 0x0, 0x1, 0x0, 0x1, 0x0, 0x0, 0x0, 0x1, 0x3f, 0x75, 0x73, 0x72,
+            0x63, 0x75, 0x61, 0x61, 0x63, 0x61, 0x61, 0x6b, 0x70, 0x61, 0x69, 0x71, 0x64, 0x61,
+            0x68, 0x76, 0x73, 0x65, 0x61, 0x36, 0x73, 0x61, 0x71, 0x61, 0x61, 0x61, 0x7a, 0x6a,
+            0x67, 0x75, 0x69, 0x6a, 0x63, 0x34, 0x6c, 0x6d, 0x78, 0x75, 0x71, 0x6e, 0x33, 0x34,
+            0x69, 0x71, 0x64, 0x61, 0x65, 0x61, 0x61, 0x61, 0x61, 0x61, 0x33, 0x61, 0x61, 0x61,
+            0x61, 0x61, 0x32, 0x70, 0x30, 0x70, 0x76, 0x6c, 0x61, 0x61, 0x63, 0x61, 0x61, 0x77,
+            0x61, 0x61, 0x6a, 0x71, 0x61, 0x36, 0x37, 0x33, 0x70, 0x61, 0x70, 0x67, 0x68, 0x34,
+            0x37, 0x79, 0x74, 0x6a, 0x75, 0x74, 0x64, 0x35, 0x6a, 0x73, 0x33, 0x37, 0x61, 0x79,
+            0x75, 0x35, 0x73, 0x34, 0x6c, 0x6d, 0x62, 0x72, 0x79, 0x61, 0x69, 0x1, 0x61, 0x1, 0x6a,
+            0x2, 0x65, 0x35, 0x2, 0x73, 0x6b, 0x0, 0x0, 0x10, 0x0, 0x1, 0xc0, 0xc, 0x0, 0x10, 0x0,
+            0x1, 0x0, 0x0, 0x0, 0x78, 0x0, 0xad, 0xac, 0x41, 0x47, 0x41, 0x53, 0x4b, 0x67, 0x41,
+            0x43, 0x41, 0x42, 0x51, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x30,
+            0x67, 0x51, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41,
+            0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x49, 0x41, 0x41, 0x41, 0x42, 0x57, 0x41,
+            0x41, 0x41, 0x41, 0x51, 0x53, 0x34, 0x35, 0x57, 0x51, 0x45, 0x41, 0x45, 0x77, 0x41,
+            0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41,
+            0x41, 0x44, 0x43, 0x49, 0x32, 0x6c, 0x43, 0x66, 0x43, 0x5a, 0x37, 0x79, 0x51, 0x64,
+            0x42, 0x6f, 0x43, 0x51, 0x2b, 0x43, 0x49, 0x6c, 0x44, 0x55, 0x72, 0x6d, 0x76, 0x65,
+            0x6a, 0x37, 0x62, 0x73, 0x32, 0x45, 0x6d, 0x67, 0x46, 0x76, 0x33, 0x68, 0x45, 0x58,
+            0x5a, 0x53, 0x37, 0x34, 0x7a, 0x33, 0x73, 0x75, 0x6e, 0x6d, 0x2b, 0x52, 0x34, 0x56,
+            0x4b, 0x4c, 0x53, 0x4d, 0x4b, 0x47, 0x4f, 0x32, 0x37, 0x6c, 0x75, 0x42, 0x36, 0x62,
+            0x50, 0x38, 0x78, 0x33, 0x53, 0x2f, 0x64, 0x68, 0x36, 0x6c, 0x46, 0x74, 0x48, 0x78,
+            0x50, 0x45, 0x4e, 0x41, 0x33, 0x76, 0x37, 0x65, 0x42, 0x34, 0x47, 0x0, 0x0, 0x29, 0x2,
+            0x0, 0x0, 0x0, 0x80, 0x0, 0x0, 0x0,
+        ];
+
+        println!("------------------------------------------");
+        print_hex(packet.clone());
+        let dns = Dns::new(&packet);
+
+        assert_eq!(dns.answer_count(), 1, "DNS long answer 1");
+        assert_eq!(dns.question_count(), 1, "DNS long query 1");
+        assert_eq!(dns.additional_count(), 1, "DNS long additional 1");
+        assert_eq!(dns.answer_list[0].name, "usrcuaacaakpaiqdahvsea6saqaaazjguijc4lmxuqn34iqdaeaaaaa3aaaaa2p.pvlaacaawaajqa673papgh47ytjutd5js37ayu5s4lmbryai.a.j.e5.sk", "DNS long additional 1");
 
         println!("DNS: {:?}", dns);
     }
