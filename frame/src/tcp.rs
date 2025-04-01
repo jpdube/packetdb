@@ -43,9 +43,15 @@ pub struct Tcp<'a> {
 }
 
 impl<'a> Tcp<'a> {
-    pub fn set_packet(&mut self, packet: &'a [u8]) {
-        self.raw_packet = packet;
-        self.decode_options();
+    pub fn new(packet: &'a [u8]) -> Self {
+        let mut slf = Self {
+            raw_packet: packet,
+            options: Options::default(),
+        };
+
+        slf.decode_options();
+
+        slf
     }
 
     pub fn seq_no(&self) -> u32 {
@@ -335,10 +341,9 @@ mod tests {
             0x01, 0x03, 0x03, 0x07,
         ];
 
-        let mut pkt = Tcp::default();
-        pkt.set_packet(packet);
+        let pkt = Tcp::new(&packet);
 
-        assert_eq!(pkt.get_field(fields::TCP_OPTIONS_MSS), 1460);
+        assert_eq!(pkt.options.mss, 1460);
     }
 
     #[test]
@@ -349,10 +354,9 @@ mod tests {
             0x01, 0x03, 0x03, 0x07,
         ];
 
-        let mut pkt = Tcp::default();
-        pkt.set_packet(packet);
+        let pkt = Tcp::new(&packet);
 
-        assert_eq!(pkt.get_field(fields::TCP_OPTIONS_WIN_SCALE), 7);
+        assert_eq!(pkt.options.winscale, 7);
     }
 
     #[test]
@@ -363,10 +367,9 @@ mod tests {
             0x01, 0x03, 0x03, 0x07,
         ];
 
-        let mut pkt = Tcp::default();
-        pkt.set_packet(packet);
+        let pkt = Tcp::new(&packet);
 
-        assert_eq!(pkt.get_field(fields::TCP_OPTIONS_WIN_SCALE_MUL), 128);
+        assert_eq!(pkt.options.win_multiplier, 128);
     }
 
     #[test]
@@ -377,13 +380,9 @@ mod tests {
             0xe6, 0x3c, 0xdd, 0xfc,
         ];
 
-        let mut pkt = Tcp::default();
-        pkt.set_packet(packet);
+        let pkt = Tcp::new(&packet);
 
-        assert_eq!(
-            pkt.get_field(fields::TCP_OPTIONS_TIMESTAMP_TSVAL),
-            0x7386e726
-        );
+        assert_eq!(pkt.options.timestamp.tsval, 0x7386e726);
     }
 
     #[test]
@@ -394,13 +393,9 @@ mod tests {
             0xe6, 0x3c, 0xdd, 0xfc,
         ];
 
-        let mut pkt = Tcp::default();
-        pkt.set_packet(packet);
+        let pkt = Tcp::new(&packet);
 
-        assert_eq!(
-            pkt.get_field(fields::TCP_OPTIONS_TIMESTAMP_TSECR),
-            0xe63cddfc
-        );
+        assert_eq!(pkt.options.timestamp.tsecr, 0xe63cddfc);
     }
 
     #[test]
@@ -410,8 +405,7 @@ mod tests {
             0x01, 0xf5, 0x67, 0xa3,
         ];
 
-        let mut pkt = Tcp::default();
-        pkt.set_packet(packet);
+        let pkt = Tcp::new(&packet);
 
         assert_eq!(pkt.hdr_len(), 5);
     }
@@ -423,8 +417,7 @@ mod tests {
             0x01, 0xf5, 0x67, 0xa3, 0x00, 0x00,
         ];
 
-        let mut pkt = Tcp::default();
-        pkt.set_packet(packet);
+        let pkt = Tcp::new(&packet);
 
         assert_eq!(pkt.win_size(), 0x01f5);
     }
@@ -454,8 +447,7 @@ mod tests {
             0x20, 0x3e, 0xb7, 0x05, 0x15, 0x2f, 0xfa, 0x28, 0x89, 0xcc,
         ];
 
-        let mut pkt = Tcp::default();
-        pkt.set_packet(packet);
+        let pkt = Tcp::new(&packet);
 
         assert_eq!(pkt.payload_len(), 256);
     }
@@ -467,8 +459,7 @@ mod tests {
             0x20, 0x35, 0x7c, 0xbf, 0x00, 0x00,
         ];
 
-        let mut pkt = Tcp::default();
-        pkt.set_packet(packet);
+        let pkt = Tcp::new(&packet);
 
         assert_eq!(pkt.sport(), 0xc8cf);
         assert_eq!(pkt.dport(), 0x01bd);
@@ -481,8 +472,7 @@ mod tests {
             0x20, 0x35, 0x7c, 0xbf, 0x00, 0x00,
         ];
 
-        let mut pkt = Tcp::default();
-        pkt.set_packet(packet);
+        let pkt = Tcp::new(&packet);
 
         assert_eq!(pkt.seq_no(), 0x1e5473c3);
     }
@@ -494,8 +484,7 @@ mod tests {
             0x20, 0x35, 0x7c, 0xbf, 0x00, 0x00,
         ];
 
-        let mut pkt = Tcp::default();
-        pkt.set_packet(packet);
+        let pkt = Tcp::new(&packet);
 
         assert_eq!(pkt.ack_no(), 0xe456897c);
     }
@@ -507,8 +496,7 @@ mod tests {
             0x20, 0x35, 0x7c, 0xbf, 0x00, 0x00,
         ];
 
-        let mut pkt = Tcp::default();
-        pkt.set_packet(packet);
+        let pkt = Tcp::new(&packet);
 
         assert!(pkt.flag_ack());
         assert!(pkt.flag_push());
@@ -525,8 +513,7 @@ mod tests {
             0x01, 0x01, 0x04, 0x02,
         ];
 
-        let mut pkt = Tcp::default();
-        pkt.set_packet(packet);
+        let pkt = Tcp::new(&packet);
 
         assert!(pkt.flag_syn());
         assert!(!pkt.flag_ack());
@@ -542,8 +529,7 @@ mod tests {
             0x00, 0x00, 0x6f, 0x2b, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         ];
 
-        let mut pkt = Tcp::default();
-        pkt.set_packet(packet);
+        let pkt = Tcp::new(&packet);
 
         assert!(pkt.flag_rst());
         assert!(!pkt.flag_syn());
