@@ -81,6 +81,23 @@ pub const ARP_OPCODE: u32 = 0x00060007;
 pub const ARP_HLEN: u32 = 0x00060008;
 pub const ARP_PLEN: u32 = 0x00060009;
 
+//-- DNS
+pub const DNS_BASE: u32 = 0x00070000;
+pub const DNS_ID: u32 = 0x00070001;
+pub const DNS_IS_QUERY: u32 = 0x00070002;
+pub const DNS_IS_RESPONSE: u32 = 0x00070003;
+pub const DNS_OPCODE: u32 = 0x00070004;
+pub const DNS_QUESTION_COUNT: u32 = 0x00070005;
+pub const DNS_ANSWER_COUNT: u32 = 0x00070006;
+pub const DNS_AUTHORITY_COUNT: u32 = 0x00070007;
+pub const DNS_IS_AUTHORITATIVE: u32 = 0x00070008;
+pub const DNS_REPLY_CODE: u32 = 0x00070009;
+pub const DNS_ANSWERS: u32 = 0x0007000A;
+pub const DNS_HAS_RRSIG: u32 = 0x0007000B;
+pub const DNS_HAS_AAAA: u32 = 0x0007000C;
+pub const DNS_TYPE_AAAA: u32 = 0x0007000D;
+pub const DNS_TYPE_A: u32 = 0x0007000E;
+
 pub fn string_to_int(field_str: &str) -> Option<u32> {
     match field_str {
         //--- Frame
@@ -99,6 +116,7 @@ pub fn string_to_int(field_str: &str) -> Option<u32> {
         "eth.vlan" => Some(ETH_VLAN_ID),
         "eth.packet" => Some(ETH_PACKET),
 
+        //--- ARP
         "arp.sender_mac" => Some(ARP_SHA),
         "arp.sender_ip" => Some(ARP_SPA),
         "arp.target_mac" => Some(ARP_THA),
@@ -157,6 +175,17 @@ pub fn string_to_int(field_str: &str) -> Option<u32> {
         "icmp.identifier" => Some(ICMP_IDENTIFIER),
         "icmp.seq_no" => Some(ICMP_SEQ_NO),
         "icmp.packet" => Some(ICMP_PACKET),
+
+        //--- DNS
+        "dns.id" => Some(DNS_ID),
+        "dns.opcode" => Some(DNS_OPCODE),
+        "dns.answer_count" => Some(DNS_ANSWER_COUNT),
+        "dns.question_count" => Some(DNS_QUESTION_COUNT),
+        "dns.answers" => Some(DNS_ANSWERS),
+        "dns.has_rrsig" => Some(DNS_HAS_RRSIG),
+        "dns.has_aaaa" => Some(DNS_HAS_AAAA),
+        "dns.type_aaaa" => Some(DNS_TYPE_AAAA),
+        "dns.type_a" => Some(DNS_TYPE_A),
 
         _ => None,
     }
