@@ -1,4 +1,5 @@
 use crate::ipv4_address::IPv4;
+use crate::ipv6_address::IPv6;
 use crate::mac_address::MacAddr;
 use ::chrono::prelude::*;
 use serde::Serialize;
@@ -13,11 +14,13 @@ pub enum FieldType {
     Int16(u16),
     Int8(u8),
     Ipv4(u32, u8),
+    Ipv6(u128, u8),
     Timestamp(u32),
     String(String),
     MacAddr(u64),
     Bool(bool),
     ByteArray(Vec<u8>),
+    FieldArray(Vec<Box<FieldType>>),
 }
 
 impl fmt::Display for FieldType {
@@ -28,11 +31,13 @@ impl fmt::Display for FieldType {
             Self::Int16(value) => write!(f, "{}", value),
             Self::Int8(value) => write!(f, "{}", value),
             Self::Ipv4(address, mask) => write!(f, "{}", IPv4::new(*address, *mask).to_string()),
+            Self::Ipv6(address, mask) => write!(f, "{}", IPv6::new(*address, *mask).to_string()),
             Self::MacAddr(address) => write!(f, "{}", MacAddr::set_from_int(address)),
             Self::Timestamp(ts) => write!(f, "{}", timestamp_str(ts)),
             Self::String(value) => write!(f, "{}", value),
             Self::Bool(value) => write!(f, "{}", value),
             Self::ByteArray(value) => write!(f, "{:?}", value),
+            Self::FieldArray(value) => write!(f, "{:?}", value),
         }
     }
 }
@@ -74,11 +79,13 @@ impl Field {
             FieldType::Int16(value) => json!(value),
             FieldType::Int8(value) => json!(value),
             FieldType::Ipv4(address, mask) => json!(IPv4::new(*address, *mask).to_string()),
+            FieldType::Ipv6(address, mask) => json!(IPv6::new(*address, *mask).to_string()),
             FieldType::MacAddr(value) => json!(MacAddr::set_from_int(value).to_string()),
             FieldType::String(value) => json!(value),
             FieldType::Timestamp(value) => json!(timestamp_str(&value)),
             FieldType::Bool(value) => json!(value),
             FieldType::ByteArray(value) => json!(value),
+            FieldType::FieldArray(value) => json!(value),
         }
     }
 
