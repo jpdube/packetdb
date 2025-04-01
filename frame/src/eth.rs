@@ -105,8 +105,7 @@ mod tests {
             0x00, 0x00,
         ];
 
-        let mut pkt = EtherFrame::default();
-        pkt.set_packet(packet);
+        let pkt = EtherFrame::new(&packet);
 
         assert_eq!(pkt.ethertype(), 0x0800, "Ethertype");
         assert_eq!(pkt.header(), 0x8100, "Eth vlan");
