@@ -8,123 +8,6 @@ use ::chrono::prelude::*;
 use byteorder::{BigEndian, ByteOrder};
 use std::str;
 use std::{fmt, usize};
-/*
-All RRs have the same top level format shown below:
-
-                                    1  1  1  1  1  1
-      0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5
-    +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-    |                                               |
-    /                                               /
-    /                      NAME                     /
-    |                                               |
-    +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-    |                      TYPE                     |
-    +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-    |                     CLASS                     |
-    +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-    |                      TTL                      |
-    |                                               |
-    +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-    |                   RDLENGTH                    |
-    +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--|
-    /                     RDATA                     /
-    /                                               /
-    +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-
-
-where:
-
-NAME            an owner name, i.e., the name of the node to which this
-                resource record pertains.
-
-TYPE            two octets containing one of the RR TYPE codes.
-
-CLASS           two octets containing one of the RR CLASS codes.
-
-TTL             a 32 bit signed integer that specifies the time interval
-                that the resource record may be cached before the source
-                of the information should again be consulted.  Zero
-                values are interpreted to mean that the RR can only be
-                used for the transaction in progress, and should not be
-                cached.  For example, SOA records are always distributed
-                with a zero TTL to prohibit caching.  Zero values can
-                also be used for extremely volatile data.
-
-RDLENGTH        an unsigned 16 bit integer that specifies the length in
-                octets of the RDATA field.
-
-
-
-Mockapetris                                                    [Page 11]
-
-RFC 1035        Domain Implementation and Specification    November 1987
-
-
-RDATA           a variable length string of octets that describes the
-                resource.  The format of this information varies
-                according to the TYPE and CLASS of the resource record.
-
-3.2.2. TYPE values
-
-TYPE fields are used in resource records.  Note that these types are a
-subset of QTYPEs.
-
-TYPE            value and meaning
-
-A               1 a host address
-
-NS              2 an authoritative name server
-
-MD              3 a mail destination (Obsolete - use MX)
-
-MF              4 a mail forwarder (Obsolete - use MX)
-
-CNAME           5 the canonical name for an alias
-
-SOA             6 marks the start of a zone of authority
-
-MB              7 a mailbox domain name (EXPERIMENTAL)
-
-MG              8 a mail group member (EXPERIMENTAL)
-
-MR              9 a mail rename domain name (EXPERIMENTAL)
-
-NULL            10 a null RR (EXPERIMENTAL)
-
-WKS             11 a well known service description
-
-PTR             12 a domain name pointer
-
-HINFO           13 host information
-
-MINFO           14 mailbox or mail list information
-
-MX              15 mail exchange
-
-TXT             16 text strings
-
-3.2.3. QTYPE values
-
-QTYPE fields appear in the question part of a query.  QTYPES are a
-superset of TYPEs, hence all TYPEs are valid QTYPEs.  In addition, the
-following QTYPEs are defined:
-
-
-
-Mockapetris                                                    [Page 12]
-
-RFC 1035        Domain Implementation and Specification    November 1987
-
-
-AXFR            252 A request for a transfer of an entire zone
-
-MAILB           253 A request for mailbox-related records (MB, MG or MR)
-
-MAILA           254 A request for mail agent RRs (Obsolete - see MX)
-
-                255 A request for all records
-*/
 
 pub const DNS_TYPE_A: u16 = 1;
 pub const DNS_TYPE_AAAA: u16 = 28;
@@ -134,9 +17,20 @@ pub const DNS_TYPE_PTR: u16 = 12;
 pub const DNS_TYPE_MX: u16 = 15;
 pub const DNS_TYPE_TXT: u16 = 16;
 pub const DNS_TYPE_SRV: u16 = 33;
+pub const DNS_TYPE_DNS_KEY: u16 = 0x30;
 pub const DNS_TYPE_RRSIG: u16 = 0x2e;
 
 pub const DNS_CLASS_IN: u16 = 1;
+
+const INDEX_TYPE_A: u16 = 0;
+const INDEX_TYPE_AAAA: u16 = 2;
+const INDEX_TYPE_CNAME: u16 = 4;
+const INDEX_TYPE_SOA: u16 = 8;
+const INDEX_TYPE_PTR: u16 = 16;
+const INDEX_TYPE_MX: u16 = 32;
+const INDEX_TYPE_TXT: u16 = 64;
+const INDEX_TYPE_SRV: u16 = 128;
+const INDEX_TYPE_RRSIG: u16 = 256;
 
 fn rtype_to_str(rtype: u16) -> String {
     match rtype {
@@ -212,6 +106,24 @@ impl fmt::Display for RRsig {
     }
 }
 
+#[derive(Debug, Clone, Default)]
+struct DnsKey {
+    flags: u16,
+    protocol: u8,
+    algorithm: u8,
+    public_key: Vec<u8>,
+}
+
+impl<'a> fmt::Display for DnsKey {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "Flags: {}, Protocol: {:0x}, Algorithm: {}, Public key: {:x?}",
+            self.flags, self.protocol, self.algorithm, self.public_key
+        )
+    }
+}
+
 fn timestamp_str(ts: &u32) -> String {
     let naive = Utc.timestamp_opt(*ts as i64, 0).unwrap();
     let timestamp = naive.format("%Y-%m-%d %H:%M:%S");
@@ -271,13 +183,14 @@ pub struct Answer {
     srv: Srv,
     rrsig: Option<RRsig>,
     soa: Option<SOARecord>,
+    dns_key: Option<DnsKey>,
 }
 
 impl fmt::Display for Answer {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "Label: {}, Type: {}, Class: {}, TTL: {},  Data length: {}, CNAME: {}, TXT: {}, IPv4 Address: {}, IPv6 Address: {}, Nbr bytes: {}, Srv: {}",
+            "Label: {}, Type: {}, Class: {}, TTL: {},  Data length: {}, CNAME: {}, TXT: {}, IPv4 Address: {}, IPv6 Address: {}, Nbr bytes: {}, Srv: {}, Dns key: {}",
             self.name,
             rtype_to_str(self.rtype),
             class_to_str(self.class),
@@ -289,6 +202,7 @@ impl fmt::Display for Answer {
             IPv6::new(self.ipv6_addr, 128).to_string(),
             self.asize,
             self.srv,
+            self.dns_key.clone().unwrap(),
         )
     }
 }
@@ -383,6 +297,23 @@ impl<'a> Answer {
                 self.asize = index + label_size;
                 self.srv = srv_rec;
             }
+            DNS_TYPE_DNS_KEY => {
+                let mut dns_key = DnsKey::default();
+
+                dns_key.flags = BigEndian::read_u16(&raw_data[index..index + 2]);
+                index += 2;
+
+                dns_key.protocol = raw_data[index];
+                index += 1;
+
+                dns_key.algorithm = raw_data[index];
+                index += 1;
+
+                dns_key.public_key = raw_data[index..index + self.rdlength - 4].to_vec();
+
+                self.asize = index + dns_key.public_key.len();
+                self.dns_key = Some(dns_key);
+            }
             DNS_TYPE_RRSIG => {
                 let mut rrsig = RRsig::default();
 
@@ -423,10 +354,8 @@ impl<'a> Answer {
 
                 (soa.name, label_size) = get_name(&raw_data, index, id);
                 index += label_size;
-                // println!("***> Index primary server: {:x} {:x}", index, label_size);
 
                 (soa.auth_mailbox, label_size) = get_name(&raw_data, index, id);
-                // println!("***> Index auth mail_box: {:x}", index);
                 index += label_size;
 
                 soa.serial_no = BigEndian::read_u32(&raw_data[index..index + 4]);
@@ -485,7 +414,11 @@ impl<'a> Query {
         index += 2;
         self.class = BigEndian::read_u16(&raw_data[index..index + 2]);
 
-        self.qsize = self.name.len() + 2 + 2 + 2;
+        if self.name == "<Root>" {
+            self.qsize = 1 + 2 + 2;
+        } else {
+            self.qsize = self.name.len() + 2 + 2 + 2;
+        }
     }
 }
 
@@ -495,6 +428,7 @@ pub struct Dns<'a> {
     offset: usize,
     query_list: Vec<Query>,
     answer_list: Vec<Answer>,
+    type_index: u16,
 }
 
 impl<'a> Dns<'a> {
@@ -504,11 +438,42 @@ impl<'a> Dns<'a> {
             offset: 12,
             query_list: Vec::new(),
             answer_list: Vec::new(),
+            type_index: 0,
         };
 
         my_self.decode();
 
         my_self
+    }
+
+    fn set_index(&mut self, rtype: u16) {
+        match rtype {
+            DNS_TYPE_A => self.type_index = self.type_index | INDEX_TYPE_A,
+            DNS_TYPE_AAAA => self.type_index = self.type_index | INDEX_TYPE_AAAA,
+            DNS_TYPE_CNAME => self.type_index = self.type_index | INDEX_TYPE_CNAME,
+            DNS_TYPE_MX => self.type_index = self.type_index | INDEX_TYPE_MX,
+            DNS_TYPE_PTR => self.type_index = self.type_index | INDEX_TYPE_PTR,
+            DNS_TYPE_RRSIG => self.type_index = self.type_index | INDEX_TYPE_RRSIG,
+            DNS_TYPE_SOA => self.type_index = self.type_index | INDEX_TYPE_SOA,
+            DNS_TYPE_SRV => self.type_index = self.type_index | INDEX_TYPE_SRV,
+            DNS_TYPE_TXT => self.type_index = self.type_index | INDEX_TYPE_TXT,
+            _ => self.type_index = self.type_index,
+        };
+    }
+
+    fn has_type(&self, rtype: u16) -> bool {
+        match rtype {
+            DNS_TYPE_A => (self.type_index & INDEX_TYPE_A) == INDEX_TYPE_A,
+            DNS_TYPE_AAAA => (self.type_index | INDEX_TYPE_AAAA) == INDEX_TYPE_AAAA,
+            DNS_TYPE_CNAME => (self.type_index | INDEX_TYPE_CNAME) == INDEX_TYPE_CNAME,
+            DNS_TYPE_MX => (self.type_index | INDEX_TYPE_MX) == INDEX_TYPE_MX,
+            DNS_TYPE_PTR => (self.type_index | INDEX_TYPE_PTR) == INDEX_TYPE_PTR,
+            DNS_TYPE_RRSIG => (self.type_index | INDEX_TYPE_RRSIG) == INDEX_TYPE_RRSIG,
+            DNS_TYPE_SOA => (self.type_index | INDEX_TYPE_SOA) == INDEX_TYPE_SOA,
+            DNS_TYPE_SRV => (self.type_index | INDEX_TYPE_SRV) == INDEX_TYPE_SRV,
+            DNS_TYPE_TXT => (self.type_index | INDEX_TYPE_TXT) == INDEX_TYPE_TXT,
+            _ => false,
+        }
     }
 
     pub fn id(&self) -> u16 {
@@ -604,6 +569,7 @@ impl<'a> Dns<'a> {
             query.decode(self.raw_packet, self.offset, self.id());
             self.offset += query.qsize;
 
+            self.set_index(query.rtype);
             self.query_list.push(query);
         }
     }
@@ -614,6 +580,7 @@ impl<'a> Dns<'a> {
             answer.decode(self.raw_packet, self.offset, self.id());
 
             self.offset = answer.asize;
+            self.set_index(answer.rtype);
             self.answer_list.push(answer);
         }
     }
@@ -629,9 +596,17 @@ impl<'a> Layer for Dns<'a> {
             fields::DNS_ID => Some(Field::set_field(FieldType::Int16(self.id()), field)),
             fields::DNS_OPCODE => Some(Field::set_field(FieldType::Int8(self.opcode()), field)),
             fields::DNS_HAS_RRSIG => {
-                Some(Field::set_field(FieldType::Bool(self.has_rrsig()), field))
+                Some(Field::set_field(
+                    FieldType::Bool(self.has_type(DNS_TYPE_RRSIG)),
+                    field,
+                ))
+                // Some(Field::set_field(FieldType::Bool(self.has_rrsig()), field))
             }
-            fields::DNS_HAS_AAAA => Some(Field::set_field(FieldType::Bool(self.has_aaaa()), field)),
+            fields::DNS_HAS_AAAA => Some(Field::set_field(
+                FieldType::Bool(self.has_type(DNS_TYPE_AAAA)),
+                field,
+            )),
+            // fields::DNS_HAS_AAAA => Some(Field::set_field(FieldType::Bool(self.has_aaaa()), field)),
             fields::DNS_ANSWER_COUNT => Some(Field::set_field(
                 FieldType::Int16(self.answer_count()),
                 field,
@@ -639,6 +614,9 @@ impl<'a> Layer for Dns<'a> {
             fields::DNS_TYPE_A => {
                 let mut field_list: Vec<Box<FieldType>> = Vec::new();
 
+                if !self.has_type(DNS_TYPE_A) {
+                    return None;
+                }
                 for answer in &self.answer_list {
                     if answer.rtype == DNS_TYPE_A {
                         field_list.push(Box::new(FieldType::Ipv4(answer.ipv4_addr, 32)));
@@ -687,6 +665,9 @@ fn get_name(raw_packet: &[u8], start_pos: usize, id: u16) -> (String, usize) {
         count = raw_packet[offset] as usize;
 
         if count == 0 {
+            if offset == start_pos {
+                temp_name = String::from("<Root>");
+            }
             break;
         }
         while count & 0xc0 == 0xc0 {
@@ -727,8 +708,8 @@ fn get_name(raw_packet: &[u8], start_pos: usize, id: u16) -> (String, usize) {
             }
             Err(msg) => {
                 eprintln!(
-                    "Error reading label: {}, offset: {:x}, count: {}, value: {:x}",
-                    msg, offset, count, &raw_packet[offset]
+                    "Error reading label: {}, ID: {:x}, offset: {:x}, count: {}, value: {:x}",
+                    msg, id, offset, count, &raw_packet[offset]
                 );
                 print_hex(raw_packet[offset..offset + count].to_vec());
             }
@@ -746,6 +727,9 @@ fn get_name(raw_packet: &[u8], start_pos: usize, id: u16) -> (String, usize) {
     return (temp_name, label_offset);
 }
 
+//------------------------------------------------------
+//------ Test section
+//------------------------------------------------------
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -761,6 +745,7 @@ mod tests {
             answer_list: Vec::new(),
             query_list: Vec::new(),
             offset: 0,
+            type_index: 0,
         };
 
         assert_eq!(pkt.id(), 0x117e, "DNS ID");
@@ -779,6 +764,7 @@ mod tests {
             answer_list: Vec::new(),
             query_list: Vec::new(),
             offset: 0,
+            type_index: 0,
         };
 
         assert_eq!(pkt.flags(), 0x8180, "DNS Flags");
@@ -795,6 +781,7 @@ mod tests {
             answer_list: Vec::new(),
             query_list: Vec::new(),
             offset: 0,
+            type_index: 0,
         };
 
         assert_eq!(pkt.question_count(), 1, "DNS Question");
@@ -811,6 +798,7 @@ mod tests {
             answer_list: Vec::new(),
             query_list: Vec::new(),
             offset: 0,
+            type_index: 0,
         };
 
         assert_eq!(pkt.is_query(), false, "DNS is query");
@@ -827,6 +815,7 @@ mod tests {
             answer_list: Vec::new(),
             query_list: Vec::new(),
             offset: 0,
+            type_index: 0,
         };
 
         assert_eq!(pkt.is_response(), true, "DNS is response");
@@ -843,6 +832,7 @@ mod tests {
             answer_list: Vec::new(),
             query_list: Vec::new(),
             offset: 0,
+            type_index: 0,
         };
 
         assert_eq!(pkt.is_query(), true, "DNS is query");
@@ -859,6 +849,7 @@ mod tests {
             answer_list: Vec::new(),
             query_list: Vec::new(),
             offset: 0,
+            type_index: 0,
         };
 
         assert_eq!(pkt.is_response(), false, "DNS is response");
@@ -875,6 +866,7 @@ mod tests {
             answer_list: Vec::new(),
             query_list: Vec::new(),
             offset: 0,
+            type_index: 0,
         };
 
         assert_eq!(pkt.opcode(), 0, "DNS is query");
@@ -891,6 +883,7 @@ mod tests {
             answer_list: Vec::new(),
             query_list: Vec::new(),
             offset: 0,
+            type_index: 0,
         };
 
         assert_eq!(pkt.is_authoritative(), true, "DNS is authoritative");
@@ -907,6 +900,7 @@ mod tests {
             answer_list: Vec::new(),
             query_list: Vec::new(),
             offset: 0,
+            type_index: 0,
         };
 
         assert_eq!(pkt.recursion_desired(), true, "DNS recursion desired");
@@ -923,6 +917,7 @@ mod tests {
             answer_list: Vec::new(),
             query_list: Vec::new(),
             offset: 0,
+            type_index: 0,
         };
 
         assert_eq!(
@@ -943,6 +938,7 @@ mod tests {
             answer_list: Vec::new(),
             query_list: Vec::new(),
             offset: 0,
+            type_index: 0,
         };
 
         assert_eq!(pkt.answer_authenticated(), false, "DNS is authenticated");
@@ -959,6 +955,7 @@ mod tests {
             answer_list: Vec::new(),
             query_list: Vec::new(),
             offset: 0,
+            type_index: 0,
         };
 
         assert_eq!(pkt.non_authenticated(), false, "DNS is non authenticated");
@@ -975,6 +972,7 @@ mod tests {
             answer_list: Vec::new(),
             query_list: Vec::new(),
             offset: 0,
+            type_index: 0,
         };
 
         assert_eq!(pkt.reply_code(), 0, "DNS reply code = 0");
@@ -991,6 +989,7 @@ mod tests {
             answer_list: Vec::new(),
             query_list: Vec::new(),
             offset: 0,
+            type_index: 0,
         };
 
         assert_eq!(pkt.question_count(), 1, "DNS question count");
@@ -1008,6 +1007,7 @@ mod tests {
             answer_list: Vec::new(),
             query_list: Vec::new(),
             offset: 0,
+            type_index: 0,
         };
 
         assert_eq!(pkt.answer_count(), 1, "DNS answer count");
@@ -1025,6 +1025,7 @@ mod tests {
             answer_list: Vec::new(),
             query_list: Vec::new(),
             offset: 0,
+            type_index: 0,
         };
 
         assert_eq!(pkt.answer_count(), 1, "DNS authority");
@@ -1499,5 +1500,108 @@ mod tests {
         assert_eq!(dns.answer_list[0].name, "usrcuaacaakpaiqdahvsea6saqaaazjguijc4lmxuqn34iqdaeaaaaa3aaaaa2p.pvlaacaawaajqa673papgh47ytjutd5js37ayu5s4lmbryai.a.j.e5.sk", "DNS long additional 1");
 
         println!("DNS: {:?}", dns);
+    }
+
+    #[test]
+    fn dns_query_dnskey() {
+        let packet: Vec<u8> = vec![
+            0xb3, 0x60, 0x81, 0xa0, 0x0, 0x1, 0x0, 0x3, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x30, 0x0,
+            0x1, 0x0, 0x0, 0x30, 0x0, 0x1, 0x0, 0x0, 0xd6, 0xd5, 0x1, 0x8, 0x1, 0x0, 0x3, 0x8, 0x3,
+            0x1, 0x0, 0x1, 0x9c, 0xa6, 0xe0, 0x70, 0x96, 0x89, 0x30, 0x0, 0x97, 0x63, 0x2f, 0xd6,
+            0x2c, 0xe0, 0x4f, 0x29, 0xfd, 0xb0, 0xac, 0x20, 0x8b, 0x97, 0x81, 0xc6, 0x91, 0xb6,
+            0xf5, 0xb5, 0x65, 0x79, 0xfa, 0xbf, 0xaf, 0xe4, 0xc6, 0xa, 0xd9, 0x94, 0x12, 0x5b,
+            0xc5, 0xc8, 0x15, 0x87, 0x46, 0x3b, 0xdf, 0xf6, 0x60, 0x60, 0x94, 0x89, 0x53, 0x5,
+            0x1b, 0x1e, 0xdb, 0x67, 0x6f, 0xcc, 0xd3, 0x88, 0xf9, 0xc6, 0x2b, 0x92, 0x30, 0xfa,
+            0x2c, 0xe1, 0xee, 0xc4, 0xca, 0x1c, 0xfd, 0xde, 0x16, 0xb5, 0x75, 0x8a, 0x76, 0xf8,
+            0x8d, 0x9a, 0xbb, 0x56, 0x17, 0x61, 0xa9, 0x8e, 0x60, 0xce, 0x23, 0xdf, 0x20, 0x2d,
+            0xde, 0x1, 0x67, 0x45, 0x3f, 0x95, 0x8f, 0x38, 0xee, 0x62, 0x4f, 0xf4, 0xbc, 0xa9,
+            0x14, 0x0, 0x59, 0x70, 0x49, 0xf7, 0xcc, 0xcd, 0xef, 0x71, 0xee, 0x4, 0x7b, 0x50, 0x37,
+            0xba, 0x94, 0xa5, 0x15, 0xd, 0x93, 0x17, 0x22, 0x52, 0xf, 0xd1, 0xef, 0x32, 0x73, 0xf8,
+            0x5e, 0x77, 0x85, 0x7b, 0x10, 0x71, 0x57, 0xde, 0x91, 0xa4, 0xb7, 0x32, 0xd8, 0xef,
+            0xae, 0xd9, 0x6e, 0x82, 0x84, 0x88, 0x83, 0xa, 0x39, 0x6b, 0xa3, 0x3, 0xc2, 0x71, 0x4d,
+            0xf3, 0x5d, 0xf5, 0xf1, 0xc9, 0x6c, 0xbf, 0x54, 0xa3, 0x3a, 0x4c, 0xe6, 0xbc, 0x80,
+            0xd7, 0xfe, 0x68, 0xa6, 0x95, 0x91, 0xcb, 0xff, 0x78, 0x88, 0x79, 0x7a, 0xbf, 0x2b,
+            0xae, 0xca, 0x80, 0x8b, 0xd2, 0x93, 0xf0, 0xee, 0x61, 0x9a, 0x1c, 0xd8, 0x2e, 0x45,
+            0xe, 0x40, 0x45, 0xd5, 0x49, 0x13, 0x91, 0x57, 0x44, 0x4c, 0xb7, 0xd9, 0x77, 0x25,
+            0x2c, 0x16, 0xc5, 0x3d, 0x4c, 0x79, 0xb1, 0x3, 0xbe, 0xd7, 0xc1, 0x6a, 0xd, 0xee, 0xa3,
+            0xe9, 0x99, 0xc1, 0x64, 0x85, 0x96, 0x97, 0x3d, 0x92, 0xec, 0xf2, 0x58, 0x17, 0x7b,
+            0xd8, 0x47, 0x0, 0x0, 0x30, 0x0, 0x1, 0x0, 0x0, 0xd6, 0xd5, 0x1, 0x8, 0x1, 0x1, 0x3,
+            0x8, 0x3, 0x1, 0x0, 0x1, 0xac, 0xff, 0xb4, 0x9, 0xbc, 0xc9, 0x39, 0xf8, 0x31, 0xf7,
+            0xa1, 0xe5, 0xec, 0x88, 0xf7, 0xa5, 0x92, 0x55, 0xec, 0x53, 0x4, 0xb, 0xe4, 0x32, 0x2,
+            0x73, 0x90, 0xa4, 0xce, 0x89, 0x6d, 0x6f, 0x90, 0x86, 0xf3, 0xc5, 0xe1, 0x77, 0xfb,
+            0xfe, 0x11, 0x81, 0x63, 0xaa, 0xec, 0x7a, 0xf1, 0x46, 0x2c, 0x47, 0x94, 0x59, 0x44,
+            0xc4, 0xe2, 0xc0, 0x26, 0xbe, 0x5e, 0x98, 0xbb, 0xcd, 0xed, 0x25, 0x97, 0x82, 0x72,
+            0xe1, 0xe3, 0xe0, 0x79, 0xc5, 0x9, 0x4d, 0x57, 0x3f, 0xe, 0x83, 0xc9, 0x2f, 0x2, 0xb3,
+            0x2d, 0x35, 0x13, 0xb1, 0x55, 0xb, 0x82, 0x69, 0x29, 0xc8, 0xd, 0xd0, 0xf9, 0x2c, 0xac,
+            0x96, 0x6d, 0x17, 0x76, 0x9f, 0xd5, 0x86, 0x7b, 0x64, 0x7c, 0x3f, 0x38, 0x2, 0x9a,
+            0xbd, 0xc4, 0x81, 0x52, 0xeb, 0x8f, 0x20, 0x71, 0x59, 0xec, 0xc5, 0xd2, 0x32, 0xc7,
+            0xc1, 0x53, 0x7c, 0x79, 0xf4, 0xb7, 0xac, 0x28, 0xff, 0x11, 0x68, 0x2f, 0x21, 0x68,
+            0x1b, 0xf6, 0xd6, 0xab, 0xa5, 0x55, 0x3, 0x2b, 0xf6, 0xf9, 0xf0, 0x36, 0xbe, 0xb2,
+            0xaa, 0xa5, 0xb3, 0x77, 0x8d, 0x6e, 0xeb, 0xfb, 0xa6, 0xbf, 0x9e, 0xa1, 0x91, 0xbe,
+            0x4a, 0xb0, 0xca, 0xea, 0x75, 0x9e, 0x2f, 0x77, 0x3a, 0x1f, 0x90, 0x29, 0xc7, 0x3e,
+            0xcb, 0x8d, 0x57, 0x35, 0xb9, 0x32, 0x1d, 0xb0, 0x85, 0xf1, 0xb8, 0xe2, 0xd8, 0x3,
+            0x8f, 0xe2, 0x94, 0x19, 0x92, 0x54, 0x8c, 0xee, 0xd, 0x67, 0xdd, 0x45, 0x47, 0xe1,
+            0x1d, 0xd6, 0x3a, 0xf9, 0xc9, 0xfc, 0x1c, 0x54, 0x66, 0xfb, 0x68, 0x4c, 0xf0, 0x9,
+            0xd7, 0x19, 0x7c, 0x2c, 0xf7, 0x9e, 0x79, 0x2a, 0xb5, 0x1, 0xe6, 0xa8, 0xa1, 0xca,
+            0x51, 0x9a, 0xf2, 0xcb, 0x9b, 0x5f, 0x63, 0x67, 0xe9, 0x4c, 0xd, 0x47, 0x50, 0x24,
+            0x51, 0x35, 0x7b, 0xe1, 0xb5, 0x0, 0x0, 0x2e, 0x0, 0x1, 0x0, 0x0, 0xd6, 0xd5, 0x1,
+            0x13, 0x0, 0x30, 0x8, 0x0, 0x0, 0x2, 0xa3, 0x0, 0x62, 0x47, 0x92, 0x0, 0x62, 0x2b,
+            0xe2, 0x80, 0x4f, 0x66, 0x0, 0xd, 0xaf, 0xfa, 0xae, 0xe2, 0x1b, 0x2e, 0x62, 0x54, 0x4f,
+            0xb, 0x1, 0x8a, 0xed, 0x4f, 0x1f, 0xc3, 0x86, 0xe9, 0xa1, 0x8, 0x80, 0xd, 0x93, 0x81,
+            0xbb, 0x6b, 0x8f, 0xeb, 0xf7, 0x5c, 0xfe, 0x58, 0xde, 0x96, 0x47, 0xc1, 0x90, 0x2d,
+            0xa8, 0x4c, 0xcf, 0x31, 0xa5, 0xd3, 0x57, 0xee, 0xee, 0xeb, 0xc0, 0xb3, 0x3e, 0xfc,
+            0x42, 0x22, 0x4, 0xeb, 0xf6, 0xa5, 0xff, 0x4, 0x2e, 0x25, 0xa6, 0x49, 0x3a, 0xb7, 0x8b,
+            0x1d, 0x14, 0xd6, 0xba, 0xd6, 0x5, 0xb7, 0x76, 0xfb, 0xdc, 0xdd, 0x2b, 0xee, 0x16,
+            0xfe, 0xcf, 0x6e, 0xd4, 0xd4, 0x3e, 0x28, 0x92, 0xbb, 0x4b, 0xbd, 0x31, 0x62, 0xb4,
+            0xb2, 0xba, 0xe4, 0x55, 0x1c, 0x41, 0x66, 0xed, 0xae, 0x18, 0xa5, 0x92, 0x90, 0x3a,
+            0x12, 0x3e, 0x32, 0xd3, 0x18, 0x8e, 0xa7, 0xf5, 0x44, 0x55, 0x8f, 0xaf, 0x55, 0x86,
+            0xb4, 0x6e, 0xb7, 0xd7, 0xdf, 0x8, 0x81, 0x9b, 0xe9, 0x98, 0x66, 0x4, 0x71, 0xbb, 0xc5,
+            0xfe, 0xe9, 0xc6, 0x8f, 0x86, 0xe8, 0xd1, 0x60, 0x1a, 0x60, 0xb6, 0x55, 0x12, 0xfa,
+            0x80, 0x1c, 0x45, 0x7a, 0x35, 0xda, 0x24, 0xce, 0x13, 0x25, 0x91, 0xb, 0x5b, 0xab,
+            0x9a, 0xf3, 0xce, 0xc3, 0x69, 0x34, 0x95, 0xfa, 0x5, 0x8b, 0xd4, 0xda, 0xf1, 0x47, 0xf,
+            0x3a, 0x67, 0x39, 0x5b, 0xe3, 0x94, 0xde, 0x6c, 0x91, 0xe0, 0xb3, 0x32, 0xce, 0x6f,
+            0xbe, 0x8b, 0x23, 0xc5, 0x8a, 0x4a, 0x26, 0xe8, 0xca, 0x27, 0xb5, 0x88, 0xf3, 0x7,
+            0x97, 0x84, 0x40, 0xf, 0xb7, 0xbb, 0x58, 0xa5, 0x93, 0xa9, 0xa1, 0xd1, 0x63, 0x75,
+            0xb5, 0xaa, 0xa7, 0xf, 0x37, 0x7f, 0x8b, 0xf6, 0x95, 0x7c, 0x6, 0x97, 0xfb, 0xab, 0x8e,
+            0xe9, 0xc6, 0x45, 0x8c, 0x4, 0xec, 0xc5, 0x99, 0xe7, 0x2b, 0x30, 0x13, 0xd1, 0xc6,
+            0xcb, 0x85, 0x4d, 0x0, 0x0, 0x29, 0x2, 0x0, 0x0, 0x0, 0x80, 0x0, 0x0, 0x0,
+        ];
+
+        println!("------------------------------------------");
+        print_hex(packet.clone());
+        let dns = Dns::new(&packet);
+
+        let key: Vec<u8> = vec![
+            0x3, 0x1, 0x0, 0x1, 0x9c, 0xa6, 0xe0, 0x70, 0x96, 0x89, 0x30, 0x0, 0x97, 0x63, 0x2f,
+            0xd6, 0x2c, 0xe0, 0x4f, 0x29, 0xfd, 0xb0, 0xac, 0x20, 0x8b, 0x97, 0x81, 0xc6, 0x91,
+            0xb6, 0xf5, 0xb5, 0x65, 0x79, 0xfa, 0xbf, 0xaf, 0xe4, 0xc6, 0xa, 0xd9, 0x94, 0x12,
+            0x5b, 0xc5, 0xc8, 0x15, 0x87, 0x46, 0x3b, 0xdf, 0xf6, 0x60, 0x60, 0x94, 0x89, 0x53,
+            0x5, 0x1b, 0x1e, 0xdb, 0x67, 0x6f, 0xcc, 0xd3, 0x88, 0xf9, 0xc6, 0x2b, 0x92, 0x30,
+            0xfa, 0x2c, 0xe1, 0xee, 0xc4, 0xca, 0x1c, 0xfd, 0xde, 0x16, 0xb5, 0x75, 0x8a, 0x76,
+            0xf8, 0x8d, 0x9a, 0xbb, 0x56, 0x17, 0x61, 0xa9, 0x8e, 0x60, 0xce, 0x23, 0xdf, 0x20,
+            0x2d, 0xde, 0x1, 0x67, 0x45, 0x3f, 0x95, 0x8f, 0x38, 0xee, 0x62, 0x4f, 0xf4, 0xbc,
+            0xa9, 0x14, 0x0, 0x59, 0x70, 0x49, 0xf7, 0xcc, 0xcd, 0xef, 0x71, 0xee, 0x4, 0x7b, 0x50,
+            0x37, 0xba, 0x94, 0xa5, 0x15, 0xd, 0x93, 0x17, 0x22, 0x52, 0xf, 0xd1, 0xef, 0x32, 0x73,
+            0xf8, 0x5e, 0x77, 0x85, 0x7b, 0x10, 0x71, 0x57, 0xde, 0x91, 0xa4, 0xb7, 0x32, 0xd8,
+            0xef, 0xae, 0xd9, 0x6e, 0x82, 0x84, 0x88, 0x83, 0xa, 0x39, 0x6b, 0xa3, 0x3, 0xc2, 0x71,
+            0x4d, 0xf3, 0x5d, 0xf5, 0xf1, 0xc9, 0x6c, 0xbf, 0x54, 0xa3, 0x3a, 0x4c, 0xe6, 0xbc,
+            0x80, 0xd7, 0xfe, 0x68, 0xa6, 0x95, 0x91, 0xcb, 0xff, 0x78, 0x88, 0x79, 0x7a, 0xbf,
+            0x2b, 0xae, 0xca, 0x80, 0x8b, 0xd2, 0x93, 0xf0, 0xee, 0x61, 0x9a, 0x1c, 0xd8, 0x2e,
+            0x45, 0xe, 0x40, 0x45, 0xd5, 0x49, 0x13, 0x91, 0x57, 0x44, 0x4c, 0xb7, 0xd9, 0x77,
+            0x25, 0x2c, 0x16, 0xc5, 0x3d, 0x4c, 0x79, 0xb1, 0x3, 0xbe, 0xd7, 0xc1, 0x6a, 0xd, 0xee,
+            0xa3, 0xe9, 0x99, 0xc1, 0x64, 0x85, 0x96, 0x97, 0x3d, 0x92, 0xec, 0xf2, 0x58, 0x17,
+            0x7b, 0xd8, 0x47,
+        ];
+        assert_eq!(dns.answer_count(), 3, "DNS long answer 1");
+        assert_eq!(dns.question_count(), 1, "DNS long query 1");
+        assert_eq!(dns.additional_count(), 1, "DNS long additional 1");
+        assert_eq!(dns.answer_list[0].name, "<Root>", "DNS long additional 1");
+        assert_eq!(
+            dns.answer_list[0].dns_key.as_ref().unwrap().public_key,
+            key,
+            "DNS long additional 1"
+        );
+
+        // println!("DNS: {:?}", dns);
     }
 }
