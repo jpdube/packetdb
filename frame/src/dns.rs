@@ -1322,6 +1322,7 @@ mod tests {
             answer.clone()
         );
     }
+
     #[test]
     fn dns_ldap_srv() {
         let packet: Vec<u8> = vec![
