@@ -31,6 +31,7 @@ const INDEX_TYPE_MX: u16 = 32;
 const INDEX_TYPE_TXT: u16 = 64;
 const INDEX_TYPE_SRV: u16 = 128;
 const INDEX_TYPE_RRSIG: u16 = 256;
+const INDEX_TYPE_DNSKEY: u16 = 512;
 
 fn rtype_to_str(rtype: u16) -> String {
     match rtype {
@@ -457,6 +458,7 @@ impl<'a> Dns<'a> {
             DNS_TYPE_SOA => self.type_index = self.type_index | INDEX_TYPE_SOA,
             DNS_TYPE_SRV => self.type_index = self.type_index | INDEX_TYPE_SRV,
             DNS_TYPE_TXT => self.type_index = self.type_index | INDEX_TYPE_TXT,
+            DNS_TYPE_DNS_KEY => self.type_index = self.type_index | INDEX_TYPE_DNSKEY,
             _ => self.type_index = self.type_index,
         };
     }
@@ -472,6 +474,7 @@ impl<'a> Dns<'a> {
             DNS_TYPE_SOA => (self.type_index | INDEX_TYPE_SOA) == INDEX_TYPE_SOA,
             DNS_TYPE_SRV => (self.type_index | INDEX_TYPE_SRV) == INDEX_TYPE_SRV,
             DNS_TYPE_TXT => (self.type_index | INDEX_TYPE_TXT) == INDEX_TYPE_TXT,
+            DNS_TYPE_DNS_KEY => (self.type_index | INDEX_TYPE_DNSKEY) == INDEX_TYPE_DNSKEY,
             _ => false,
         }
     }
@@ -662,6 +665,13 @@ fn get_name(raw_packet: &[u8], start_pos: usize, id: u16) -> (String, usize) {
 
     temp_name = String::new();
     loop {
+        assert!(
+            offset < raw_packet.len(),
+            "Offset: {}, Packet len: {}",
+            offset,
+            raw_packet.len(),
+        );
+
         count = raw_packet[offset] as usize;
 
         if count == 0 {
