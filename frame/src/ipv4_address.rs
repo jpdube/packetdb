@@ -2,7 +2,7 @@ use ipnet::Ipv4Net;
 use std::fmt;
 use std::net::Ipv4Addr;
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct IPv4 {
     pub address: u32,
     pub mask: u8,
