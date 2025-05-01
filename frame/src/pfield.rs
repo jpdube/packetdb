@@ -85,8 +85,23 @@ impl Field {
             FieldType::Timestamp(value) => json!(timestamp_str(&value)),
             FieldType::Bool(value) => json!(value),
             FieldType::ByteArray(value) => json!(value),
-            FieldType::FieldArray(value) => json!(value),
+            FieldType::FieldArray(value) => json!(self.format_array(value.clone())),
         }
+    }
+
+    fn format_array(&self, value: Vec<Box<FieldType>>) -> Vec<String> {
+        let mut result: Vec<String> = Vec::new();
+
+        for field in value {
+            match *field {
+                FieldType::Ipv4(adr, mask) => result.push(IPv4::new(adr, mask).to_string()),
+                FieldType::Ipv6(adr, mask) => result.push(IPv6::new(adr, mask).to_string()),
+                FieldType::MacAddr(addr) => result.push(MacAddr::set_from_int(&addr).to_string()),
+                _ => result.push(field.to_string()),
+            }
+        }
+
+        result
     }
 
     pub fn to_u8(&self) -> u8 {
