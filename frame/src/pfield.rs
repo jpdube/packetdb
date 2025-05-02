@@ -16,6 +16,7 @@ pub enum FieldType {
     Ipv4(u32, u8),
     Ipv6(u128, u8),
     Timestamp(u32),
+    TimeValue(u32),
     String(String),
     MacAddr(u64),
     Bool(bool),
@@ -34,6 +35,7 @@ impl fmt::Display for FieldType {
             Self::Ipv6(address, mask) => write!(f, "{}", IPv6::new(*address, *mask).to_string()),
             Self::MacAddr(address) => write!(f, "{}", MacAddr::set_from_int(address)),
             Self::Timestamp(ts) => write!(f, "{}", timestamp_str(ts)),
+            Self::TimeValue(tv) => write!(f, "{}", timevalue_str(tv)),
             Self::String(value) => write!(f, "{}", value),
             Self::Bool(value) => write!(f, "{}", value),
             Self::ByteArray(value) => write!(f, "{:?}", value),
@@ -83,6 +85,7 @@ impl Field {
             FieldType::MacAddr(value) => json!(MacAddr::set_from_int(value).to_string()),
             FieldType::String(value) => json!(value),
             FieldType::Timestamp(value) => json!(timestamp_str(&value)),
+            FieldType::TimeValue(value) => json!(timevalue_str(value)),
             FieldType::Bool(value) => json!(value),
             FieldType::ByteArray(value) => json!(value),
             FieldType::FieldArray(value) => json!(self.format_array(value.clone())),
@@ -97,6 +100,7 @@ impl Field {
                 FieldType::Ipv4(adr, mask) => result.push(IPv4::new(adr, mask).to_string()),
                 FieldType::Ipv6(adr, mask) => result.push(IPv6::new(adr, mask).to_string()),
                 FieldType::MacAddr(addr) => result.push(MacAddr::set_from_int(&addr).to_string()),
+                FieldType::Timestamp(ts) => result.push(timestamp_str(&ts)),
                 _ => result.push(field.to_string()),
             }
         }
@@ -175,6 +179,20 @@ impl Field {
             _ => String::new(),
         }
     }
+}
+
+fn timevalue_str(tv: &u32) -> String {
+    let days: u32;
+    let mut hours: u32 = 0;
+
+    let result: u32 = tv / 360 / 24;
+    days = result;
+
+    if tv % 360 != 0 {
+        hours = tv % 360 * 60;
+    }
+
+    format!("Days: {}, hours: {}, value: {}", days, hours, tv)
 }
 
 fn timestamp_str(ts: &u32) -> String {
