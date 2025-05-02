@@ -1,3 +1,4 @@
+use crate::dhcp::Dhcp;
 // #![allow(dead_code)]
 use crate::eth::EtherFrame;
 use crate::fields;
@@ -144,6 +145,15 @@ impl Packet {
         }
     }
 
+    fn get_dhcp_packet(&self) -> Option<Dhcp> {
+        if let Some(raw_pkt) = self.get_layer_bytes(LayerType::DHCP) {
+            let dhcp = Dhcp::new(raw_pkt);
+            return Some(dhcp);
+        } else {
+            return None;
+        }
+    }
+
     pub fn print_layers(&self) {
         println!("Layers: {:#?}", self.frame_list);
     }
@@ -251,10 +261,19 @@ impl Packet {
 
                         if let Some(dns) = self.get_udp_packet() {
                             if dns.is_dns() {
-                                // let dns_pkt = Dns::new(&dns._payload());
                                 self.add_layer(LayerInfo {
                                     layer_type: LayerType::DNS,
                                     start_pos: vo + ip_header_len + dns.header_len(),
+                                    end_pos: self.raw_packet.len(),
+                                });
+                            }
+                        }
+
+                        if let Some(dhcp) = self.get_udp_packet() {
+                            if dhcp.is_dhcp() {
+                                self.add_layer(LayerInfo {
+                                    layer_type: LayerType::DHCP,
+                                    start_pos: vo + ip_header_len + dhcp.header_len(),
                                     end_pos: self.raw_packet.len(),
                                 });
                             }
@@ -391,6 +410,12 @@ impl Packet {
         } else if self.field_type(field, fields::DNS_BASE) && self.has_layer(LayerType::DNS) {
             if let Some(dns_packet) = self.get_dns_packet() {
                 dns_packet.get_field(field)
+            } else {
+                None
+            }
+        } else if self.field_type(field, fields::DHCP_BASE) && self.has_layer(LayerType::DHCP) {
+            if let Some(dhcp_packet) = self.get_dhcp_packet() {
+                dhcp_packet.get_field(field)
             } else {
                 None
             }
