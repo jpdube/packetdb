@@ -749,9 +749,6 @@ impl<'a> Dhcp<'a> {
             options.length = self.raw_data[self.option_index] as usize;
 
             self.option_index += 1;
-            // println!("FETCH: ID: {}, Len: {}", options.id, options.length);
-            // print_hex(self.raw_data.to_vec());
-            // println!("--------------------------------------------------");
             options.data =
                 self.raw_data[self.option_index..self.option_index + options.length].to_vec();
 
