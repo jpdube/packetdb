@@ -555,7 +555,7 @@ impl<'a> Dhcp<'a> {
         Some(Field::set_field(FieldType::Ipv4(self.ciaddr(), 32), *field))
     }
 
-    pub fn domaine_servers(&self, field: &u32) -> Option<Field> {
+    pub fn domain_servers(&self, field: &u32) -> Option<Field> {
         if let Some(iplt) = &self.dns_server {
             let mut field_list: Vec<Box<FieldType>> = Vec::new();
 
@@ -858,7 +858,7 @@ impl<'a> Layer for Dhcp<'a> {
             fields::DHCP_REBINDING_TIME => self.rebinding_time(&field),
             fields::DHCP_RENEWAL_TIME => self.renewal_time(&field),
             fields::DHCP_DOMAIN_NAME => self.domain_name(&field),
-            fields::DHCP_DOMAIN_SRV => self.domaine_servers(&field),
+            fields::DHCP_DOMAIN_SRV => self.domain_servers(&field),
             fields::DHCP_ROUTER => self.router(&field),
             fields::DHCP_SUBNET_MASK => self.subnet_mask(&field),
             fields::DHCP_SERVER_ID => self.server_id(&field),
