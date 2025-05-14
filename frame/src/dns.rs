@@ -479,6 +479,35 @@ impl<'a> Dns<'a> {
         }
     }
 
+    pub fn decode(&mut self) {
+        self.offset = 12;
+
+        self.process_queries();
+        self.process_answers();
+    }
+
+    fn process_queries(&mut self) {
+        for _ in 0..self.question_count() {
+            let mut query = Query::default();
+            query.decode(self.raw_packet, self.offset, self.id());
+            self.offset += query.qsize;
+
+            self.set_index(query.rtype);
+            self.query_list.push(query);
+        }
+    }
+
+    fn process_answers(&mut self) {
+        for _ in 0..self.answer_count() {
+            let mut answer = Answer::default();
+            answer.decode(self.raw_packet, self.offset, self.id());
+
+            self.offset = answer.asize;
+            self.set_index(answer.rtype);
+            self.answer_list.push(answer);
+        }
+    }
+
     pub fn id(&self) -> u16 {
         BigEndian::read_u16(&self.raw_packet[0..2])
     }
@@ -557,35 +586,6 @@ impl<'a> Dns<'a> {
         }
 
         false
-    }
-
-    pub fn decode(&mut self) {
-        self.offset = 12;
-
-        self.process_queries();
-        self.process_answers();
-    }
-
-    fn process_queries(&mut self) {
-        for _ in 0..self.question_count() {
-            let mut query = Query::default();
-            query.decode(self.raw_packet, self.offset, self.id());
-            self.offset += query.qsize;
-
-            self.set_index(query.rtype);
-            self.query_list.push(query);
-        }
-    }
-
-    fn process_answers(&mut self) {
-        for _ in 0..self.answer_count() {
-            let mut answer = Answer::default();
-            answer.decode(self.raw_packet, self.offset, self.id());
-
-            self.offset = answer.asize;
-            self.set_index(answer.rtype);
-            self.answer_list.push(answer);
-        }
     }
 }
 
