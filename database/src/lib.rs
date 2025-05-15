@@ -14,6 +14,7 @@ pub mod packet_ptr;
 pub mod parse;
 pub mod pcapfile;
 pub mod preparser;
+pub mod proto_index;
 pub mod query_result;
 pub mod seek_packet;
 pub mod token;
