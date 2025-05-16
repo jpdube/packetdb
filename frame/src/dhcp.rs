@@ -335,7 +335,7 @@ impl VendorClassID {
     }
 }
 
-#[derive(Default, Debug, Clone)]
+#[derive(Default, Debug, Clone, PartialEq)]
 struct VendorInfo {
     _length: u8,
     _raw_data: Vec<u8>,
@@ -1159,7 +1159,7 @@ mod tests {
 
         assert_eq!(dhcp.vendor_info.is_some(), true, "Vendor info is present");
         assert_eq!(
-            dhcp.vendor_info.unwrap().vendor_info(),
+            dhcp.vendor_info.unwrap().value(),
             vec![0xdc, 0x03, 0x4e, 0x41, 0x50],
             "Vendor info value"
         );
