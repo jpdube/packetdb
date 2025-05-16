@@ -2,6 +2,7 @@ use crate::config::CONFIG;
 use crate::packet_ptr::PacketPtr;
 use crate::parse::PqlStatement;
 use crate::pcapfile::PcapFile;
+use crate::proto_index::ProtoIndex;
 use anyhow::Result;
 use byteorder::{BigEndian, ByteOrder, WriteBytesExt};
 use frame::fields;
@@ -225,6 +226,8 @@ impl IndexManager {
 
         let start = Instant::now();
         let mut count = 0;
+        let mut dhcp_index = ProtoIndex::new(filename, IndexField::Dhcp as u32);
+        let mut dns_index = ProtoIndex::new(filename, IndexField::Dns as u32);
 
         while let Some(pkt) = pfile.next() {
             count += 1;
@@ -238,6 +241,14 @@ impl IndexManager {
             writer.write_u32::<BigEndian>(pkt.pkt_ptr).unwrap();
 
             let pindex = self.build_index(&pkt);
+
+            if (pindex & IndexField::Dhcp as u32) == IndexField::Dhcp as u32 {
+                dhcp_index.add(&pkt.pkt_ptr);
+            }
+            if (pindex & IndexField::Dns as u32) == IndexField::Dns as u32 {
+                dns_index.add(&pkt.pkt_ptr);
+            }
+
             writer.write_u32::<BigEndian>(pindex).unwrap();
             proto_stat.add(pindex);
 
@@ -253,6 +264,9 @@ impl IndexManager {
                 writer.write_u32::<BigEndian>(0).unwrap();
             }
         }
+        dhcp_index.create_index();
+        dns_index.create_index();
+
         let duration = start.elapsed();
         info!(
             "Index file {} Process {} packets in: {:3.3}ms Per packet: {:3.3}us",
