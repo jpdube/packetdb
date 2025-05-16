@@ -1414,12 +1414,11 @@ mod tests {
         let mut answer = Answer::default();
         answer.decode(&packet, 0, 0xff);
 
+        println!("AAAA : {}", answer);
         assert_eq!(
             answer.ipv6_addr, 0x20010500001300000000000000000063,
             "DNS ipv6 address"
         );
-
-        println!("AAAA : {}", answer);
     }
 
     #[test]
