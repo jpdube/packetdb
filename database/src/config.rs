@@ -13,6 +13,7 @@ lazy_static! {
 pub struct Config {
     pub db_path: String,
     pub index_path: String,
+    pub proto_index_path: String,
     pub master_index_path: String,
     pub db_segment_size: usize,
     pub block_size: usize,

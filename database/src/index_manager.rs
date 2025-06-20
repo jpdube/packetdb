@@ -2,7 +2,7 @@ use crate::config::CONFIG;
 use crate::packet_ptr::PacketPtr;
 use crate::parse::PqlStatement;
 use crate::pcapfile::PcapFile;
-use crate::proto_index::ProtoIndex;
+use crate::proto_index::{ProtoIndex, ProtoIndexMgr};
 use anyhow::Result;
 use byteorder::{BigEndian, ByteOrder, WriteBytesExt};
 use frame::fields;
@@ -25,12 +25,12 @@ use std::{f64, fmt};
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum IndexField {
     Ethernet = 0x01,
-    Arp = 0x02,
-    IpV4 = 0x04,
-    IpV6 = 0x08,
-    Icmp = 0x10,
-    Udp = 0x20,
-    Tcp = 0x40,
+    IpV4 = 0x02,
+    IpV6 = 0x04,
+    Udp = 0x08,
+    Tcp = 0x10,
+    Arp = 0x20,
+    Icmp = 0x40,
     Dns = 0x80,
     Dhcp = 0x100,
     Https = 0x200,
@@ -153,6 +153,13 @@ pub struct MasterIndex {
 pub struct IndexManager {}
 
 impl IndexManager {
+    pub fn read_proto_index(&self) {
+        let mut proto_idx = ProtoIndex::new(732, 0x80);
+        for (i, ix) in proto_idx.read().unwrap().iter().enumerate() {
+            print!("{}: {:08x},", i, ix);
+        }
+    }
+
     pub fn search_index(&mut self, pql: &PqlStatement, file_id: u32) -> PacketPtr {
         let idx_filename = &format!("{}/{}.pidx", &CONFIG.index_path, file_id);
         let mut file = BufReader::new(File::open(idx_filename).unwrap());
@@ -226,8 +233,7 @@ impl IndexManager {
 
         let start = Instant::now();
         let mut count = 0;
-        let mut dhcp_index = ProtoIndex::new(filename, IndexField::Dhcp as u32);
-        let mut dns_index = ProtoIndex::new(filename, IndexField::Dns as u32);
+        let mut proto_idx_mgr = ProtoIndexMgr::new(filename);
 
         while let Some(pkt) = pfile.next() {
             count += 1;
@@ -242,11 +248,22 @@ impl IndexManager {
 
             let pindex = self.build_index(&pkt);
 
-            if (pindex & IndexField::Dhcp as u32) == IndexField::Dhcp as u32 {
-                dhcp_index.add(&pkt.pkt_ptr);
-            }
-            if (pindex & IndexField::Dns as u32) == IndexField::Dns as u32 {
-                dns_index.add(&pkt.pkt_ptr);
+            if pindex >= IndexField::Arp as u32 {
+                if pindex & (IndexField::Arp as u32) == IndexField::Arp as u32 {
+                    proto_idx_mgr.add(IndexField::Arp as u32, pkt.pkt_ptr);
+                } else if pindex & (IndexField::Dns as u32) == IndexField::Dns as u32 {
+                    proto_idx_mgr.add(IndexField::Dns as u32, pkt.pkt_ptr);
+                } else if pindex & (IndexField::Dhcp as u32) == IndexField::Dhcp as u32 {
+                    proto_idx_mgr.add(IndexField::Dhcp as u32, pkt.pkt_ptr);
+                } else if pindex & (IndexField::Icmp as u32) == IndexField::Icmp as u32 {
+                    proto_idx_mgr.add(IndexField::Icmp as u32, pkt.pkt_ptr);
+                } else if pindex & (IndexField::Ssh as u32) == IndexField::Ssh as u32 {
+                    proto_idx_mgr.add(IndexField::Ssh as u32, pkt.pkt_ptr);
+                } else if pindex & (IndexField::Https as u32) == IndexField::Https as u32 {
+                    proto_idx_mgr.add(IndexField::Https as u32, pkt.pkt_ptr);
+                } else if pindex & (IndexField::Http as u32) == IndexField::Http as u32 {
+                    proto_idx_mgr.add(IndexField::Http as u32, pkt.pkt_ptr);
+                }
             }
 
             writer.write_u32::<BigEndian>(pindex).unwrap();
@@ -264,8 +281,8 @@ impl IndexManager {
                 writer.write_u32::<BigEndian>(0).unwrap();
             }
         }
-        dhcp_index.create_index();
-        dns_index.create_index();
+
+        proto_idx_mgr.save();
 
         let duration = start.elapsed();
         info!(
@@ -396,6 +413,7 @@ impl IndexManager {
     }
 
     pub fn build_search_index(&self, search_type: &HashSet<IndexField>) -> u32 {
+        println!("Proto types: {:?}", search_type);
         let mut ret_type: u32 = 0;
         for stype in search_type {
             match stype {
