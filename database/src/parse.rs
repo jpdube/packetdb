@@ -823,7 +823,6 @@ impl Parse {
     fn parse_ipv4(&mut self) -> Option<Expression> {
         let mut cidr: u8 = 32;
         if let Some(tok) = self.accept(Keyword::IpV4) {
-            println!("IPv4: {:?}", tok);
             if self.peek(Keyword::Mask) {
                 self.accept(Keyword::Mask);
                 if let Some(mask) = self.accept(Keyword::Integer) {
