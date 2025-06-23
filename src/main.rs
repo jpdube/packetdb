@@ -4,9 +4,7 @@ pub mod jwebtoken;
 use crate::api_server::web_main;
 use database::config::CONFIG;
 use database::dbengine::DbEngine;
-use database::file_manager::FileManager;
 use database::init_db::InitDb;
-use database::proto_index::ProtoIndex;
 use log::info;
 use sniffer::capture::capture;
 use std::{env, process};
@@ -24,12 +22,6 @@ struct Args {
 
     #[arg(long, default_value_t = String::new())]
     capture: String,
-
-    #[arg(long, default_value_t = false)]
-    proto_index: bool,
-
-    #[arg(long, default_value_t = false)]
-    proto_file: bool,
 }
 
 fn process_params() {
@@ -55,35 +47,6 @@ fn process_params() {
         let db = DbEngine::new();
         db.create_index();
         process::exit(0);
-    }
-
-    if args.proto_file {
-        let fm = FileManager::default();
-        fm.proto_index_list();
-        // println!("{:#?}", fm.proto_index_list());
-    }
-
-    if args.proto_index {
-        let mut proto_index = ProtoIndex::new(99_999_999, 128);
-        for i in 0..8 {
-            proto_index.add(&(i as u32));
-        }
-
-        proto_index.create_index();
-
-        proto_index.clear();
-        for i in 0..8 {
-            proto_index.add(&(i as u32));
-        }
-
-        proto_index.append();
-
-        proto_index.clear();
-        for i in 0..16 {
-            proto_index.add(&(i as u32));
-        }
-
-        proto_index.append();
     }
 
     info!("Config: {}", CONFIG.db_path);
