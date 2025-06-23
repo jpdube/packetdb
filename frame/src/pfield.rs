@@ -125,6 +125,7 @@ impl Field {
     pub fn to_u32(&self) -> u32 {
         match self.field {
             FieldType::Int32(value) => value,
+            FieldType::Ipv4(value, _) => value,
             _ => 0,
         }
     }

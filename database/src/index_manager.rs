@@ -25,7 +25,7 @@ use std::{f64, fmt};
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum IndexField {
     Ethernet = 0x01,
-    IpV4 = 0x02,
+    Ip = 0x02,
     IpV6 = 0x04,
     Udp = 0x08,
     Tcp = 0x10,
@@ -314,7 +314,7 @@ impl IndexManager {
             index += IndexField::Arp as u32
         }
         if pkt.has_ipv4() {
-            index += IndexField::IpV4 as u32
+            index += IndexField::Ip as u32
         }
         if pkt.has_icmp() {
             index += IndexField::Icmp as u32
@@ -420,7 +420,7 @@ impl IndexManager {
             match stype {
                 IndexField::Ethernet => ret_type += IndexField::Ethernet as u32,
                 IndexField::Arp => ret_type += IndexField::Arp as u32,
-                IndexField::IpV4 => ret_type += IndexField::IpV4 as u32,
+                IndexField::Ip => ret_type += IndexField::Ip as u32,
                 IndexField::IpV6 => ret_type += IndexField::IpV6 as u32,
                 IndexField::Icmp => ret_type += IndexField::Icmp as u32,
                 IndexField::Udp => ret_type += IndexField::Udp as u32,
