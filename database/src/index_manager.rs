@@ -1,4 +1,5 @@
 use crate::config::CONFIG;
+use crate::file_manager;
 use crate::packet_ptr::PacketPtr;
 use crate::parse::PqlStatement;
 use crate::pcapfile::PcapFile;
@@ -10,7 +11,6 @@ use frame::ipv4_address::IPv4;
 use frame::packet::Packet;
 use log::{error, info};
 use rayon::prelude::*;
-use remove_dir_all::remove_dir_contents;
 use rusqlite::Connection;
 use std::collections::{HashMap, HashSet};
 use std::fs;
@@ -229,7 +229,7 @@ impl IndexManager {
         let mut mindex = MasterIndex::default();
         let mut first_index = false;
         let mut ts: u32 = 0;
-        let mut proto_stat = ProtoStat::new(filename);
+        // let mut proto_stat = ProtoStat::new(filename);
 
         let start = Instant::now();
         let mut count = 0;
@@ -267,7 +267,7 @@ impl IndexManager {
             }
 
             writer.write_u32::<BigEndian>(pindex).unwrap();
-            proto_stat.add(pindex);
+            // proto_stat.add(pindex);
 
             if let Some(ip_dst) = pkt.get_field(fields::IPV4_DST_ADDR) {
                 writer.write_u32::<BigEndian>(ip_dst.to_u32()).unwrap();
@@ -293,10 +293,10 @@ impl IndexManager {
             (duration.as_secs_f64() / count as f64) * 1_000_000.0
         );
 
-        match proto_stat.save() {
-            Ok(_) => {}
-            Err(err) => eprintln!("Error computing protocol stats: {}", err),
-        }
+        // match proto_stat.save() {
+        //     Ok(_) => {}
+        //     Err(err) => eprintln!("Error computing protocol stats: {}", err),
+        // }
 
         mindex.end_timestamp = ts;
         mindex.file_ptr = filename;
@@ -369,7 +369,8 @@ impl IndexManager {
     }
 
     pub fn create_index(&self) {
-        remove_dir_contents(&CONFIG.index_path).unwrap();
+        file_manager::clean_indexes();
+        // remove_dir_contents(&CONFIG.index_path).unwrap();
         match self.get_packet_files() {
             Ok(files_list) => {
                 let result: Vec<MasterIndex> = (files_list)
