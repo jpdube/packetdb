@@ -29,9 +29,6 @@ impl DbEngine {
     }
 
     pub fn run(&mut self, query: &str) -> Result<Cursor, String> {
-        let pidx = IndexManager::default();
-        pidx.read_proto_index();
-
         println!("Searching for: {}", query);
         let mut parse = Parse::new();
 
