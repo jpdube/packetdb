@@ -94,9 +94,8 @@ pub fn get_keywords(str_token: &str) -> Option<Keyword> {
 pub fn get_constants(str_token: &str) -> Option<Keyword> {
     match str_token {
         "ETH_IPV4" | "ETH_IPV6" | "ETH_ARP" | "IPV4_TCP" | "IPV4_UDP" | "IPV4_ICMP"
-        | "TCP_PUSH" | "HTTPS" | "DNS" | "DHCP_SERVER" | "DHCP_CLIENT" | "SYN" => {
-            Some(Keyword::Constant)
-        }
+        | "TCP_PUSH" | "HTTPS" | "HTTP" | "RDP" | "SSH" | "TELNET" | "DNS" | "DHCP_SERVER"
+        | "DHCP_CLIENT" | "SYN" => Some(Keyword::Constant),
         _ => None,
     }
 }

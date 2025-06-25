@@ -6,7 +6,11 @@ pub enum NetConstant {
     Ipv4Udp = 0x11,
     Ipv4Icmp = 0x01,
     Https = 443,
+    Http = 80,
     Dns = 53,
     DhcpClient = 68,
     DhcpServer = 67,
+    Rdp = 3389,
+    Ssh = 22,
+    Telnet = 23,
 }

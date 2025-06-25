@@ -1,5 +1,7 @@
+use anyhow::Result;
 use filetime::FileTime;
 use std::fs;
+use std::path::Path;
 
 use crate::config::CONFIG;
 
@@ -9,15 +11,19 @@ pub fn clean_indexes() {
 }
 
 pub fn clean_proto_index() {
-    clean_folder(&CONFIG.proto_index_path);
+    let paths: Vec<_> = fs::read_dir(&CONFIG.proto_index_path)
+        .unwrap()
+        .map(|r| r.unwrap())
+        .collect();
+
+    for path in paths {
+        println!("Deleting: {:?}", path.path());
+        fs::remove_dir_all(&path.path()).unwrap();
+    }
 }
 
 pub fn clean_index() {
-    clean_folder(&CONFIG.index_path);
-}
-
-pub fn clean_folder(folder_name: &str) {
-    let paths: Vec<_> = fs::read_dir(&folder_name)
+    let paths: Vec<_> = fs::read_dir(&CONFIG.index_path)
         .unwrap()
         .map(|r| r.unwrap())
         .collect();
@@ -27,6 +33,7 @@ pub fn clean_folder(folder_name: &str) {
         fs::remove_file(&path.path()).unwrap();
     }
 }
+
 pub fn proto_index_filename(file_id: u32, proto_id: u32) -> String {
     format!(
         "{}/{}_{:x}.pidx",
@@ -36,6 +43,24 @@ pub fn proto_index_filename(file_id: u32, proto_id: u32) -> String {
 
 pub fn index_filename(file_id: u32) -> String {
     format!("{}/{}.pidx", &CONFIG.index_path, file_id)
+}
+
+pub fn path_exists(path_name: &str) -> bool {
+    let path = Path::new(path_name);
+    if path.exists() && path.is_dir() {
+        // println!("The directory exists.");
+        return true;
+    } else {
+        // println!("The directory does not exist.");
+        return false;
+    }
+}
+
+pub fn create_path(path_name: &str) -> Result<()> {
+    if !path_exists(path_name) {
+        fs::create_dir(path_name)?;
+    }
+    return Ok(());
 }
 
 pub fn proto_index_list() -> Vec<String> {

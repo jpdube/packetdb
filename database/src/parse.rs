@@ -781,6 +781,22 @@ impl Parse {
                     self.field_type.insert(IndexField::Https);
                     Some(Expression::Integer(NetConstant::Https as u32))
                 }
+                "HTTP" => {
+                    self.field_type.insert(IndexField::Http);
+                    Some(Expression::Integer(NetConstant::Http as u32))
+                }
+                "RDP" => {
+                    self.field_type.insert(IndexField::Rdp);
+                    Some(Expression::Integer(NetConstant::Rdp as u32))
+                }
+                "TELNET" => {
+                    self.field_type.insert(IndexField::Telnet);
+                    Some(Expression::Integer(NetConstant::Telnet as u32))
+                }
+                "SSH" => {
+                    self.field_type.insert(IndexField::Ssh);
+                    Some(Expression::Integer(NetConstant::Ssh as u32))
+                }
                 "DNS" => {
                     self.field_type.insert(IndexField::Dns);
                     Some(Expression::Integer(NetConstant::Dns as u32))

@@ -3,7 +3,7 @@ use crate::file_manager;
 use crate::packet_ptr::PacketPtr;
 use crate::parse::PqlStatement;
 use crate::pcapfile::PcapFile;
-use crate::proto_index::{ProtoIndex, ProtoIndexMgr};
+use crate::proto_index::ProtoIndexMgr;
 use anyhow::Result;
 use byteorder::{BigEndian, ByteOrder, WriteBytesExt};
 use frame::fields;
@@ -51,6 +51,7 @@ pub enum IndexField {
     SipTls = 0x1_000_000,
     Bgp = 0x2_000_000,
     Smb = 0x4_000_000,
+    Rdp = 0x8_000_000,
 }
 
 const STAT_SQL: &str =
@@ -153,16 +154,16 @@ pub struct MasterIndex {
 pub struct IndexManager {}
 
 impl IndexManager {
-    pub fn read_proto_index(&self) {
-        let mut proto_idx = ProtoIndex::new(732, 0x80);
-        for (i, ix) in proto_idx.read().unwrap().iter().enumerate() {
-            print!("{}: {:08x},", i, ix);
-        }
-    }
+    // pub fn read_proto_index(&self) {
+    //     let mut proto_idx = ProtoIndex::new(732, 0x80);
+    //     for (i, ix) in proto_idx.read().unwrap().iter().enumerate() {
+    //         print!("{}: {:08x},", i, ix);
+    //     }
+    // }
 
-    pub fn search_index(&mut self, pql: &PqlStatement, file_id: u32) -> PacketPtr {
+    pub fn search_index(&mut self, pql: &PqlStatement, file_id: u32) -> Result<PacketPtr> {
         let idx_filename = &format!("{}/{}.pidx", &CONFIG.index_path, file_id);
-        let mut file = BufReader::new(File::open(idx_filename).unwrap());
+        let mut file = BufReader::new(File::open(idx_filename)?);
         let mut buffer = [0; 20];
         let mut packet_ptr = PacketPtr::default();
         packet_ptr.file_id = file_id;
@@ -191,7 +192,7 @@ impl IndexManager {
             }
         }
 
-        packet_ptr
+        Ok(packet_ptr)
     }
 
     fn match_index(&self, buffer: &[u8], search_value: u32, ip_list: &Vec<IPv4>) -> bool {
@@ -263,6 +264,12 @@ impl IndexManager {
                     proto_idx_mgr.add(IndexField::Https as u32, pkt.pkt_ptr);
                 } else if pindex & (IndexField::Http as u32) == IndexField::Http as u32 {
                     proto_idx_mgr.add(IndexField::Http as u32, pkt.pkt_ptr);
+                } else if pindex & (IndexField::Telnet as u32) == IndexField::Telnet as u32 {
+                    proto_idx_mgr.add(IndexField::Telnet as u32, pkt.pkt_ptr);
+                } else if pindex & (IndexField::Rdp as u32) == IndexField::Rdp as u32 {
+                    proto_idx_mgr.add(IndexField::Rdp as u32, pkt.pkt_ptr);
+                } else if pindex & (IndexField::Smb as u32) == IndexField::Smb as u32 {
+                    proto_idx_mgr.add(IndexField::Smb as u32, pkt.pkt_ptr);
                 }
             }
 
@@ -414,7 +421,7 @@ impl IndexManager {
     }
 
     pub fn build_search_index(&self, search_type: &HashSet<IndexField>) -> u32 {
-        println!("Proto types: {:?}", search_type);
+        // println!("Proto types: {:?}", search_type);
         let mut ret_type: u32 = 0;
         for stype in search_type {
             match stype {
@@ -445,6 +452,7 @@ impl IndexManager {
                 IndexField::SipTls => ret_type += IndexField::SipTls as u32,
                 IndexField::Bgp => ret_type += IndexField::Bgp as u32,
                 IndexField::Smb => ret_type += IndexField::Smb as u32,
+                IndexField::Rdp => ret_type += IndexField::Rdp as u32,
             }
         }
 

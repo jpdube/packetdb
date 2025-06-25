@@ -1,8 +1,10 @@
 use crate::config::CONFIG;
+use crate::file_manager;
+use crate::packet_ptr::PacketPtr;
 use anyhow::{anyhow, Result};
 use byteorder::ByteOrder;
 use byteorder::{BigEndian, WriteBytesExt};
-use log::info;
+use log::{error, info};
 use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
@@ -41,15 +43,17 @@ impl ProtoIndex {
         }
     }
 
-    pub fn read(&mut self) -> Result<Vec<u32>> {
+    pub fn read(&mut self) -> Result<PacketPtr> {
         let idx_filename = &format!(
-            "{}/{}_{:x}.pidx",
-            &CONFIG.proto_index_path, self.file_id, self.proto_id
+            "{}/{:x}/{}.pidx",
+            &CONFIG.proto_index_path, self.proto_id, self.file_id
         );
 
-        info!("Loading proto index file: {}", idx_filename);
+        // info!("Loading proto index file: {}", idx_filename);
 
-        let mut result: Vec<u32> = Vec::new();
+        // let mut result: Vec<u32> = Vec::new();
+        let mut result = PacketPtr::default();
+        result.file_id = self.file_id;
 
         let file = File::open(idx_filename)?;
         let mut reader = BufReader::new(file);
@@ -80,15 +84,15 @@ impl ProtoIndex {
         buffer.resize(4, 0);
         reader.read_exact(&mut buffer)?;
         self.header.count = BigEndian::read_u32(&buffer);
-        info!(
-            "Found {:x} packets in index {}_{:x}",
-            self.header.count, self.file_id, self.proto_id,
-        );
+        // info!(
+        //     "Found {}/{:x} packets in index {}_{:x}",
+        //     self.header.count, self.header.count, self.file_id, self.proto_id,
+        // );
 
         buffer.resize(4, 0);
         for _ in 0..self.header.count {
             reader.read_exact(&mut buffer)?;
-            result.push(BigEndian::read_u32(&buffer));
+            result.pkt_ptr.push(BigEndian::read_u32(&buffer));
         }
 
         Ok(result)
@@ -105,8 +109,8 @@ impl ProtoIndex {
 
     fn update_count(&mut self) {
         let idx_filename = &format!(
-            "{}/{}_{}.pidx",
-            &CONFIG.proto_index_path, self.file_id, self.proto_id
+            "{}/{:x}/{}.pidx",
+            &CONFIG.proto_index_path, self.proto_id, self.file_id
         );
 
         {
@@ -137,8 +141,8 @@ impl ProtoIndex {
 
     pub fn append(&mut self) {
         let idx_filename = &format!(
-            "{}/{}_{}.pidx",
-            &CONFIG.proto_index_path, self.file_id, self.proto_id
+            "{}/{:x}/{}.pidx",
+            &CONFIG.proto_index_path, self.proto_id, self.file_id
         );
 
         {
@@ -156,10 +160,13 @@ impl ProtoIndex {
     }
 
     pub fn create_index(&mut self) {
-        let idx_filename = &format!(
-            "{}/{}_{:x}.pidx",
-            &CONFIG.proto_index_path, self.file_id, self.proto_id
-        );
+        let proto_path = format!("{}/{:x}", &CONFIG.proto_index_path, self.proto_id);
+        if file_manager::create_path(&proto_path).is_err() {
+            error!("Error accessing path: {}", proto_path);
+            return;
+        }
+
+        let idx_filename = &format!("{}/{}.pidx", proto_path, self.file_id);
 
         self.header.count = self.ptr_list.len() as u32;
         let mut writer = BufWriter::new(File::create(idx_filename).unwrap());
@@ -175,17 +182,26 @@ impl ProtoIndex {
             writer.write_u32::<BigEndian>(*ptr).unwrap();
         }
     }
-    pub fn test_append() {
-        let mut proto_index = ProtoIndex::new(99_999_999, 128);
+    // pub fn create_index(&mut self) {
+    //     let idx_filename = &format!(
+    //         "{}/{}_{:x}.pidx",
+    //         &CONFIG.proto_index_path, self.file_id, self.proto_id
+    //     );
 
-        for i in 0..10 {
-            proto_index.add(&(i as u32));
-        }
+    //     self.header.count = self.ptr_list.len() as u32;
+    //     let mut writer = BufWriter::new(File::create(idx_filename).unwrap());
 
-        proto_index.create_index();
+    //     //--- Write header
+    //     writer.write_u32::<BigEndian>(self.header.magic_no).unwrap();
+    //     writer.write_u16::<BigEndian>(self.header.version).unwrap();
+    //     writer.write_u16::<BigEndian>(self.header.options).unwrap();
+    //     writer.write_u32::<BigEndian>(self.header.count).unwrap();
 
-        assert_eq!(proto_index.header.count, 10, "10 elements appended");
-    }
+    //     //--Write ptr list
+    //     for ptr in &self.ptr_list {
+    //         writer.write_u32::<BigEndian>(*ptr).unwrap();
+    //     }
+    // }
 }
 
 #[cfg(test)]

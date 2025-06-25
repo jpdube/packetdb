@@ -1,15 +1,18 @@
 use crate::config::CONFIG;
 use crate::cursor::Cursor;
 use crate::exec_plan::ExecutionPlan;
-use crate::index_manager::{IndexField, IndexManager, ProtoStat};
+use crate::index_manager::{IndexField, IndexManager};
 use crate::interpreter::Interpreter;
-use crate::parse::{Parse, PqlStatement};
+use crate::packet_ptr::PacketPtr;
+use crate::parse::Parse;
 use crate::pcapfile::PcapFile;
+use crate::proto_index::ProtoIndex;
 use crate::query_result::QueryResult;
 use frame::packet::Packet;
 
 use anyhow::Result;
 use log::{debug, info};
+use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
 use std::time::SystemTime;
@@ -42,7 +45,7 @@ impl DbEngine {
             let interpreter = Interpreter::new(expr.clone());
 
             self.offset = 0;
-            println!("Chunk size: {}", self.chunk_size(&expr));
+            let mut proto_search: u32 = 0;
 
             if expr.has_id_search() {
                 debug!("In ID search");
@@ -55,30 +58,48 @@ impl DbEngine {
                 self.exec_plan.show();
                 Ok(query_result.get_result())
             } else {
-                if expr.search_type.contains(&IndexField::Dhcp) {
-                    info!("::::::::: FOUND DHCP INDEX ::::::::::::");
+                let files_list: Result<Vec<u32>>;
+
+                if let Some(proto_id) = self.has_proto(&expr.search_type) {
+                    // if expr.search_type.contains(&IndexField::Dhcp) {
+                    info!("::::::::: FOUND {:?} INDEX ::::::::::::", proto_id);
+                    proto_search = proto_id as u32;
+                    // proto_search = IndexField::Dhcp as u32;
+                    files_list = self.get_proto_files(proto_search);
+                } else {
+                    files_list = self.get_index_files();
                 }
-                let files_list = self.get_index_files();
                 match files_list {
-                    // match self.get_index_files() {
-                    Ok(pkt_list) => {
+                    Ok(search_list) => {
                         while !query_result.count_reach() {
-                            file_count += 1;
+                            for file_id in &search_list {
+                                file_count += 1;
 
-                            for file_id in &pkt_list {
-                                let mut pkt_index = IndexManager::default();
-                                let ptr = pkt_index.search_index(&expr, *file_id);
+                                let pkt_index: Result<PacketPtr>;
 
-                                let c = interpreter.run_pgm_seek(&ptr, expr.top);
-
-                                for r in c {
-                                    query_result.add(r);
-                                    if query_result.count_reach() {
-                                        break;
-                                    }
+                                if proto_search > IndexField::Arp as u32 {
+                                    info!("::::::::: FOUND {:x} INDEX ::::::::::::", proto_search);
+                                    let mut proto_index = ProtoIndex::new(*file_id, proto_search);
+                                    pkt_index = proto_index.read();
+                                } else {
+                                    let mut index = IndexManager::default();
+                                    pkt_index = index.search_index(&expr, *file_id);
                                 }
-                                if query_result.count_reach() {
-                                    break;
+                                match pkt_index {
+                                    Ok(ptr) => {
+                                        let c = interpreter.run_pgm_seek(&ptr, expr.top);
+
+                                        for r in c {
+                                            query_result.add(r);
+                                            if query_result.count_reach() {
+                                                break;
+                                            }
+                                        }
+                                        if query_result.count_reach() {
+                                            break;
+                                        }
+                                    }
+                                    Err(msg) => eprintln!("Error reading DB: {}", msg),
                                 }
                             }
                         }
@@ -96,6 +117,23 @@ impl DbEngine {
         }
     }
 
+    fn has_proto(&self, search_type: &HashSet<IndexField>) -> Option<IndexField> {
+        let search_proto = vec![
+            IndexField::Dhcp,
+            IndexField::Dns,
+            IndexField::Http,
+            IndexField::Ssh,
+            IndexField::Telnet,
+        ];
+
+        for st in search_type {
+            if search_proto.contains(&st) {
+                return Some(st.clone());
+            }
+        }
+
+        return None;
+    }
     // pub fn run(&mut self, query: &str) -> Result<Cursor, String> {
     //     let pidx = IndexManager::default();
     //     pidx.read_proto_index();
@@ -196,36 +234,55 @@ impl DbEngine {
         result
     }
 
-    fn chunk_size(&self, expr: &PqlStatement) -> usize {
-        let ix_manager = IndexManager::default();
-        let search_proto = ix_manager.build_search_index(&expr.search_type);
-        let proto_stat = ProtoStat::new(0);
+    // fn chunk_size(&self, expr: &PqlStatement) -> usize {
+    //     let ix_manager = IndexManager::default();
+    //     let search_proto = ix_manager.build_search_index(&expr.search_type);
+    //     let proto_stat = ProtoStat::new(0);
 
-        let avg_file = proto_stat.get_count_stats(search_proto);
+    //     let avg_file = proto_stat.get_count_stats(search_proto);
 
-        let mut chunk_size: usize = 1;
+    //     let mut chunk_size: usize = 1;
 
-        if avg_file != 0 {
-            chunk_size = ((&expr.top + &expr.offset) / avg_file) + 1;
-            println!(
-                "Chunk size raw: Proto: {search_proto}, top: {}, Avg: {avg_file}, chunk: {chunk_size}",
-                &expr.top
-            );
+    //     if avg_file != 0 {
+    //         chunk_size = ((&expr.top + &expr.offset) / avg_file) + 1;
+    //         println!(
+    //             "Chunk size raw: Proto: {search_proto}, top: {}, Avg: {avg_file}, chunk: {chunk_size}",
+    //             &expr.top
+    //         );
 
-            if chunk_size == 0 {
-                chunk_size = 1;
-            }
+    //         if chunk_size == 0 {
+    //             chunk_size = 1;
+    //         }
 
-            if chunk_size > 8 {
-                chunk_size = 8;
-            }
+    //         if chunk_size > 8 {
+    //             chunk_size = 8;
+    //         }
+    //     }
+
+    //     chunk_size
+    // }
+
+    fn get_proto_files(&self, proto_id: u32) -> Result<Vec<u32>> {
+        let paths = fs::read_dir(format!("{}/{:x}", &CONFIG.proto_index_path, proto_id))?;
+        let mut file_id_list: Vec<u32> = Vec::new();
+
+        for path in paths {
+            let id: u32 = Path::new(&path.unwrap().file_name())
+                .file_stem()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .parse::<u32>()?;
+
+            file_id_list.push(id);
         }
-
-        chunk_size
+        file_id_list.sort();
+        file_id_list.reverse();
+        Ok(file_id_list)
     }
 
     fn get_index_files(&self) -> Result<Vec<u32>> {
-        let paths = fs::read_dir(&CONFIG.index_path).unwrap();
+        let paths = fs::read_dir(&CONFIG.index_path)?;
         let mut file_id_list: Vec<u32> = Vec::new();
 
         for path in paths {
