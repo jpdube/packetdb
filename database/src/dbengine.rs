@@ -62,7 +62,7 @@ impl DbEngine {
 
                 if let Some(proto_id) = self.has_proto(&expr.search_type) {
                     // if expr.search_type.contains(&IndexField::Dhcp) {
-                    info!("::::::::: FOUND {:?} INDEX ::::::::::::", proto_id);
+                    info!("FOUND PROTO INDEX {:?}", proto_id);
                     proto_search = proto_id as u32;
                     // proto_search = IndexField::Dhcp as u32;
                     files_list = self.get_proto_files(proto_search);
@@ -78,7 +78,7 @@ impl DbEngine {
                                 let pkt_index: Result<PacketPtr>;
 
                                 if proto_search > IndexField::Arp as u32 {
-                                    info!("::::::::: FOUND {:x} INDEX ::::::::::::", proto_search);
+                                    // info!("::::::::: FOUND {:x} INDEX ::::::::::::", proto_search);
                                     let mut proto_index = ProtoIndex::new(*file_id, proto_search);
                                     pkt_index = proto_index.read();
                                 } else {
