@@ -4,7 +4,7 @@ use crate::packet_ptr::PacketPtr;
 use anyhow::{anyhow, Result};
 use byteorder::ByteOrder;
 use byteorder::{BigEndian, WriteBytesExt};
-use log::{error, info};
+use log::error;
 use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
