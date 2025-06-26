@@ -154,13 +154,6 @@ pub struct MasterIndex {
 pub struct IndexManager {}
 
 impl IndexManager {
-    // pub fn read_proto_index(&self) {
-    //     let mut proto_idx = ProtoIndex::new(732, 0x80);
-    //     for (i, ix) in proto_idx.read().unwrap().iter().enumerate() {
-    //         print!("{}: {:08x},", i, ix);
-    //     }
-    // }
-
     pub fn search_index(&mut self, pql: &PqlStatement, file_id: u32) -> Result<PacketPtr> {
         let idx_filename = &format!("{}/{}.pidx", &CONFIG.index_path, file_id);
         let mut file = BufReader::new(File::open(idx_filename)?);
@@ -270,6 +263,10 @@ impl IndexManager {
                     proto_idx_mgr.add(IndexField::Rdp as u32, pkt.pkt_ptr);
                 } else if pindex & (IndexField::Smb as u32) == IndexField::Smb as u32 {
                     proto_idx_mgr.add(IndexField::Smb as u32, pkt.pkt_ptr);
+                } else if pindex & (IndexField::Sip as u32) == IndexField::Sip as u32 {
+                    proto_idx_mgr.add(IndexField::Sip as u32, pkt.pkt_ptr);
+                } else if pindex & (IndexField::Ntp as u32) == IndexField::Ntp as u32 {
+                    proto_idx_mgr.add(IndexField::Ntp as u32, pkt.pkt_ptr);
                 }
             }
 
@@ -350,7 +347,21 @@ impl IndexManager {
         if pkt.has_http() {
             index += IndexField::Http as u32
         }
-
+        if pkt.has_rdp() {
+            index += IndexField::Rdp as u32
+        }
+        if pkt.has_ntp() {
+            index += IndexField::Ntp as u32
+        }
+        if pkt.has_smb() {
+            index += IndexField::Smb as u32
+        }
+        if pkt.has_smtp() {
+            index += IndexField::Smtp as u32
+        }
+        if pkt.has_snmp() {
+            index += IndexField::Snmp as u32
+        }
         index
     }
 

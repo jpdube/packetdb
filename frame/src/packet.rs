@@ -347,9 +347,49 @@ impl Packet {
         }
     }
 
+    pub fn has_rdp(&self) -> bool {
+        if let Some(pkt) = self.get_tcp_packet() {
+            return pkt.is_rdp();
+        } else {
+            false
+        }
+    }
+
+    pub fn has_smb(&self) -> bool {
+        if let Some(pkt) = self.get_tcp_packet() {
+            return pkt.is_smb();
+        } else {
+            false
+        }
+    }
+
+    pub fn has_smtp(&self) -> bool {
+        if let Some(pkt) = self.get_tcp_packet() {
+            return pkt.is_smtp();
+        } else {
+            false
+        }
+    }
+
     pub fn has_dns(&self) -> bool {
         if let Some(pkt) = &self.get_udp_packet() {
             return pkt.is_dns();
+        }
+
+        false
+    }
+
+    pub fn has_snmp(&self) -> bool {
+        if let Some(pkt) = &self.get_udp_packet() {
+            return pkt.is_snmp();
+        }
+
+        false
+    }
+
+    pub fn has_ntp(&self) -> bool {
+        if let Some(pkt) = &self.get_udp_packet() {
+            return pkt.is_ntp();
         }
 
         false

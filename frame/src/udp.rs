@@ -46,9 +46,16 @@ impl<'a> UdpFrame<'a> {
     pub fn is_dns(&self) -> bool {
         self.dport() == 53 || self.sport() == 53
     }
+    pub fn is_ntp(&self) -> bool {
+        self.dport() == 123 || self.sport() == 123
+    }
 
     pub fn is_dhcp(&self) -> bool {
         (self.sport() == 68 || self.dport() == 67) || (self.sport() == 67 || self.dport() == 68)
+    }
+
+    pub fn is_snmp(&self) -> bool {
+        (self.sport() == 161 || self.dport() == 161) || (self.sport() == 162 || self.dport() == 162)
     }
 }
 

@@ -801,6 +801,26 @@ impl Parse {
                     self.field_type.insert(IndexField::Dns);
                     Some(Expression::Integer(NetConstant::Dns as u32))
                 }
+                "SMTP" => {
+                    self.field_type.insert(IndexField::Smtp);
+                    Some(Expression::Integer(NetConstant::Smtp as u32))
+                }
+                "SNMP" => {
+                    self.field_type.insert(IndexField::Snmp);
+                    Some(Expression::Integer(NetConstant::Snmp as u32))
+                }
+                "NTP" => {
+                    self.field_type.insert(IndexField::Ntp);
+                    Some(Expression::Integer(NetConstant::Ntp as u32))
+                }
+                "SIP" => {
+                    self.field_type.insert(IndexField::Sip);
+                    Some(Expression::Integer(NetConstant::Sip as u32))
+                }
+                "SMB" => {
+                    self.field_type.insert(IndexField::Smb);
+                    Some(Expression::Integer(NetConstant::Smb as u32))
+                }
                 "DHCP_SERVER" => {
                     self.field_type.insert(IndexField::Dhcp);
                     Some(Expression::Integer(NetConstant::DhcpServer as u32))
