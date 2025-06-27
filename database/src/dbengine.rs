@@ -1,13 +1,14 @@
 use crate::config::CONFIG;
 use crate::cursor::Cursor;
 use crate::exec_plan::ExecutionPlan;
-use crate::index_manager::{IndexField, IndexManager};
+use crate::index_manager::IndexManager;
 use crate::interpreter::Interpreter;
 use crate::packet_ptr::PacketPtr;
 use crate::parse::Parse;
 use crate::pcapfile::PcapFile;
 use crate::proto_index::ProtoIndex;
 use crate::query_result::QueryResult;
+use frame::layer_index::IndexField;
 use frame::packet::Packet;
 
 use anyhow::Result;

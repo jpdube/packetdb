@@ -8,6 +8,7 @@ use anyhow::Result;
 use byteorder::{BigEndian, ByteOrder, WriteBytesExt};
 use frame::fields;
 use frame::ipv4_address::IPv4;
+use frame::layer_index::IndexField;
 use frame::packet::Packet;
 use log::{error, info};
 use rayon::prelude::*;
@@ -22,37 +23,37 @@ use std::path::Path;
 use std::time::Instant;
 use std::{f64, fmt};
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub enum IndexField {
-    Ethernet = 0x01,
-    Ip = 0x02,
-    IpV6 = 0x04,
-    Udp = 0x08,
-    Tcp = 0x10,
-    Arp = 0x20,
-    Icmp = 0x40,
-    Dns = 0x80,
-    Dhcp = 0x100,
-    Https = 0x200,
-    Http = 0x400,
-    Ssh = 0x800,
-    Telnet = 0x1000,
-    Smtp = 0x2000,
-    Imap = 0x4000,
-    Imaps = 0x8000,
-    Pop3 = 0x10_000,
-    Pop3s = 0x20_000,
-    Snmp = 0x40_000,
-    Ftp = 0x80_000,
-    Ntp = 0x100_000,
-    Rtp = 0x200_000,
-    RtpC = 0x400_000,
-    Sip = 0x800_000,
-    SipTls = 0x1_000_000,
-    Bgp = 0x2_000_000,
-    Smb = 0x4_000_000,
-    Rdp = 0x8_000_000,
-}
+// #[derive(Debug, Clone, Eq, PartialEq, Hash)]
+// pub enum IndexField {
+//     Ethernet = 0x01,
+//     Ip = 0x02,
+//     IpV6 = 0x04,
+//     Udp = 0x08,
+//     Tcp = 0x10,
+//     Arp = 0x20,
+//     Icmp = 0x40,
+//     Dns = 0x80,
+//     Dhcp = 0x100,
+//     Https = 0x200,
+//     Http = 0x400,
+//     Ssh = 0x800,
+//     Telnet = 0x1000,
+//     Smtp = 0x2000,
+//     Imap = 0x4000,
+//     Imaps = 0x8000,
+//     Pop3 = 0x10_000,
+//     Pop3s = 0x20_000,
+//     Snmp = 0x40_000,
+//     Ftp = 0x80_000,
+//     Ntp = 0x100_000,
+//     Rtp = 0x200_000,
+//     RtpC = 0x400_000,
+//     Sip = 0x800_000,
+//     SipTls = 0x1_000_000,
+//     Bgp = 0x2_000_000,
+//     Smb = 0x4_000_000,
+//     Rdp = 0x8_000_000,
+// }
 
 const STAT_SQL: &str =
     "INSERT INTO proto_stats (file_id, proto, count) values (:file_id, :proto, :count)";

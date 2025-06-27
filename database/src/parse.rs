@@ -1,7 +1,6 @@
 #![allow(dead_code)]
 
 use crate::aggregate::Aggregate;
-use crate::index_manager::IndexField;
 use crate::keywords::Keyword;
 use crate::lexer::Lexer;
 use crate::token::Token;
@@ -10,6 +9,7 @@ use chrono::{Local, TimeZone};
 use frame::constant::NetConstant;
 use frame::fields::string_to_int;
 use frame::ipv4_address::{from_string_to_ip, IPv4};
+use frame::layer_index::IndexField;
 use frame::mac_address::MacAddr;
 
 use log::debug;

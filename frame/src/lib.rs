@@ -10,6 +10,7 @@ pub mod ip;
 pub mod ipv4_address;
 pub mod ipv6_address;
 pub mod layer;
+pub mod layer_index;
 pub mod mac_address;
 pub mod packet;
 pub mod packet_builder;
