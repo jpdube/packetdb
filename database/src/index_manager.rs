@@ -8,7 +8,7 @@ use anyhow::Result;
 use byteorder::{BigEndian, ByteOrder, WriteBytesExt};
 use frame::fields;
 use frame::ipv4_address::IPv4;
-use frame::layer_index::IndexField;
+use frame::layer_index::LayerIndex;
 use frame::packet::Packet;
 use log::{error, info};
 use rayon::prelude::*;
@@ -243,31 +243,31 @@ impl IndexManager {
 
             let pindex = self.build_index(&pkt);
 
-            if pindex >= IndexField::Arp as u32 {
-                if pindex & (IndexField::Arp as u32) == IndexField::Arp as u32 {
-                    proto_idx_mgr.add(IndexField::Arp as u32, pkt.pkt_ptr);
-                } else if pindex & (IndexField::Dns as u32) == IndexField::Dns as u32 {
-                    proto_idx_mgr.add(IndexField::Dns as u32, pkt.pkt_ptr);
-                } else if pindex & (IndexField::Dhcp as u32) == IndexField::Dhcp as u32 {
-                    proto_idx_mgr.add(IndexField::Dhcp as u32, pkt.pkt_ptr);
-                } else if pindex & (IndexField::Icmp as u32) == IndexField::Icmp as u32 {
-                    proto_idx_mgr.add(IndexField::Icmp as u32, pkt.pkt_ptr);
-                } else if pindex & (IndexField::Ssh as u32) == IndexField::Ssh as u32 {
-                    proto_idx_mgr.add(IndexField::Ssh as u32, pkt.pkt_ptr);
-                } else if pindex & (IndexField::Https as u32) == IndexField::Https as u32 {
-                    proto_idx_mgr.add(IndexField::Https as u32, pkt.pkt_ptr);
-                } else if pindex & (IndexField::Http as u32) == IndexField::Http as u32 {
-                    proto_idx_mgr.add(IndexField::Http as u32, pkt.pkt_ptr);
-                } else if pindex & (IndexField::Telnet as u32) == IndexField::Telnet as u32 {
-                    proto_idx_mgr.add(IndexField::Telnet as u32, pkt.pkt_ptr);
-                } else if pindex & (IndexField::Rdp as u32) == IndexField::Rdp as u32 {
-                    proto_idx_mgr.add(IndexField::Rdp as u32, pkt.pkt_ptr);
-                } else if pindex & (IndexField::Smb as u32) == IndexField::Smb as u32 {
-                    proto_idx_mgr.add(IndexField::Smb as u32, pkt.pkt_ptr);
-                } else if pindex & (IndexField::Sip as u32) == IndexField::Sip as u32 {
-                    proto_idx_mgr.add(IndexField::Sip as u32, pkt.pkt_ptr);
-                } else if pindex & (IndexField::Ntp as u32) == IndexField::Ntp as u32 {
-                    proto_idx_mgr.add(IndexField::Ntp as u32, pkt.pkt_ptr);
+            if pindex >= LayerIndex::ARP as u32 {
+                if pindex & (LayerIndex::ARP as u32) == LayerIndex::ARP as u32 {
+                    proto_idx_mgr.add(LayerIndex::ARP as u32, pkt.pkt_ptr);
+                } else if pindex & (LayerIndex::DNS as u32) == LayerIndex::DNS as u32 {
+                    proto_idx_mgr.add(LayerIndex::DNS as u32, pkt.pkt_ptr);
+                } else if pindex & (LayerIndex::DHCP as u32) == LayerIndex::DHCP as u32 {
+                    proto_idx_mgr.add(LayerIndex::DHCP as u32, pkt.pkt_ptr);
+                } else if pindex & (LayerIndex::ICMP as u32) == LayerIndex::ICMP as u32 {
+                    proto_idx_mgr.add(LayerIndex::ICMP as u32, pkt.pkt_ptr);
+                } else if pindex & (LayerIndex::SSH as u32) == LayerIndex::SSH as u32 {
+                    proto_idx_mgr.add(LayerIndex::SSH as u32, pkt.pkt_ptr);
+                } else if pindex & (LayerIndex::HTTPS as u32) == LayerIndex::HTTPS as u32 {
+                    proto_idx_mgr.add(LayerIndex::HTTPS as u32, pkt.pkt_ptr);
+                } else if pindex & (LayerIndex::HTTP as u32) == LayerIndex::HTTP as u32 {
+                    proto_idx_mgr.add(LayerIndex::HTTP as u32, pkt.pkt_ptr);
+                } else if pindex & (LayerIndex::TELNET as u32) == LayerIndex::TELNET as u32 {
+                    proto_idx_mgr.add(LayerIndex::TELNET as u32, pkt.pkt_ptr);
+                } else if pindex & (LayerIndex::RDP as u32) == LayerIndex::RDP as u32 {
+                    proto_idx_mgr.add(LayerIndex::RDP as u32, pkt.pkt_ptr);
+                } else if pindex & (LayerIndex::SMB as u32) == LayerIndex::SMB as u32 {
+                    proto_idx_mgr.add(LayerIndex::SMB as u32, pkt.pkt_ptr);
+                } else if pindex & (LayerIndex::SIP as u32) == LayerIndex::SIP as u32 {
+                    proto_idx_mgr.add(LayerIndex::SIP as u32, pkt.pkt_ptr);
+                } else if pindex & (LayerIndex::NTP as u32) == LayerIndex::NTP as u32 {
+                    proto_idx_mgr.add(LayerIndex::NTP as u32, pkt.pkt_ptr);
                 }
             }
 
@@ -313,55 +313,55 @@ impl IndexManager {
         let mut index: u32 = 0;
 
         if pkt.has_ethernet() {
-            index += IndexField::Ethernet as u32
+            index += LayerIndex::ETH as u32
         }
         if pkt.has_arp() {
-            index += IndexField::Arp as u32
+            index += LayerIndex::ARP as u32
         }
         if pkt.has_ipv4() {
-            index += IndexField::Ip as u32
+            index += LayerIndex::IPv4 as u32
         }
         if pkt.has_icmp() {
-            index += IndexField::Icmp as u32
+            index += LayerIndex::ICMP as u32
         }
         if pkt.has_udp() {
-            index += IndexField::Udp as u32
+            index += LayerIndex::UDP as u32
         }
         if pkt.has_tcp() {
-            index += IndexField::Tcp as u32
+            index += LayerIndex::TCP as u32
         }
         if pkt.has_https() {
-            index += IndexField::Https as u32
+            index += LayerIndex::HTTPS as u32
         }
         if pkt.has_dns() {
-            index += IndexField::Dns as u32
+            index += LayerIndex::DNS as u32
         }
         if pkt.has_dhcp() {
-            index += IndexField::Dhcp as u32
+            index += LayerIndex::DHCP as u32
         }
         if pkt.has_ssh() {
-            index += IndexField::Ssh as u32
+            index += LayerIndex::SSH as u32
         }
         if pkt.has_telnet() {
-            index += IndexField::Telnet as u32
+            index += LayerIndex::TELNET as u32
         }
         if pkt.has_http() {
-            index += IndexField::Http as u32
+            index += LayerIndex::HTTP as u32
         }
         if pkt.has_rdp() {
-            index += IndexField::Rdp as u32
+            index += LayerIndex::RDP as u32
         }
         if pkt.has_ntp() {
-            index += IndexField::Ntp as u32
+            index += LayerIndex::NTP as u32
         }
         if pkt.has_smb() {
-            index += IndexField::Smb as u32
+            index += LayerIndex::SMB as u32
         }
         if pkt.has_smtp() {
-            index += IndexField::Smtp as u32
+            index += LayerIndex::SMTP as u32
         }
         if pkt.has_snmp() {
-            index += IndexField::Snmp as u32
+            index += LayerIndex::SMTP as u32
         }
         index
     }
@@ -432,39 +432,41 @@ impl IndexManager {
         }
     }
 
-    pub fn build_search_index(&self, search_type: &HashSet<IndexField>) -> u32 {
+    pub fn build_search_index(&self, search_type: &HashSet<LayerIndex>) -> u32 {
         // println!("Proto types: {:?}", search_type);
         let mut ret_type: u32 = 0;
         for stype in search_type {
             match stype {
-                IndexField::Ethernet => ret_type += IndexField::Ethernet as u32,
-                IndexField::Arp => ret_type += IndexField::Arp as u32,
-                IndexField::Ip => ret_type += IndexField::Ip as u32,
-                IndexField::IpV6 => ret_type += IndexField::IpV6 as u32,
-                IndexField::Icmp => ret_type += IndexField::Icmp as u32,
-                IndexField::Udp => ret_type += IndexField::Udp as u32,
-                IndexField::Tcp => ret_type += IndexField::Tcp as u32,
-                IndexField::Dns => ret_type += IndexField::Dns as u32,
-                IndexField::Dhcp => ret_type += IndexField::Dhcp as u32,
-                IndexField::Https => ret_type += IndexField::Https as u32,
-                IndexField::Http => ret_type += IndexField::Http as u32,
-                IndexField::Ssh => ret_type += IndexField::Ssh as u32,
-                IndexField::Telnet => ret_type += IndexField::Telnet as u32,
-                IndexField::Smtp => ret_type += IndexField::Smtp as u32,
-                IndexField::Imap => ret_type += IndexField::Imap as u32,
-                IndexField::Imaps => ret_type += IndexField::Imaps as u32,
-                IndexField::Pop3 => ret_type += IndexField::Pop3 as u32,
-                IndexField::Pop3s => ret_type += IndexField::Pop3s as u32,
-                IndexField::Snmp => ret_type += IndexField::Snmp as u32,
-                IndexField::Ftp => ret_type += IndexField::Ftp as u32,
-                IndexField::Ntp => ret_type += IndexField::Ntp as u32,
-                IndexField::Rtp => ret_type += IndexField::Rtp as u32,
-                IndexField::RtpC => ret_type += IndexField::RtpC as u32,
-                IndexField::Sip => ret_type += IndexField::Sip as u32,
-                IndexField::SipTls => ret_type += IndexField::SipTls as u32,
-                IndexField::Bgp => ret_type += IndexField::Bgp as u32,
-                IndexField::Smb => ret_type += IndexField::Smb as u32,
-                IndexField::Rdp => ret_type += IndexField::Rdp as u32,
+                //--- Ignoring frame for indexing
+                LayerIndex::FRAME => ret_type += 0,
+                LayerIndex::ETH => ret_type += LayerIndex::ETH as u32,
+                LayerIndex::ARP => ret_type += LayerIndex::ARP as u32,
+                LayerIndex::IPv4 => ret_type += LayerIndex::IPv4 as u32,
+                LayerIndex::IPv6 => ret_type += LayerIndex::IPv6 as u32,
+                LayerIndex::ICMP => ret_type += LayerIndex::ICMP as u32,
+                LayerIndex::UDP => ret_type += LayerIndex::UDP as u32,
+                LayerIndex::TCP => ret_type += LayerIndex::TCP as u32,
+                LayerIndex::DNS => ret_type += LayerIndex::DNS as u32,
+                LayerIndex::DHCP => ret_type += LayerIndex::DHCP as u32,
+                LayerIndex::HTTPS => ret_type += LayerIndex::HTTPS as u32,
+                LayerIndex::HTTP => ret_type += LayerIndex::HTTP as u32,
+                LayerIndex::SSH => ret_type += LayerIndex::SSH as u32,
+                LayerIndex::TELNET => ret_type += LayerIndex::TELNET as u32,
+                LayerIndex::SMTP => ret_type += LayerIndex::SMTP as u32,
+                LayerIndex::IMAP => ret_type += LayerIndex::IMAP as u32,
+                LayerIndex::IMAPS => ret_type += LayerIndex::IMAPS as u32,
+                LayerIndex::POP3 => ret_type += LayerIndex::POP3 as u32,
+                LayerIndex::POP3S => ret_type += LayerIndex::POP3S as u32,
+                LayerIndex::SNMP => ret_type += LayerIndex::SNMP as u32,
+                LayerIndex::FTP => ret_type += LayerIndex::FTP as u32,
+                LayerIndex::NTP => ret_type += LayerIndex::NTP as u32,
+                LayerIndex::RTP => ret_type += LayerIndex::RTP as u32,
+                LayerIndex::RTPC => ret_type += LayerIndex::RTPC as u32,
+                LayerIndex::SIP => ret_type += LayerIndex::SIP as u32,
+                LayerIndex::SIPTLS => ret_type += LayerIndex::SIPTLS as u32,
+                LayerIndex::BGP => ret_type += LayerIndex::BGP as u32,
+                LayerIndex::SMB => ret_type += LayerIndex::SMB as u32,
+                LayerIndex::RDP => ret_type += LayerIndex::RDP as u32,
             }
         }
 

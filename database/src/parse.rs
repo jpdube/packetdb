@@ -9,7 +9,7 @@ use chrono::{Local, TimeZone};
 use frame::constant::NetConstant;
 use frame::fields::string_to_int;
 use frame::ipv4_address::{from_string_to_ip, IPv4};
-use frame::layer_index::IndexField;
+use frame::layer_index::LayerIndex;
 use frame::mac_address::MacAddr;
 
 use log::debug;
@@ -96,7 +96,7 @@ pub struct PqlStatement {
     pub top: usize,
     pub offset: usize,
     pub interval: Option<Interval>,
-    pub search_type: HashSet<IndexField>,
+    pub search_type: HashSet<LayerIndex>,
     pub ip_list: Vec<IPv4>,
     pub has_distinct: bool,
     pub aggr_list: Vec<Aggregate>,
@@ -241,7 +241,7 @@ pub struct Parse {
     prev_token: Option<Token>,
     peek_keyword: Option<Keyword>,
     has_error: bool,
-    field_type: HashSet<IndexField>,
+    field_type: HashSet<LayerIndex>,
     error_list: Vec<ErrorMsg>,
     query: PqlStatement,
 }
@@ -778,55 +778,55 @@ impl Parse {
                 "IPV4_UDP" => Some(Expression::Integer(NetConstant::Ipv4Udp as u32)),
                 "IPV4_ICMP" => Some(Expression::Integer(NetConstant::Ipv4Icmp as u32)),
                 "HTTPS" => {
-                    self.field_type.insert(IndexField::Https);
+                    self.field_type.insert(LayerIndex::HTTPS);
                     Some(Expression::Integer(NetConstant::Https as u32))
                 }
                 "HTTP" => {
-                    self.field_type.insert(IndexField::Http);
+                    self.field_type.insert(LayerIndex::HTTP);
                     Some(Expression::Integer(NetConstant::Http as u32))
                 }
                 "RDP" => {
-                    self.field_type.insert(IndexField::Rdp);
+                    self.field_type.insert(LayerIndex::RDP);
                     Some(Expression::Integer(NetConstant::Rdp as u32))
                 }
                 "TELNET" => {
-                    self.field_type.insert(IndexField::Telnet);
+                    self.field_type.insert(LayerIndex::TELNET);
                     Some(Expression::Integer(NetConstant::Telnet as u32))
                 }
                 "SSH" => {
-                    self.field_type.insert(IndexField::Ssh);
+                    self.field_type.insert(LayerIndex::SSH);
                     Some(Expression::Integer(NetConstant::Ssh as u32))
                 }
                 "DNS" => {
-                    self.field_type.insert(IndexField::Dns);
+                    self.field_type.insert(LayerIndex::DNS);
                     Some(Expression::Integer(NetConstant::Dns as u32))
                 }
                 "SMTP" => {
-                    self.field_type.insert(IndexField::Smtp);
+                    self.field_type.insert(LayerIndex::SMTP);
                     Some(Expression::Integer(NetConstant::Smtp as u32))
                 }
                 "SNMP" => {
-                    self.field_type.insert(IndexField::Snmp);
+                    self.field_type.insert(LayerIndex::SMTP);
                     Some(Expression::Integer(NetConstant::Snmp as u32))
                 }
                 "NTP" => {
-                    self.field_type.insert(IndexField::Ntp);
+                    self.field_type.insert(LayerIndex::NTP);
                     Some(Expression::Integer(NetConstant::Ntp as u32))
                 }
                 "SIP" => {
-                    self.field_type.insert(IndexField::Sip);
+                    self.field_type.insert(LayerIndex::SIP);
                     Some(Expression::Integer(NetConstant::Sip as u32))
                 }
                 "SMB" => {
-                    self.field_type.insert(IndexField::Smb);
+                    self.field_type.insert(LayerIndex::SMB);
                     Some(Expression::Integer(NetConstant::Smb as u32))
                 }
                 "DHCP_SERVER" => {
-                    self.field_type.insert(IndexField::Dhcp);
+                    self.field_type.insert(LayerIndex::DHCP);
                     Some(Expression::Integer(NetConstant::DhcpServer as u32))
                 }
                 "DHCP_CLIENT" => {
-                    self.field_type.insert(IndexField::Dhcp);
+                    self.field_type.insert(LayerIndex::DHCP);
                     Some(Expression::Integer(NetConstant::DhcpClient as u32))
                 }
                 _ => None,
@@ -1011,13 +1011,13 @@ impl Parse {
         if field.find('.').is_some() {
             let field_type: Vec<&str> = field.split(".").collect();
             match field_type[0] {
-                "eth" => self.field_type.insert(IndexField::Ethernet),
-                "arp" => self.field_type.insert(IndexField::Arp),
-                "ip" => self.field_type.insert(IndexField::Ip),
+                "eth" => self.field_type.insert(LayerIndex::ETH),
+                "arp" => self.field_type.insert(LayerIndex::ARP),
+                "ip" => self.field_type.insert(LayerIndex::IPv4),
                 // "ipv4" => self.field_type.insert(IndexField::IpV4),
-                "icmp" => self.field_type.insert(IndexField::Icmp),
-                "udp" => self.field_type.insert(IndexField::Udp),
-                "tcp" => self.field_type.insert(IndexField::Tcp),
+                "icmp" => self.field_type.insert(LayerIndex::ICMP),
+                "udp" => self.field_type.insert(LayerIndex::UDP),
+                "tcp" => self.field_type.insert(LayerIndex::TCP),
                 _ => false,
             };
         }

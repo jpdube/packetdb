@@ -8,7 +8,7 @@ use crate::parse::Parse;
 use crate::pcapfile::PcapFile;
 use crate::proto_index::ProtoIndex;
 use crate::query_result::QueryResult;
-use frame::layer_index::IndexField;
+use frame::layer_index::LayerIndex;
 use frame::packet::Packet;
 
 use anyhow::Result;
@@ -75,7 +75,7 @@ impl DbEngine {
                                 file_count += 1;
                                 let pkt_index: Result<PacketPtr>;
 
-                                if proto_search > IndexField::Arp as u32 {
+                                if proto_search > LayerIndex::ARP as u32 {
                                     let mut proto_index = ProtoIndex::new(*file_id, proto_search);
                                     pkt_index = proto_index.read();
                                 } else {
@@ -114,27 +114,27 @@ impl DbEngine {
         }
     }
 
-    fn has_proto(&self, search_type: &HashSet<IndexField>) -> Option<IndexField> {
+    fn has_proto(&self, search_type: &HashSet<LayerIndex>) -> Option<LayerIndex> {
         let search_proto = vec![
-            IndexField::Arp,
-            IndexField::Icmp,
-            IndexField::Dns,
-            IndexField::Dhcp,
-            IndexField::Https,
-            IndexField::Http,
-            IndexField::Ssh,
-            IndexField::Telnet,
-            IndexField::Smtp,
-            IndexField::Imap,
-            IndexField::Pop3,
-            IndexField::Snmp,
-            IndexField::Ftp,
-            IndexField::Ntp,
-            IndexField::Rtp,
-            IndexField::Sip,
-            IndexField::SipTls,
-            IndexField::Smb,
-            IndexField::Rdp,
+            LayerIndex::ARP,
+            LayerIndex::ICMP,
+            LayerIndex::DNS,
+            LayerIndex::DHCP,
+            LayerIndex::HTTPS,
+            LayerIndex::HTTP,
+            LayerIndex::SSH,
+            LayerIndex::TELNET,
+            LayerIndex::SMTP,
+            LayerIndex::IMAP,
+            LayerIndex::POP3,
+            LayerIndex::SMTP,
+            LayerIndex::FTP,
+            LayerIndex::NTP,
+            LayerIndex::RTP,
+            LayerIndex::SIP,
+            LayerIndex::SIPTLS,
+            LayerIndex::SMB,
+            LayerIndex::RDP,
         ];
 
         for st in search_type {
