@@ -76,7 +76,7 @@ impl Packet {
         self.frame_list.contains_key(&layer)
     }
 
-    fn get_ipv4_packet(&self) -> Option<IpFrame> {
+    fn get_ipv4_packet(&self) -> Option<IpFrame<'_>> {
         if let Some(raw_pkt) = self.get_layer_bytes(LayerIndex::IPv4) {
             return Some(IpFrame::new(raw_pkt));
         } else {
@@ -84,8 +84,8 @@ impl Packet {
         }
     }
 
-    fn get_tcp_packet(&self) -> Option<Tcp> {
-        if let Some(raw_pkt) = self.get_layer_bytes(LayerIndex::TCP) {
+    fn get_tcp_packet(&self) -> Option<Tcp<'_>> {
+        if let Some(raw_pkt) = &self.get_layer_bytes(LayerIndex::TCP) {
             let tcp = Tcp::new(raw_pkt);
             return Some(tcp);
         } else {
@@ -93,7 +93,7 @@ impl Packet {
         }
     }
 
-    fn get_udp_packet(&self) -> Option<UdpFrame> {
+    fn get_udp_packet(&self) -> Option<UdpFrame<'_>> {
         if let Some(raw_pkt) = self.get_layer_bytes(LayerIndex::UDP) {
             return Some(UdpFrame::new(raw_pkt));
         } else {
@@ -101,7 +101,7 @@ impl Packet {
         }
     }
 
-    fn get_eth_packet(&self) -> Option<EtherFrame> {
+    fn get_eth_packet(&self) -> Option<EtherFrame<'_>> {
         if let Some(raw_pkt) = self.get_layer_bytes(LayerIndex::ETH) {
             return Some(EtherFrame::new(raw_pkt));
         } else {
@@ -109,7 +109,7 @@ impl Packet {
         }
     }
 
-    fn get_frame_packet(&self) -> Option<Frame> {
+    fn get_frame_packet(&self) -> Option<Frame<'_>> {
         if let Some(raw_pkt) = self.get_layer_bytes(LayerIndex::FRAME) {
             return Some(Frame::new(raw_pkt, self.little_endian));
         } else {
@@ -117,7 +117,7 @@ impl Packet {
         }
     }
 
-    fn get_dns_packet(&self) -> Option<Dns> {
+    fn get_dns_packet(&self) -> Option<Dns<'_>> {
         if let Some(raw_pkt) = self.get_layer_bytes(LayerIndex::DNS) {
             let dns = Dns::new(raw_pkt);
             return Some(dns);
@@ -126,7 +126,7 @@ impl Packet {
         }
     }
 
-    fn get_dhcp_packet(&self) -> Option<Dhcp> {
+    fn get_dhcp_packet(&self) -> Option<Dhcp<'_>> {
         if let Some(raw_pkt) = self.get_layer_bytes(LayerIndex::DHCP) {
             let dhcp = Dhcp::new(raw_pkt);
             return Some(dhcp);
