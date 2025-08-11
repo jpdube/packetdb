@@ -806,7 +806,7 @@ impl Parse {
                     Some(Expression::Integer(NetConstant::Smtp as u32))
                 }
                 "SNMP" => {
-                    self.field_type.insert(LayerIndex::SMTP);
+                    self.field_type.insert(LayerIndex::SNMP);
                     Some(Expression::Integer(NetConstant::Snmp as u32))
                 }
                 "NTP" => {
