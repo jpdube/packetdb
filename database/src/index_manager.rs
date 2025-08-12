@@ -375,9 +375,9 @@ impl IndexManager {
         for path in paths {
             let id: u32 = Path::new(&path.unwrap().file_name())
                 .file_stem()
-                .unwrap()
+                .ok_or(anyhow::anyhow!("Error extrating file stem"))?
                 .to_str()
-                .unwrap()
+                .ok_or(anyhow::anyhow!("Error converting file stem to string"))?
                 .parse::<u32>()?;
 
             file_id_list.push(id);
