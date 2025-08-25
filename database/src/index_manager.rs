@@ -4,7 +4,7 @@ use crate::packet_ptr::PacketPtr;
 use crate::parse::PqlStatement;
 use crate::pcapfile::PcapFile;
 use crate::proto_index::ProtoIndexMgr;
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use byteorder::{BigEndian, ByteOrder, WriteBytesExt};
 use frame::fields;
 use frame::ipv4_address::IPv4;
@@ -375,9 +375,9 @@ impl IndexManager {
         for path in paths {
             let id: u32 = Path::new(&path.unwrap().file_name())
                 .file_stem()
-                .ok_or(anyhow::anyhow!("Error extrating file stem"))?
+                .ok_or(anyhow!("Error extrating file stem"))?
                 .to_str()
-                .ok_or(anyhow::anyhow!("Error converting file stem to string"))?
+                .ok_or(anyhow!("Error converting file stem to string"))?
                 .parse::<u32>()?;
 
             file_id_list.push(id);
