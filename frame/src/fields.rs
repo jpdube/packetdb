@@ -134,6 +134,24 @@ pub const DHCP_VENDOR_CLASS_ID: u32 = 0x0008001F;
 pub const DHCP_VENDOR_INFO: u32 = 0x00080020;
 pub const DHCP_PARAMS_REQ_LIST: u32 = 0x00080021;
 
+pub const NTP_BASE: u32 = 0x00090000;
+pub const NTP_LEAP_INDICATOR: u32 = 0x00090001;
+pub const NTP_VERSION_NO: u32 = 0x00090002;
+pub const NTP_MODE: u32 = 0x00090003;
+pub const NTP_STRATUM: u32 = 0x00090004;
+pub const NTP_POLL: u32 = 0x00090005;
+pub const NTP_PRECISION: u32 = 0x00090006;
+pub const NTP_ROOT_DELAY: u32 = 0x00090007;
+pub const NTP_ROOT_DISPERSION: u32 = 0x00090008;
+pub const NTP_REF_ID: u32 = 0x00090009;
+pub const NTP_REF_TIMESTAMP: u32 = 0x0009000A;
+pub const NTP_ORIGIN_TIMESTAMP: u32 = 0x0009000B;
+pub const NTP_RECV_TIMESTAMP: u32 = 0x0009000C;
+pub const NTP_XMIT_TIMESTAMP: u32 = 0x0009000D;
+pub const NTP_OPT_EXTENSION: u32 = 0x0009000E;
+pub const NTP_KEY_ID: u32 = 0x0009000F;
+pub const NTP_MSG_DIGEST: u32 = 0x00090010;
+
 pub fn string_to_int(field_str: &str) -> Option<u32> {
     match field_str {
         //--- Frame
@@ -248,6 +266,23 @@ pub fn string_to_int(field_str: &str) -> Option<u32> {
         "dhcp.vendor_id" => Some(DHCP_VENDOR_CLASS_ID),
         "dhcp.vendor_info" => Some(DHCP_VENDOR_INFO),
         "dhcp.params_req_list" => Some(DHCP_PARAMS_REQ_LIST),
+
+        "ntp.leap_indicator" => Some(NTP_LEAP_INDICATOR),
+        "ntp.version" => Some(NTP_VERSION_NO),
+        "ntp.mode" => Some(NTP_MODE),
+        "ntp.stratum" => Some(NTP_STRATUM),
+        "ntp.poll" => Some(NTP_POLL),
+        "ntp.precision" => Some(NTP_PRECISION),
+        "ntp.root_delay" => Some(NTP_ROOT_DELAY),
+        "ntp.root_dispersion" => Some(NTP_ROOT_DISPERSION),
+        "ntp.ref_id" => Some(NTP_REF_ID),
+        "ntp.ref_timestamp" => Some(NTP_REF_TIMESTAMP),
+        "ntp.origin_timestamp" => Some(NTP_ORIGIN_TIMESTAMP),
+        "ntp.recv_timestamp" => Some(NTP_RECV_TIMESTAMP),
+        "ntp.xmit_timestamp" => Some(NTP_XMIT_TIMESTAMP),
+        "ntp.opt_extension" => Some(NTP_OPT_EXTENSION),
+        "ntp.key_id" => Some(NTP_KEY_ID),
+        "ntp.msg_digest" => Some(NTP_MSG_DIGEST),
 
         _ => None,
     }

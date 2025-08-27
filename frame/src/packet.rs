@@ -11,7 +11,7 @@ use crate::packet_display::PacketDisplay;
 use crate::pfield::Field;
 use crate::tcp::Tcp;
 use crate::udp::UdpFrame;
-use crate::{arp::Arp, dns::Dns};
+use crate::{arp::Arp, dns::Dns, ntp::Ntp};
 use indexmap::IndexMap;
 
 use byteorder::{BigEndian, ByteOrder};
@@ -130,6 +130,14 @@ impl Packet {
         if let Some(raw_pkt) = self.get_layer_bytes(LayerIndex::DHCP) {
             let dhcp = Dhcp::new(raw_pkt);
             return Some(dhcp);
+        } else {
+            return None;
+        }
+    }
+    fn get_ntp_packet(&self) -> Option<Ntp<'_>> {
+        if let Some(raw_pkt) = self.get_layer_bytes(LayerIndex::NTP) {
+            let ntp = Ntp::new(raw_pkt);
+            return Some(ntp);
         } else {
             return None;
         }
@@ -255,6 +263,15 @@ impl Packet {
                                 self.add_layer(LayerInfo {
                                     layer_type: LayerIndex::DHCP,
                                     start_pos: vo + ip_header_len + dhcp.header_len(),
+                                    end_pos: self.raw_packet.len(),
+                                });
+                            }
+                        }
+                        if let Some(ntp) = self.get_udp_packet() {
+                            if ntp.is_ntp() {
+                                self.add_layer(LayerInfo {
+                                    layer_type: LayerIndex::NTP,
+                                    start_pos: vo + ip_header_len + ntp.header_len(),
                                     end_pos: self.raw_packet.len(),
                                 });
                             }
@@ -445,6 +462,12 @@ impl Packet {
         } else if self.field_type(field, fields::DHCP_BASE) && self.has_layer(LayerIndex::DHCP) {
             if let Some(dhcp_packet) = self.get_dhcp_packet() {
                 dhcp_packet.get_field(field)
+            } else {
+                None
+            }
+        } else if self.field_type(field, fields::NTP_BASE) && self.has_layer(LayerIndex::NTP) {
+            if let Some(ntp_packet) = self.get_ntp_packet() {
+                ntp_packet.get_field(field)
             } else {
                 None
             }
