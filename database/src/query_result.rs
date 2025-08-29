@@ -80,7 +80,8 @@ impl QueryResult {
 
         if let Some(ts_temp) = pkt.get_field(FRAME_TIMESTAMP) {
             let mut ts = ts_temp;
-            ts.name = String::from("frame.timestamp");
+            ts.set_name(String::from("frame.timestamp"));
+            // ts.name = String::from("frame.timestamp");
             record.add_field(ts.clone());
 
             if ts.to_u32() < self.ts_start {

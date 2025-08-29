@@ -24,9 +24,9 @@ pub struct Command {
 }
 
 #[derive(Serialize, Debug)]
-pub struct CmdResponse<'a> {
+pub struct CmdResponse {
     success: bool,
-    result: Vec<BTreeMap<&'a str, Value>>,
+    result: Vec<BTreeMap<String, Value>>,
 }
 
 #[post("/execute")]

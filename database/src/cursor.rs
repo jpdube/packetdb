@@ -10,7 +10,7 @@ pub struct Record {
 
 impl Record {
     pub fn add_field(&mut self, field: Field) {
-        self.field_list.insert(field.name.to_owned(), field);
+        self.field_list.insert(field.get_name(), field);
     }
 
     pub fn get(&self, fieldname: String) -> Option<Field> {
@@ -21,10 +21,10 @@ impl Record {
         None
     }
 
-    pub fn to_json(&self) -> BTreeMap<&str, Value> {
-        let mut result: BTreeMap<&str, Value> = BTreeMap::new();
+    pub fn to_json(&self) -> BTreeMap<String, Value> {
+        let mut result: BTreeMap<String, Value> = BTreeMap::new();
         for f in self.field_list.values() {
-            result.insert(&f.name, f.to_json());
+            result.insert(f.get_name(), f.to_json());
         }
 
         result
@@ -47,8 +47,8 @@ impl Cursor {
         }
     }
 
-    pub fn to_json(&self) -> Vec<BTreeMap<&str, Value>> {
-        let mut json_result: Vec<BTreeMap<&str, Value>> = Vec::new();
+    pub fn to_json(&self) -> Vec<BTreeMap<String, Value>> {
+        let mut json_result: Vec<BTreeMap<String, Value>> = Vec::new();
         for r in &self.record_list {
             json_result.push(r.to_json());
         }
@@ -66,7 +66,7 @@ impl Cursor {
         for f in &self.record_list {
             if first_line {
                 for h in f.field_list.values() {
-                    print!("{}\t\t", h.name);
+                    print!("{}\t\t", h.get_name());
                 }
                 println!();
                 println!("----------------------------------------------------------");
