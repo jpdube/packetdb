@@ -76,6 +76,18 @@ impl<'a> Ntp<'a> {
     pub fn msg_digest(&self) -> Vec<u8> {
         self.raw_data[52..].to_vec()
     }
+
+    fn mode_str(&self) -> String {
+        let mode_str: &str;
+
+        match self.mode() {
+            3 => mode_str = "Client",
+            4 => mode_str = "Server",
+            _ => mode_str = "Undefined",
+        }
+
+        mode_str.to_string()
+    }
 }
 
 impl<'a> Layer for Ntp<'a> {
@@ -94,6 +106,10 @@ impl<'a> Layer for Ntp<'a> {
                 Some(Field::set_field(FieldType::Int8(self.version_no()), field))
             }
             fields::NTP_MODE => Some(Field::set_field(FieldType::Int8(self.mode()), field)),
+            fields::NTP_MODE_LABEL => {
+                Some(Field::set_field(FieldType::String(self.mode_str()), field))
+            }
+
             fields::NTP_STRATUM => Some(Field::set_field(FieldType::Int8(self.stratum()), field)),
             fields::NTP_POLL => Some(Field::set_field(FieldType::Int8(self.poll()), field)),
             fields::NTP_PRECISION => {

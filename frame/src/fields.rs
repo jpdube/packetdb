@@ -151,6 +151,7 @@ pub const NTP_XMIT_TIMESTAMP: u32 = 0x0009000D;
 pub const NTP_OPT_EXTENSION: u32 = 0x0009000E;
 pub const NTP_KEY_ID: u32 = 0x0009000F;
 pub const NTP_MSG_DIGEST: u32 = 0x00090010;
+pub const NTP_MODE_LABEL: u32 = 0x00090011;
 
 pub fn string_to_int(field_str: &str) -> Option<u32> {
     match field_str {
@@ -283,6 +284,7 @@ pub fn string_to_int(field_str: &str) -> Option<u32> {
         "ntp.opt_extension" => Some(NTP_OPT_EXTENSION),
         "ntp.key_id" => Some(NTP_KEY_ID),
         "ntp.msg_digest" => Some(NTP_MSG_DIGEST),
+        "ntp.mode_label" => Some(NTP_MODE_LABEL),
 
         _ => None,
     }
