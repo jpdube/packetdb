@@ -60,8 +60,6 @@ impl QueryResult {
 
         for field in &self.model.select {
             if let Some(field_value) = pkt.get_field(field.name.clone()) {
-                // if let Some(field_value) = pkt.get_field(field.id) {
-                // record.add_field(Field::set_field_with_name(
                 record.add_field(Field::set_field(
                     field_value.field.clone(),
                     field.name.clone(),
@@ -74,7 +72,6 @@ impl QueryResult {
         }
 
         let pkt_id = pkt.get_id() as u64;
-        // record.add_field(Field::set_field_with_name(
         record.add_field(Field::set_field(
             FieldType::Int64(pkt_id),
             String::from("frame.id"),
@@ -83,7 +80,6 @@ impl QueryResult {
         if let Some(ts_temp) = pkt.get_field("frame.timestamp".to_string()) {
             let mut ts = ts_temp;
             ts.name = "frame.timestamp".to_string();
-            // ts.name = String::from("frame.timestamp");
             record.add_field(ts.clone());
 
             if ts.to_u32() < self.ts_start {
