@@ -1,4 +1,3 @@
-use crate::fields;
 use crate::layer::Layer;
 use crate::packet_display::PacketDisplay;
 
@@ -38,7 +37,6 @@ pub struct Options {
 #[derive(Default, Debug, Clone)]
 pub struct Tcp<'a> {
     raw_packet: &'a [u8],
-    // raw_packet: Vec<u8>,
     options: Options,
 }
 
@@ -232,83 +230,65 @@ impl<'a> Tcp<'a> {
 }
 
 impl<'a> Layer for Tcp<'a> {
-    fn get_field(&self, field: u32) -> Option<Field> {
-        match field {
-            fields::TCP_PROTO_NAME => Some(Field::set_field(
+    fn get_field(&self, field: String) -> Option<Field> {
+        match field.as_str() {
+            "tcp.proto_name" => Some(Field::set_field(
                 FieldType::String(String::from("TCP Level 4")),
                 field,
             )),
-            fields::TCP_SRC_PORT => Some(Field::set_field(FieldType::Int16(self.sport()), field)),
-            fields::TCP_DEST_PORT => Some(Field::set_field(FieldType::Int16(self.dport()), field)),
-            fields::TCP_ACK_NO => Some(Field::set_field(FieldType::Int32(self.ack_no()), field)),
-            fields::TCP_SEQ_NO => Some(Field::set_field(FieldType::Int32(self.seq_no()), field)),
-            fields::TCP_FLAGS_ACK => {
-                Some(Field::set_field(FieldType::Bool(self.flag_ack()), field))
-            }
-            fields::TCP_FLAGS_PUSH => {
-                Some(Field::set_field(FieldType::Bool(self.flag_push()), field))
-            }
+            "tcp.sport" => Some(Field::set_field(FieldType::Int16(self.sport()), field)),
+            "tcp.dport" => Some(Field::set_field(FieldType::Int16(self.dport()), field)),
+            "tcp.ackno" => Some(Field::set_field(FieldType::Int32(self.ack_no()), field)),
+            "tcp.seqno" => Some(Field::set_field(FieldType::Int32(self.seq_no()), field)),
+            "tcp.flags_ack" => Some(Field::set_field(FieldType::Bool(self.flag_ack()), field)),
+            "tcp.flags_push" => Some(Field::set_field(FieldType::Bool(self.flag_push()), field)),
 
-            fields::TCP_FLAGS_SYN => {
-                Some(Field::set_field(FieldType::Bool(self.flag_syn()), field))
-            }
-            fields::TCP_FLAGS_RESET => {
-                Some(Field::set_field(FieldType::Bool(self.flag_rst()), field))
-            }
-            fields::TCP_FLAGS_FIN => {
-                Some(Field::set_field(FieldType::Bool(self.flag_fin()), field))
-            }
-            fields::TCP_FLAGS_URG => {
-                Some(Field::set_field(FieldType::Bool(self.flag_urg()), field))
-            }
-            fields::TCP_WIN_SIZE => {
-                Some(Field::set_field(FieldType::Int16(self.win_size()), field))
-            }
-            fields::TCP_HDR_LEN => Some(Field::set_field(FieldType::Int8(self.hdr_len()), field)),
-            fields::TCP_PAYLOAD_LEN => Some(Field::set_field(
+            "tcp.flags_syn" => Some(Field::set_field(FieldType::Bool(self.flag_syn()), field)),
+            "tcp.flags_reset" => Some(Field::set_field(FieldType::Bool(self.flag_rst()), field)),
+            "tcp.flags_fin" => Some(Field::set_field(FieldType::Bool(self.flag_fin()), field)),
+            "tcp.flags_urgent" => Some(Field::set_field(FieldType::Bool(self.flag_urg()), field)),
+            "tcp.flags_winsize" => Some(Field::set_field(FieldType::Int16(self.win_size()), field)),
+            "tcp.hdr_len" => Some(Field::set_field(FieldType::Int8(self.hdr_len()), field)),
+            "tcp.payload_len" => Some(Field::set_field(
                 FieldType::Int16(self.payload_len()),
                 field,
             )),
 
-            fields::TCP_OPTIONS_WIN_SCALE => Some(Field::set_field(
+            "tcp.options_wscale" => Some(Field::set_field(
                 FieldType::Int8(self.options.winscale),
                 field,
             )),
 
-            fields::TCP_OPTIONS_WIN_SCALE_MUL => Some(Field::set_field(
+            "tcp.options_wscale_mult" => Some(Field::set_field(
                 FieldType::Int16(self.options.win_multiplier),
                 field,
             )),
 
-            fields::TCP_OPTIONS_SACK => {
-                Some(Field::set_field(FieldType::Bool(self.options.sack), field))
-            }
+            "tcp.options_sack" => Some(Field::set_field(FieldType::Bool(self.options.sack), field)),
 
-            fields::TCP_OPTIONS_SACK_COUNT => Some(Field::set_field(
+            "tcp.options_sack_count" => Some(Field::set_field(
                 FieldType::Int16(self.options.sack_list.len() as u16),
                 field,
             )),
 
-            fields::TCP_OPTIONS_SCALE_LE => Some(Field::set_field(
+            "tcp.options_scale_le" => Some(Field::set_field(
                 FieldType::Int32(self.options.sack_list[0].left),
                 field,
             )),
 
-            fields::TCP_OPTIONS_SCALE_RE => Some(Field::set_field(
+            "tcp.options_scale_re" => Some(Field::set_field(
                 FieldType::Int32(self.options.sack_list[0].right),
                 field,
             )),
 
-            fields::TCP_OPTIONS_MSS => {
-                Some(Field::set_field(FieldType::Int16(self.options.mss), field))
-            }
+            "tcp.options_mss" => Some(Field::set_field(FieldType::Int16(self.options.mss), field)),
 
-            fields::TCP_OPTIONS_TIMESTAMP_TSVAL => Some(Field::set_field(
+            "tcp.options_timestamp" => Some(Field::set_field(
                 FieldType::Int32(self.options.timestamp.tsval),
                 field,
             )),
 
-            fields::TCP_OPTIONS_TIMESTAMP_TSECR => Some(Field::set_field(
+            "tcp.options_timestamp_tsecr" => Some(Field::set_field(
                 FieldType::Int32(self.options.timestamp.tsecr),
                 field,
             )),
@@ -317,7 +297,7 @@ impl<'a> Layer for Tcp<'a> {
         }
     }
 
-    fn get_field_bytes(&self, _field_name: u32) -> Option<Vec<u8>> {
+    fn get_field_bytes(&self, _field_name: String) -> Option<Vec<u8>> {
         None
     }
 

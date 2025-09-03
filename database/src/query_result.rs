@@ -5,7 +5,6 @@ use frame::packet::Packet;
 
 use crate::cursor::{Cursor, Record};
 use crate::parse::PqlStatement;
-use frame::fields::FRAME_TIMESTAMP;
 use frame::pfield::{Field, FieldType};
 use log::debug;
 
@@ -60,8 +59,10 @@ impl QueryResult {
         let mut distinct_key = String::new();
 
         for field in &self.model.select {
-            if let Some(field_value) = pkt.get_field(field.id) {
-                record.add_field(Field::set_field_with_name(
+            if let Some(field_value) = pkt.get_field(field.name.clone()) {
+                // if let Some(field_value) = pkt.get_field(field.id) {
+                // record.add_field(Field::set_field_with_name(
+                record.add_field(Field::set_field(
                     field_value.field.clone(),
                     field.name.clone(),
                 ));
@@ -73,14 +74,15 @@ impl QueryResult {
         }
 
         let pkt_id = pkt.get_id() as u64;
-        record.add_field(Field::set_field_with_name(
+        // record.add_field(Field::set_field_with_name(
+        record.add_field(Field::set_field(
             FieldType::Int64(pkt_id),
             String::from("frame.id"),
         ));
 
-        if let Some(ts_temp) = pkt.get_field(FRAME_TIMESTAMP) {
+        if let Some(ts_temp) = pkt.get_field("frame.timestamp".to_string()) {
             let mut ts = ts_temp;
-            ts.set_name(String::from("frame.timestamp"));
+            ts.name = "frame.timestamp".to_string();
             // ts.name = String::from("frame.timestamp");
             record.add_field(ts.clone());
 
@@ -141,7 +143,7 @@ impl AggregateResult {
     pub fn get_result(&mut self) -> Cursor {
         let mut record = Record::default();
         for aggr in &self.model.aggr_list {
-            let aggr_field = Field::set_field_with_name(
+            let aggr_field = Field::set_field(
                 FieldType::Int64(aggr.compute(&self.pkt_list) as u64),
                 aggr.as_of().clone(),
             );
@@ -178,7 +180,7 @@ impl GroupBy {
         let mut key: Vec<usize> = Vec::new();
 
         for k in &self.model.groupby_fields {
-            if let Some(field_id) = pkt.get_field(k.id) {
+            if let Some(field_id) = pkt.get_field(k.name.clone()) {
                 key.push(field_id.to_u64() as usize);
             }
         }
@@ -210,13 +212,15 @@ impl GroupBy {
                     field_value = FieldType::Int64(*gfield as u64);
                 }
 
-                let aggr_field = Field::set_field_with_name(field_value, field_name);
+                let aggr_field = Field::set_field(field_value, field_name);
+                // let aggr_field = Field::set_field_with_name(field_value, field_name);
 
                 record.add_field(aggr_field);
             }
 
             for aggr in &self.model.aggr_list {
-                let aggr_field = Field::set_field_with_name(
+                let aggr_field = Field::set_field(
+                    // let aggr_field = Field::set_field_with_name(
                     FieldType::Int32(aggr.compute(grp) as u32),
                     aggr.as_of().clone(),
                 );

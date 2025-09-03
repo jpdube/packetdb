@@ -47,8 +47,7 @@ impl fmt::Display for FieldType {
 #[derive(Debug, Serialize, Clone)]
 pub struct Field {
     pub field: FieldType,
-    name: Option<String>,
-    pub field_id: u32,
+    pub name: String,
 }
 
 impl fmt::Display for Field {
@@ -58,32 +57,15 @@ impl fmt::Display for Field {
 }
 
 impl Field {
-    pub fn set_field(field_type: FieldType, field_id: u32) -> Self {
+    pub fn set_field(field_type: FieldType, field_id: String) -> Self {
         Self {
             field: field_type,
-            field_id,
-            name: None,
-        }
-    }
-
-    pub fn set_field_with_name(field_type: FieldType, name: String) -> Self {
-        Self {
-            field: field_type,
-            field_id: 0,
-            name: Some(name),
+            name: field_id,
         }
     }
 
     pub fn get_name(&self) -> String {
-        if let Some(ref_name) = self.name.clone() {
-            return ref_name;
-        }
-
-        "".to_string()
-    }
-
-    pub fn set_name(&mut self, new_name: String) {
-        self.name = Some(new_name);
+        self.name.clone()
     }
 
     pub fn to_json(&self) -> Value {

@@ -1,4 +1,3 @@
-use crate::fields;
 use crate::layer::Layer;
 use crate::pfield::{Field, FieldType};
 use byteorder::{BigEndian, ByteOrder};
@@ -95,55 +94,47 @@ impl<'a> Layer for Ntp<'a> {
         "ntp".to_string()
     }
 
-    fn get_field(&self, field: u32) -> Option<Field> {
-        match field {
-            fields::NTP_LEAP_INDICATOR => Some(Field::set_field(
+    fn get_field(&self, field: String) -> Option<Field> {
+        match field.as_str() {
+            "ntp.leap_indicator" => Some(Field::set_field(
                 FieldType::Int8(self.leap_indicator()),
                 field,
             )),
 
-            fields::NTP_VERSION_NO => {
-                Some(Field::set_field(FieldType::Int8(self.version_no()), field))
-            }
-            fields::NTP_MODE => Some(Field::set_field(FieldType::Int8(self.mode()), field)),
-            fields::NTP_MODE_LABEL => {
-                Some(Field::set_field(FieldType::String(self.mode_str()), field))
-            }
+            "ntp.version" => Some(Field::set_field(FieldType::Int8(self.version_no()), field)),
+            "ntp.mode" => Some(Field::set_field(FieldType::Int8(self.mode()), field)),
+            "mtp.mode_label" => Some(Field::set_field(FieldType::String(self.mode_str()), field)),
 
-            fields::NTP_STRATUM => Some(Field::set_field(FieldType::Int8(self.stratum()), field)),
-            fields::NTP_POLL => Some(Field::set_field(FieldType::Int8(self.poll()), field)),
-            fields::NTP_PRECISION => {
-                Some(Field::set_field(FieldType::Int8(self.precision()), field))
-            }
-            fields::NTP_ROOT_DELAY => {
-                Some(Field::set_field(FieldType::Int32(self.root_delay()), field))
-            }
-            fields::NTP_ROOT_DISPERSION => Some(Field::set_field(
+            "ntp.stratum" => Some(Field::set_field(FieldType::Int8(self.stratum()), field)),
+            "ntp.poll" => Some(Field::set_field(FieldType::Int8(self.poll()), field)),
+            "ntp.precision" => Some(Field::set_field(FieldType::Int8(self.precision()), field)),
+            "ntp.root_delay" => Some(Field::set_field(FieldType::Int32(self.root_delay()), field)),
+            "ntp.root_dispersion" => Some(Field::set_field(
                 FieldType::Int32(self.root_dispersion()),
                 field,
             )),
-            fields::NTP_REF_ID => Some(Field::set_field(FieldType::Int32(self.ref_id()), field)),
-            fields::NTP_REF_TIMESTAMP => Some(Field::set_field(
+            "ntp.ref_id" => Some(Field::set_field(FieldType::Int32(self.ref_id()), field)),
+            "ntp.ref_timestamp" => Some(Field::set_field(
                 FieldType::Int64(self.ref_timestamp()),
                 field,
             )),
-            fields::NTP_ORIGIN_TIMESTAMP => Some(Field::set_field(
+            "ntp.origin_timestamp" => Some(Field::set_field(
                 FieldType::Int64(self.origin_timestamp()),
                 field,
             )),
-            fields::NTP_RECV_TIMESTAMP => Some(Field::set_field(
+            "ntp.recv_timestamp" => Some(Field::set_field(
                 FieldType::Int64(self.recv_timestamp()),
                 field,
             )),
-            fields::NTP_XMIT_TIMESTAMP => Some(Field::set_field(
+            "ntp.xmit_timestamp" => Some(Field::set_field(
                 FieldType::Int64(self.xmit_timestamp()),
                 field,
             )),
-            fields::NTP_OPT_EXTENSION => Some(Field::set_field(
+            "ntp.opt_extension" => Some(Field::set_field(
                 FieldType::Int32(self.optional_ext()),
                 field,
             )),
-            fields::NTP_MSG_DIGEST => Some(Field::set_field(
+            "ntp.key_id" => Some(Field::set_field(
                 FieldType::ByteArray(self.msg_digest()),
                 field,
             )),
@@ -151,7 +142,7 @@ impl<'a> Layer for Ntp<'a> {
         }
     }
 
-    fn get_field_bytes(&self, _field: u32) -> Option<Vec<u8>> {
+    fn get_field_bytes(&self, _field: String) -> Option<Vec<u8>> {
         None
     }
 }

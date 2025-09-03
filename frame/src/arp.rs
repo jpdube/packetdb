@@ -1,6 +1,5 @@
 use byteorder::{BigEndian, ByteOrder};
 
-use crate::fields;
 use crate::ipv4_address::IPv4;
 use crate::layer::Layer;
 use crate::mac_address::MacAddr;
@@ -66,27 +65,24 @@ impl Layer for Arp {
         self.name.clone()
     }
 
-    fn get_field(&self, field: u32) -> Option<Field> {
-        match field {
-            fields::ARP_HTYPE => Some(Field::set_field(FieldType::Int16(self.get_htype()), field)),
-            fields::ARP_PTYPE => Some(Field::set_field(FieldType::Int16(self.get_ptype()), field)),
-            fields::ARP_HLEN => Some(Field::set_field(FieldType::Int8(self.get_hlen()), field)),
-            fields::ARP_PLEN => Some(Field::set_field(FieldType::Int8(self.get_hlen()), field)),
+    fn get_field(&self, field: String) -> Option<Field> {
+        match field.as_str() {
+            "arp.hwd_type" => Some(Field::set_field(FieldType::Int16(self.get_htype()), field)),
+            "arp.proto_type" => Some(Field::set_field(FieldType::Int16(self.get_ptype()), field)),
+            "arp.hwd_size" => Some(Field::set_field(FieldType::Int8(self.get_hlen()), field)),
 
-            fields::ARP_OPCODE => {
-                Some(Field::set_field(FieldType::Int16(self.get_opcode()), field))
-            }
-            fields::ARP_SHA => Some(Field::set_field(FieldType::MacAddr(self.get_sha()), field)),
-            fields::ARP_THA => Some(Field::set_field(FieldType::MacAddr(self.get_tha()), field)),
+            "arp.opcode" => Some(Field::set_field(FieldType::Int16(self.get_opcode()), field)),
+            "arp.sender_mac" => Some(Field::set_field(FieldType::MacAddr(self.get_sha()), field)),
+            "arp.target_mac" => Some(Field::set_field(FieldType::MacAddr(self.get_tha()), field)),
 
-            fields::ARP_SPA => Some(Field::set_field(FieldType::Ipv4(self.get_spa(), 32), field)),
-            fields::ARP_TPA => Some(Field::set_field(FieldType::Ipv4(self.get_tpa(), 32), field)),
+            "arp.sender_ip" => Some(Field::set_field(FieldType::Ipv4(self.get_spa(), 32), field)),
+            "arp.target_ip" => Some(Field::set_field(FieldType::Ipv4(self.get_tpa(), 32), field)),
 
             _ => None,
         }
     }
 
-    fn get_field_bytes(&self, _field_name: u32) -> Option<Vec<u8>> {
+    fn get_field_bytes(&self, _field_name: String) -> Option<Vec<u8>> {
         None
     }
 }

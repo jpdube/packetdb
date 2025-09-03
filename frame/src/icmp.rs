@@ -1,4 +1,3 @@
-use crate::fields;
 use crate::layer::Layer;
 use crate::packet_display::PacketDisplay;
 use crate::pfield::{Field, FieldType};
@@ -137,20 +136,18 @@ impl<'a> Icmp<'a> {
 }
 
 impl<'a> Layer for Icmp<'a> {
-    fn get_field(&self, field: u32) -> Option<Field> {
-        match field {
-            fields::ICMP_TYPE => Some(Field::set_field(FieldType::Int8(self.itype()), field)),
-            fields::ICMP_CODE => Some(Field::set_field(FieldType::Int8(self.code()), field)),
-            fields::ICMP_IDENTIFIER => {
-                Some(Field::set_field(FieldType::Int16(self.identifier()), field))
-            }
+    fn get_field(&self, field: String) -> Option<Field> {
+        match field.as_str() {
+            "icmp.type" => Some(Field::set_field(FieldType::Int8(self.itype()), field)),
+            "icmp.code" => Some(Field::set_field(FieldType::Int8(self.code()), field)),
+            "icmp.identifier" => Some(Field::set_field(FieldType::Int16(self.identifier()), field)),
 
-            fields::ICMP_SEQ_NO => Some(Field::set_field(FieldType::Int16(self.seq_no()), field)),
+            "icmp.seq_no" => Some(Field::set_field(FieldType::Int16(self.seq_no()), field)),
             _ => None,
         }
     }
 
-    fn get_field_bytes(&self, _field_name: u32) -> Option<Vec<u8>> {
+    fn get_field_bytes(&self, _field_name: String) -> Option<Vec<u8>> {
         None
     }
 

@@ -1,4 +1,3 @@
-use crate::fields;
 use crate::layer::Layer;
 use crate::pfield::{Field, FieldType};
 use byteorder::{BigEndian, ByteOrder, LittleEndian};
@@ -52,26 +51,18 @@ impl<'a> Layer for Frame<'a> {
         "frame".to_string()
     }
 
-    fn get_field(&self, field: u32) -> Option<Field> {
-        match field {
-            fields::FRAME_TIMESTAMP => {
-                Some(Field::set_field(FieldType::Int32(self.timestamp()), field))
-            }
-            fields::FRAME_OFFSET => {
-                Some(Field::set_field(FieldType::Int32(self.ts_offset()), field))
-            }
-            fields::FRAME_INC_LEN => {
-                Some(Field::set_field(FieldType::Int32(self.inc_len()), field))
-            }
-            fields::FRAME_ORIG_LEN => {
-                Some(Field::set_field(FieldType::Int32(self.orig_len()), field))
-            }
+    fn get_field(&self, field: String) -> Option<Field> {
+        match field.as_str() {
+            "frame.timestamp" => Some(Field::set_field(FieldType::Int32(self.timestamp()), field)),
+            "frame.offset" => Some(Field::set_field(FieldType::Int32(self.ts_offset()), field)),
+            "frame.inclen" => Some(Field::set_field(FieldType::Int32(self.inc_len()), field)),
+            "frame.origlen" => Some(Field::set_field(FieldType::Int32(self.orig_len()), field)),
 
             _ => None,
         }
     }
 
-    fn get_field_bytes(&self, _field_name: u32) -> Option<Vec<u8>> {
+    fn get_field_bytes(&self, _field_name: String) -> Option<Vec<u8>> {
         None
     }
 }

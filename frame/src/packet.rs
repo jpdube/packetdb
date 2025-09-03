@@ -1,5 +1,4 @@
 use crate::dhcp::Dhcp;
-// #![allow(dead_code)]
 use crate::eth::EtherFrame;
 use crate::fields;
 use crate::frame::Frame;
@@ -229,7 +228,7 @@ impl Packet {
     fn process_ipv4(&mut self, vo: usize, ip_header_len: usize) {
         if let Some(ip_layer) = &self.get_layer_bytes(LayerIndex::IPv4) {
             let p = IpFrame::new(ip_layer);
-            if let Some(proto) = p.get_field(fields::IPV4_PROTOCOL) {
+            if let Some(proto) = p.get_field("ip.protocol".to_string()) {
                 match proto.to_u8() {
                     IP_TCP_PROTO => {
                         //--- Add TCP layer
@@ -291,14 +290,6 @@ impl Packet {
             }
         }
     }
-
-    // pub fn has_proto(&self, search_proto: IndexField) -> bool {
-    //     match search_proto {
-    //         IndexField::Arp =>
-    //     }
-
-    //     false
-    // }
 
     pub fn has_ethernet(&self) -> bool {
         self.has_layer(LayerIndex::ETH)
@@ -409,63 +400,81 @@ impl Packet {
         false
     }
 
-    fn field_type(&self, field: u32, field_base: u32) -> bool {
-        (field & 0xffff0000) == field_base
+    fn field_type(&self, field: &str, field_base: u32) -> bool {
+        let base: Vec<&str> = field.split(".").collect();
+
+        if base.len() == 2 {
+            match field_base {
+                fields::FRAME_BASE => return base[0] == "frame",
+                fields::ETH_BASE => return base[0] == "eth",
+                fields::ARP_BASE => return base[0] == "arp",
+                fields::IPV4_BASE => return base[0] == "ip",
+                fields::TCP_BASE => return base[0] == "tcp",
+                fields::UDP_BASE => return base[0] == "udp",
+                fields::ICMP_BASE => return base[0] == "icmp",
+                fields::DNS_BASE => return base[0] == "dns",
+                fields::DHCP_BASE => return base[0] == "dhcp",
+                fields::NTP_BASE => return base[0] == "ntp",
+                _ => return false,
+            }
+        } else {
+            return false;
+        }
     }
 
-    pub fn get_field(&self, field: u32) -> Option<Field> {
-        if self.field_type(field, fields::ETH_BASE) && self.has_layer(LayerIndex::ETH) {
+    pub fn get_field(&self, field: String) -> Option<Field> {
+        if self.field_type(&field, fields::ETH_BASE) && self.has_layer(LayerIndex::ETH) {
             if let Some(eth_packet) = self.get_eth_packet() {
                 return eth_packet.get_field(field);
             } else {
                 None
             }
-        } else if self.field_type(field, fields::ARP_BASE) && self.arp_packet.is_some() {
+        } else if self.field_type(&field, fields::ARP_BASE) && self.arp_packet.is_some() {
             self.arp_packet.as_ref().unwrap().get_field(field)
-        } else if self.field_type(field, fields::TCP_BASE) && self.has_layer(LayerIndex::TCP) {
+        } else if self.field_type(&field, fields::TCP_BASE) && self.has_layer(LayerIndex::TCP) {
             if let Some(tcp_packet) = self.get_tcp_packet() {
                 return tcp_packet.get_field(field);
             } else {
                 None
             }
-        } else if self.field_type(field, fields::IPV4_BASE) && self.has_layer(LayerIndex::IPv4) {
+        } else if self.field_type(&field, fields::IPV4_BASE) && self.has_layer(LayerIndex::IPv4) {
             if let Some(ip_packet) = self.get_ipv4_packet() {
                 return ip_packet.get_field(field);
             } else {
                 None
             }
-        } else if self.field_type(field, fields::UDP_BASE) && self.has_layer(LayerIndex::UDP) {
+        } else if self.field_type(&field, fields::UDP_BASE) && self.has_layer(LayerIndex::UDP) {
             if let Some(udp_packet) = self.get_udp_packet() {
                 udp_packet.get_field(field)
             } else {
                 None
             }
-        } else if self.field_type(field, fields::FRAME_BASE) && self.has_layer(LayerIndex::FRAME) {
+        } else if self.field_type(&field, fields::FRAME_BASE) && self.has_layer(LayerIndex::FRAME) {
             if let Some(frame_packet) = self.get_frame_packet() {
                 frame_packet.get_field(field)
             } else {
                 None
             }
-        } else if self.field_type(field, fields::ICMP_BASE) && self.has_layer(LayerIndex::ICMP) {
+        } else if self.field_type(&field, fields::ICMP_BASE) && self.has_layer(LayerIndex::ICMP) {
             if let Some(pkt_bytes) = self.get_layer_bytes(LayerIndex::ICMP) {
                 let icmp = Icmp::new(pkt_bytes);
                 icmp.get_field(field)
             } else {
                 None
             }
-        } else if self.field_type(field, fields::DNS_BASE) && self.has_layer(LayerIndex::DNS) {
+        } else if self.field_type(&field, fields::DNS_BASE) && self.has_layer(LayerIndex::DNS) {
             if let Some(dns_packet) = self.get_dns_packet() {
                 dns_packet.get_field(field)
             } else {
                 None
             }
-        } else if self.field_type(field, fields::DHCP_BASE) && self.has_layer(LayerIndex::DHCP) {
+        } else if self.field_type(&field, fields::DHCP_BASE) && self.has_layer(LayerIndex::DHCP) {
             if let Some(dhcp_packet) = self.get_dhcp_packet() {
                 dhcp_packet.get_field(field)
             } else {
                 None
             }
-        } else if self.field_type(field, fields::NTP_BASE) && self.has_layer(LayerIndex::NTP) {
+        } else if self.field_type(&field, fields::NTP_BASE) && self.has_layer(LayerIndex::NTP) {
             if let Some(ntp_packet) = self.get_ntp_packet() {
                 ntp_packet.get_field(field)
             } else {
@@ -492,21 +501,21 @@ impl Packet {
         (file_id, pkt_ptr)
     }
 
-    pub fn get_field_byte(&self, field: u32, offset: usize, len: usize) -> Vec<u8> {
-        if self.field_type(field, fields::TCP_BASE) && self.has_layer(LayerIndex::TCP) {
+    pub fn get_field_byte(&self, field: String, offset: usize, len: usize) -> Vec<u8> {
+        if self.field_type(&field, fields::TCP_BASE) && self.has_layer(LayerIndex::TCP) {
             if let Some(ip_packet) = self.get_tcp_packet() {
                 return ip_packet.payload_range(offset, len);
             }
-        } else if self.field_type(field, fields::UDP_BASE) && self.has_layer(LayerIndex::UDP) {
+        } else if self.field_type(&field, fields::UDP_BASE) && self.has_layer(LayerIndex::UDP) {
             if let Some(udp_packet) = self.get_udp_packet() {
                 return udp_packet.payload_range(offset, len);
             }
-        } else if self.field_type(field, fields::ICMP_BASE) && self.has_layer(LayerIndex::ICMP) {
+        } else if self.field_type(&field, fields::ICMP_BASE) && self.has_layer(LayerIndex::ICMP) {
             if let Some(pkt_bytes) = self.get_layer_bytes(LayerIndex::ICMP) {
                 let icmp = Icmp::new(pkt_bytes);
                 return icmp.payload_range(offset, len);
             }
-        } else if self.field_type(field, fields::ETH_BASE) && self.has_layer(LayerIndex::ETH) {
+        } else if self.field_type(&field, fields::ETH_BASE) && self.has_layer(LayerIndex::ETH) {
             if let Some(eth) = self.get_eth_packet() {
                 return eth.payload_range(offset, len);
             }

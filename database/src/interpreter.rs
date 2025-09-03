@@ -16,7 +16,7 @@ pub enum Object {
     IPv4(u32, u8),
     Timestamp(u32),
     MacAddress(u64),
-    _Label(u32),
+    _Label(String),
     ByteArray(Vec<u8>),
     LongArray(Vec<u64>),
     String(String),
@@ -34,7 +34,7 @@ impl Display for Object {
             Object::Integer(value) => write!(f, "Int:{}", value),
             Object::IPv4(addr, mask) => write!(f, "IPv4: {}/{}", addr, mask),
             Object::Boolean(value) => write!(f, "Bool: {}", value),
-            Object::_Label(value) => write!(f, "Label: {:x}", value),
+            Object::_Label(value) => write!(f, "Label: {}", value),
             Object::ByteArray(value) => write!(f, "Byte array: {:?}", value),
             Object::LongArray(value) => write!(f, "Long array: {:?}", value),
             Object::Timestamp(value) => write!(f, "Timestamp: {:x}", value),
@@ -134,7 +134,8 @@ impl Interpreter {
             Expression::String(s) => Ok(Object::String(s.clone())),
             Expression::Timestamp(t) => Ok(Object::Timestamp(*t)),
             Expression::Label(value) => {
-                let field_value = pkt.get_field(*value).unwrap();
+                // debug!("Label: {}", value);
+                let field_value = pkt.get_field(value.clone()).unwrap();
                 match field_value.field {
                     FieldType::Int8(_) => Ok(Object::Integer(field_value.to_u64())),
                     FieldType::Int16(_) => Ok(Object::Integer(field_value.to_u64())),
@@ -145,9 +146,11 @@ impl Interpreter {
                     _ => Ok(Object::Integer(field_value.to_u64())),
                 }
             }
-            Expression::LabelByte(field, offset, len) => {
-                Ok(Object::ByteArray(pkt.get_field_byte(*field, *offset, *len)))
-            }
+            Expression::LabelByte(field, offset, len) => Ok(Object::ByteArray(pkt.get_field_byte(
+                field.clone(),
+                *offset,
+                *len,
+            ))),
             Expression::Array(array_values) => Ok(Object::ByteArray(array_values.clone())),
             Expression::IPv4(addr, mask) => Ok(Object::IPv4(*addr, *mask)),
             Expression::MacAddress(addr) => Ok(Object::MacAddress(*addr)),

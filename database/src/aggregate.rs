@@ -5,22 +5,22 @@ use frame::packet::Packet;
 #[derive(Debug, Clone)]
 pub enum Aggregate {
     Count(String),
-    Avg(u32, String),
-    Min(u32, String),
-    Max(u32, String),
-    Sum(u32, String),
-    Bandwidth(u32, String),
+    Avg(String, String),
+    Min(String, String),
+    Max(String, String),
+    Sum(String, String),
+    Bandwidth(String, String),
 }
 
 impl Aggregate {
     pub fn compute(&self, pkt_list: &Vec<Packet>) -> usize {
         match &self {
             Self::Count(_) => self.count(&pkt_list),
-            Self::Avg(field_id, _) => self.avg(field_id, &pkt_list),
-            Self::Min(field_id, _) => self.min(field_id, &pkt_list),
-            Self::Max(field_id, _) => self.max(field_id, &pkt_list),
-            Self::Sum(field_id, _) => self.sum(field_id, &pkt_list),
-            Self::Bandwidth(field_id, _) => self.bandwidth(field_id, &pkt_list),
+            Self::Avg(field_id, _) => self.avg(field_id.clone(), &pkt_list),
+            Self::Min(field_id, _) => self.min(field_id.clone(), &pkt_list),
+            Self::Max(field_id, _) => self.max(field_id.clone(), &pkt_list),
+            Self::Sum(field_id, _) => self.sum(field_id.clone(), &pkt_list),
+            Self::Bandwidth(field_id, _) => self.bandwidth(field_id.clone(), &pkt_list),
         }
     }
 
@@ -35,14 +35,14 @@ impl Aggregate {
         }
     }
 
-    pub fn field_id(&self) -> u32 {
+    pub fn field_id(&self) -> String {
         match self {
-            Self::Count(_) => 0,
-            Self::Avg(field, _) => *field,
-            Self::Min(field, _) => *field,
-            Self::Max(field, _) => *field,
-            Self::Sum(field, _) => *field,
-            Self::Bandwidth(field, _) => *field,
+            Self::Count(_) => "0".to_string(),
+            Self::Avg(field, _) => field.clone(),
+            Self::Min(field, _) => field.clone(),
+            Self::Max(field, _) => field.clone(),
+            Self::Sum(field, _) => field.clone(),
+            Self::Bandwidth(field, _) => field.clone(),
         }
     }
 
@@ -50,44 +50,41 @@ impl Aggregate {
         pkt_list.len()
     }
 
-    fn bandwidth(&self, _field_id: &u32, _pkt_list: &Vec<Packet>) -> usize {
+    fn bandwidth(&self, _field_id: String, _pkt_list: &Vec<Packet>) -> usize {
         let result: usize = 0;
 
         result
     }
 
-    fn sum(&self, field_id: &u32, pkt_list: &Vec<Packet>) -> usize {
+    fn sum(&self, field_id: String, pkt_list: &Vec<Packet>) -> usize {
         let mut result: usize = 0;
 
         for pkt in pkt_list {
-            if let Some(field) = pkt.get_field(*field_id) {
+            if let Some(field) = pkt.get_field(field_id.clone()) {
                 result += field.to_usize();
             }
-
-            // result += pkt.get_field(*field_id);
         }
 
         result
     }
 
-    fn avg(&self, field_id: &u32, pkt_list: &Vec<Packet>) -> usize {
+    fn avg(&self, field_id: String, pkt_list: &Vec<Packet>) -> usize {
         let mut result: usize = 0;
 
         for pkt in pkt_list {
-            if let Some(field) = pkt.get_field(*field_id) {
+            if let Some(field) = pkt.get_field(field_id.clone()) {
                 result += field.to_usize();
             }
-            // result += pkt.get_field(*field_id);
         }
 
         result / pkt_list.len()
     }
 
-    fn min(&self, field_id: &u32, pkt_list: &Vec<Packet>) -> usize {
+    fn min(&self, field_id: String, pkt_list: &Vec<Packet>) -> usize {
         let mut result: usize = usize::max_value();
 
         for pkt in pkt_list {
-            if let Some(r) = pkt.get_field(*field_id) {
+            if let Some(r) = pkt.get_field(field_id.clone()) {
                 if r.to_usize() < result {
                     result = r.to_usize();
                 }
@@ -97,11 +94,11 @@ impl Aggregate {
         result
     }
 
-    fn max(&self, field_id: &u32, pkt_list: &Vec<Packet>) -> usize {
+    fn max(&self, field_id: String, pkt_list: &Vec<Packet>) -> usize {
         let mut result: usize = 0;
 
         for pkt in pkt_list {
-            if let Some(r) = pkt.get_field(*field_id) {
+            if let Some(r) = pkt.get_field(field_id.clone()) {
                 if r.to_usize() > result {
                     result = r.to_usize();
                 }

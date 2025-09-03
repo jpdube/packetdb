@@ -7,7 +7,6 @@ use crate::token::Token;
 use chrono::{prelude::*, Duration};
 use chrono::{Local, TimeZone};
 use frame::constant::NetConstant;
-use frame::fields::string_to_int;
 use frame::ipv4_address::{from_string_to_ip, IPv4};
 use frame::layer_index::LayerIndex;
 use frame::mac_address::MacAddr;
@@ -81,10 +80,18 @@ impl fmt::Display for Interval {
     }
 }
 
-#[derive(Default, Clone, Debug)]
+#[derive(Debug, Clone)]
+pub enum PktFieldType {
+    Raw,
+    Label,
+    Numeric,
+    Seconds,
+    TimeStamp,
+}
+#[derive(Clone, Debug)]
 pub struct SelectField {
     pub name: String,
-    pub id: u32,
+    // pub ftype: PktFieldType,
 }
 
 #[derive(Debug, Clone)]
@@ -171,8 +178,8 @@ impl Default for PqlStatement {
 pub enum Expression {
     BinOp(Operator, Box<Expression>, Box<Expression>),
     Group(Box<Expression>),
-    Label(u32),
-    LabelByte(u32, usize, usize),
+    Label(String),
+    LabelByte(String, usize, usize),
     Array(Vec<u8>),
     ArrayLong(Vec<u64>),
     Boolean(bool),
@@ -198,7 +205,7 @@ impl fmt::Display for Expression {
                 write!(f, "BinOp(OP:{}, LEFT:{}, RIGHT:{})", op, lhs, rhs)
             }
             Self::Group(expr) => write!(f, "Group({})", expr),
-            Self::Label(lbl) => write!(f, "Label({:x})", lbl),
+            Self::Label(lbl) => write!(f, "Label({})", lbl),
             Self::LabelByte(lbl, offset, length) => {
                 write!(f, "Label byte({},{},{})", lbl, offset, length)
             }
@@ -346,34 +353,22 @@ impl Parse {
             return Some(Aggregate::Count(as_tok.value));
         } else if let Some(tok) = self.accept(Keyword::Max) {
             let as_tok = self.expect(Keyword::As).unwrap();
-            return Some(Aggregate::Max(
-                string_to_int(&tok.value).unwrap(),
-                as_tok.value,
-            ));
+            return Some(Aggregate::Max(tok.value, as_tok.value));
         } else if let Some(tok) = self.accept(Keyword::Min) {
             let as_tok = self.expect(Keyword::As).unwrap();
-            return Some(Aggregate::Min(
-                string_to_int(&tok.value).unwrap(),
-                as_tok.value,
-            ));
+            return Some(Aggregate::Min(tok.value, as_tok.value));
         } else if let Some(tok) = self.accept(Keyword::Sum) {
             debug!("In sum: {:?}", tok);
             let as_tok = self.expect(Keyword::As).unwrap();
-            let result = Aggregate::Sum(string_to_int(&tok.value).unwrap(), as_tok.value);
+            let result = Aggregate::Sum(tok.value, as_tok.value);
             debug!("SUM Result: {:?}", result);
             return Some(result);
         } else if let Some(tok) = self.accept(Keyword::Average) {
             let as_tok = self.expect(Keyword::As).unwrap();
-            return Some(Aggregate::Avg(
-                string_to_int(&tok.value).unwrap(),
-                as_tok.value,
-            ));
+            return Some(Aggregate::Avg(tok.value, as_tok.value));
         } else if let Some(tok) = self.accept(Keyword::Bandwidth) {
             let as_tok = self.expect(Keyword::As).unwrap();
-            return Some(Aggregate::Bandwidth(
-                string_to_int(&tok.value).unwrap(),
-                as_tok.value,
-            ));
+            return Some(Aggregate::Bandwidth(tok.value, as_tok.value));
         }
 
         None
@@ -393,12 +388,7 @@ impl Parse {
                     println!("AGGREGATE: {:?}", aggr);
                     self.query.aggr_list.push(aggr);
                 } else if let Some(sfield) = self.expect(Keyword::Identifier) {
-                    if let Some(field) = string_to_int(&sfield.value) {
-                        self.query.select.push(SelectField {
-                            name: sfield.value,
-                            id: field,
-                        });
-                    }
+                    self.query.select.push(SelectField { name: sfield.value });
                 }
                 if self.peek(Keyword::Comma) {
                     self.accept(Keyword::Comma);
@@ -481,12 +471,9 @@ impl Parse {
 
                 loop {
                     if let Some(sfield) = self.expect(Keyword::Identifier) {
-                        if let Some(field) = string_to_int(&sfield.value) {
-                            self.query.groupby_fields.push(SelectField {
-                                name: sfield.value,
-                                id: field,
-                            });
-                        }
+                        self.query
+                            .groupby_fields
+                            .push(SelectField { name: sfield.value });
                     }
                     if self.peek(Keyword::Comma) {
                         self.accept(Keyword::Comma);
@@ -959,12 +946,10 @@ impl Parse {
     }
 
     fn parse_label_byte(&mut self, tok: Token) -> Option<Expression> {
-        let label: u32;
         let mut offset: usize = 0;
         let mut length: usize = 0;
 
         self.add_type(&tok.value);
-        label = string_to_int(&tok.value).unwrap();
         if self.accept(Keyword::IndexStart).is_some() {
             if let Some(tok_offset) = self.expect(Keyword::Integer) {
                 offset = tok_offset.value.parse::<usize>().unwrap();
@@ -978,7 +963,7 @@ impl Parse {
 
             _ = self.expect(Keyword::IndexEnd);
 
-            return Some(Expression::LabelByte(label, offset, length));
+            return Some(Expression::LabelByte(tok.value, offset, length));
         }
 
         None
@@ -987,21 +972,16 @@ impl Parse {
     fn parse_label(&mut self) -> Option<Expression> {
         println!("In label -->");
         if let Some(tok) = self.accept(Keyword::Identifier) {
-            if let Some(field) = string_to_int(&tok.value) {
-                self.query.filter_fields.push(SelectField {
-                    name: tok.value.clone(),
-                    id: field,
-                });
-            }
+            self.query.filter_fields.push(SelectField {
+                name: tok.value.clone(),
+            });
             if self.peek(Keyword::IndexStart) {
                 return self.parse_label_byte(tok);
             }
             self.add_type(&tok.value);
-            if let Some(field) = string_to_int(&tok.value) {
-                self.query.prev_label = tok.value.clone();
-                debug!("PREV LABEL: {}", self.query.prev_label);
-                return Some(Expression::Label(field));
-            }
+            self.query.prev_label = tok.value.clone();
+            debug!("PREV LABEL: {}", self.query.prev_label);
+            return Some(Expression::Label(tok.value));
         }
 
         return None;

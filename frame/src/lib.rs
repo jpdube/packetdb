@@ -3,6 +3,7 @@ pub mod constant;
 pub mod dhcp;
 pub mod dns;
 pub mod eth;
+pub mod field;
 pub mod fields;
 pub mod frame;
 pub mod icmp;

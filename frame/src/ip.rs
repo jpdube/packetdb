@@ -1,4 +1,3 @@
-use crate::fields;
 use crate::ipv4_address::IPv4;
 use crate::layer::Layer;
 use crate::packet_display::PacketDisplay;
@@ -51,21 +50,19 @@ impl<'a> Layer for IpFrame<'a> {
         "ip".to_string()
     }
 
-    fn get_field(&self, field: u32) -> Option<Field> {
-        match field {
-            fields::IPV4_SRC_ADDR => Some(Field::set_field(FieldType::Ipv4(self.src(), 32), field)),
-            fields::IPV4_DST_ADDR => Some(Field::set_field(FieldType::Ipv4(self.dst(), 32), field)),
-            fields::IPV4_TOS => Some(Field::set_field(FieldType::Int8(self.tos()), field)),
-            fields::IPV4_TTL => Some(Field::set_field(FieldType::Int8(self.ttl()), field)),
-            fields::IPV4_PROTOCOL => Some(Field::set_field(FieldType::Int8(self.proto()), field)),
-            fields::IPV4_HEADER_LEN => {
-                Some(Field::set_field(FieldType::Int8(self.header_len()), field))
-            }
+    fn get_field(&self, field: String) -> Option<Field> {
+        match field.as_str() {
+            "ip.src" => Some(Field::set_field(FieldType::Ipv4(self.src(), 32), field)),
+            "ip.dst" => Some(Field::set_field(FieldType::Ipv4(self.dst(), 32), field)),
+            "ip.tos" => Some(Field::set_field(FieldType::Int8(self.tos()), field)),
+            "ip.ttl" => Some(Field::set_field(FieldType::Int8(self.ttl()), field)),
+            "ip.protocol" => Some(Field::set_field(FieldType::Int8(self.proto()), field)),
+            "ip.hdr_len" => Some(Field::set_field(FieldType::Int8(self.header_len()), field)),
             _ => None,
         }
     }
 
-    fn get_field_bytes(&self, _field_name: u32) -> Option<Vec<u8>> {
+    fn get_field_bytes(&self, _field_name: String) -> Option<Vec<u8>> {
         None
     }
 }

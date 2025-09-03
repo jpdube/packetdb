@@ -1,6 +1,6 @@
 use crate::layer::Layer;
+use crate::packet_display::PacketDisplay;
 use crate::pfield::{Field, FieldType};
-use crate::{fields, packet_display::PacketDisplay};
 use byteorder::{BigEndian, ByteOrder};
 
 const UDP_HEADER_LEN: usize = 8;
@@ -60,19 +60,17 @@ impl<'a> UdpFrame<'a> {
 }
 
 impl<'a> Layer for UdpFrame<'a> {
-    fn get_field(&self, field: u32) -> Option<Field> {
-        match field {
-            fields::UDP_SRC_PORT => Some(Field::set_field(FieldType::Int16(self.sport()), field)),
-            fields::UDP_DEST_PORT => Some(Field::set_field(FieldType::Int16(self.dport()), field)),
-            fields::UDP_LEN => Some(Field::set_field(FieldType::Int16(self.length()), field)),
-            fields::UDP_CHEKCSUM => {
-                Some(Field::set_field(FieldType::Int16(self.checksum()), field))
-            }
+    fn get_field(&self, field: String) -> Option<Field> {
+        match field.as_str() {
+            "udp.sport" => Some(Field::set_field(FieldType::Int16(self.sport()), field)),
+            "udp.dport" => Some(Field::set_field(FieldType::Int16(self.dport()), field)),
+            "udp.length" => Some(Field::set_field(FieldType::Int16(self.length()), field)),
+            "udp.checksum" => Some(Field::set_field(FieldType::Int16(self.checksum()), field)),
             _ => None,
         }
     }
 
-    fn get_field_bytes(&self, _field_name: u32) -> Option<Vec<u8>> {
+    fn get_field_bytes(&self, _field_name: String) -> Option<Vec<u8>> {
         None
     }
 
