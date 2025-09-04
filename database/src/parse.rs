@@ -7,6 +7,7 @@ use crate::token::Token;
 use chrono::{prelude::*, Duration};
 use chrono::{Local, TimeZone};
 use frame::constant::NetConstant;
+use frame::fields::is_field_valid;
 use frame::ipv4_address::{from_string_to_ip, IPv4};
 use frame::layer_index::LayerIndex;
 use frame::mac_address::MacAddr;
@@ -388,7 +389,20 @@ impl Parse {
                     println!("AGGREGATE: {:?}", aggr);
                     self.query.aggr_list.push(aggr);
                 } else if let Some(sfield) = self.expect(Keyword::Identifier) {
-                    self.query.select.push(SelectField { name: sfield.value });
+                    if is_field_valid(&sfield.value) {
+                        debug!("FIELD: {} valid", sfield.value);
+                        self.query.select.push(SelectField { name: sfield.value });
+                    } else {
+                        debug!("FIELD: {} NOT valid", sfield.value);
+                        let mut err_list: Vec<ErrorMsg> = Vec::new();
+                        err_list.push(ErrorMsg {
+                            message: format!("Invalid field: {}", sfield.value),
+                            line: sfield.line,
+                            column: sfield.column,
+                        });
+
+                        return Err(err_list);
+                    }
                 }
                 if self.peek(Keyword::Comma) {
                     self.accept(Keyword::Comma);
@@ -1018,35 +1032,35 @@ impl Parse {
 mod tests {
     use super::*;
 
-    // #[test]
-    // fn test_select_multi_fields() {
-    //     let mut parse = Parse::new();
-    //     let pql_test = r#"
-    //     select a,b,c
-    //     from s1,s2
-    //     where ip.src == 192.168.242.1
-    //     top  200
-    //     "#;
-    //     let sql = parse.parse_select(pql_test).unwrap();
-    //     println!("Select parse result: {:?}", sql);
+    #[test]
+    fn test_select_multi_fields() {
+        let mut parse = Parse::new();
+        let pql_test = r#"
+        select a,b,c
+        from s1,s2
+        where ip.src == 192.168.242.1
+        top  200
+        "#;
+        let sql = parse.parse_select(pql_test).unwrap();
+        println!("Select parse result: {:?}", sql);
 
-    //     assert_eq!(3, sql.select.len(), "Select");
-    //     assert_eq!(2, sql.from.len(), "From");
-    // }
-    // #[test]
-    // fn test_select_single_fields() {
-    //     let mut parse = Parse::new();
-    //     let pql_test = r#"
-    //     select a
-    //     from s1
-    //     where ip.src == 192.168.242.1
-    //     top  200
-    //     offset 15
-    //     "#;
-    //     let sql = parse.parse_select(pql_test).unwrap();
-    //     println!("Select parse result: {:?}", sql);
+        assert_eq!(3, sql.select.len(), "Select");
+        assert_eq!(2, sql.from.len(), "From");
+    }
+    #[test]
+    fn test_select_single_fields() {
+        let mut parse = Parse::new();
+        let pql_test = r#"
+        select a
+        from s1
+        where ip.src == 192.168.242.1
+        top  200
+        offset 15
+        "#;
+        let sql = parse.parse_select(pql_test).unwrap();
+        println!("Select parse result: {:?}", sql);
 
-    //     assert_eq!(1, sql.select.len(), "Select");
-    //     assert_eq!(1, sql.from.len(), "From");
-    // }
+        assert_eq!(1, sql.select.len(), "Select");
+        assert_eq!(1, sql.from.len(), "From");
+    }
 }

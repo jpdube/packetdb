@@ -12,6 +12,7 @@ use frame::layer_index::LayerIndex;
 use frame::packet::Packet;
 
 use anyhow::Result;
+use core::error;
 use log::{debug, info};
 use std::collections::HashSet;
 use std::fs;
@@ -37,80 +38,83 @@ impl DbEngine {
         let mut parse = Parse::new();
 
         self.exec_plan.start("Start search");
-        if let Ok(expr) = parse.parse_select(query) {
-            debug!("--> Select query: {:?}", expr.search_type);
+        // if let Ok(expr) = parse.parse_select(query) {
+        match parse.parse_select(query) {
+            Ok(expr) => {
+                debug!("--> Select query: {:?}", expr.search_type);
 
-            let mut query_result = QueryResult::new(expr.clone());
+                let mut query_result = QueryResult::new(expr.clone());
 
-            let mut file_count = 0;
-            let interpreter = Interpreter::new(expr.clone());
+                let mut file_count = 0;
+                let interpreter = Interpreter::new(expr.clone());
 
-            self.offset = 0;
-            let mut proto_search: u32 = 0;
+                self.offset = 0;
+                let mut proto_search: u32 = 0;
 
-            if expr.has_id_search() {
-                debug!("In ID search");
-                let pkt_result = self.get_id_packets(expr.id_search);
-                for p in pkt_result {
-                    query_result.add(p);
-                }
+                if expr.has_id_search() {
+                    debug!("In ID search");
+                    let pkt_result = self.get_id_packets(expr.id_search);
+                    for p in pkt_result {
+                        query_result.add(p);
+                    }
 
-                self.exec_plan.stop();
-                self.exec_plan.show();
-                Ok(query_result.get_result())
-            } else {
-                let files_list: Result<Vec<u32>>;
-
-                if let Some(proto_id) = self.has_proto(&expr.search_type) {
-                    info!("FOUND PROTO INDEX {:?}", proto_id);
-                    proto_search = proto_id as u32;
-                    files_list = self.get_proto_files(proto_search);
+                    self.exec_plan.stop();
+                    self.exec_plan.show();
+                    Ok(query_result.get_result())
                 } else {
-                    files_list = self.get_index_files();
-                }
-                match files_list {
-                    Ok(search_list) => {
-                        while !query_result.count_reach() {
-                            for file_id in &search_list {
-                                file_count += 1;
-                                let pkt_index: Result<PacketPtr>;
+                    let files_list: Result<Vec<u32>>;
 
-                                if proto_search > LayerIndex::ARP as u32 {
-                                    let mut proto_index = ProtoIndex::new(*file_id, proto_search);
-                                    pkt_index = proto_index.read();
-                                } else {
-                                    let mut index = IndexManager::default();
-                                    pkt_index = index.search_index(&expr, *file_id);
-                                }
-                                match pkt_index {
-                                    Ok(ptr) => {
-                                        let c = interpreter.run_pgm_seek(&ptr, expr.top);
+                    if let Some(proto_id) = self.has_proto(&expr.search_type) {
+                        info!("FOUND PROTO INDEX {:?}", proto_id);
+                        proto_search = proto_id as u32;
+                        files_list = self.get_proto_files(proto_search);
+                    } else {
+                        files_list = self.get_index_files();
+                    }
+                    match files_list {
+                        Ok(search_list) => {
+                            while !query_result.count_reach() {
+                                for file_id in &search_list {
+                                    file_count += 1;
+                                    let pkt_index: Result<PacketPtr>;
 
-                                        for r in c {
-                                            query_result.add(r);
+                                    if proto_search > LayerIndex::ARP as u32 {
+                                        let mut proto_index =
+                                            ProtoIndex::new(*file_id, proto_search);
+                                        pkt_index = proto_index.read();
+                                    } else {
+                                        let mut index = IndexManager::default();
+                                        pkt_index = index.search_index(&expr, *file_id);
+                                    }
+                                    match pkt_index {
+                                        Ok(ptr) => {
+                                            let c = interpreter.run_pgm_seek(&ptr, expr.top);
+
+                                            for r in c {
+                                                query_result.add(r);
+                                                if query_result.count_reach() {
+                                                    break;
+                                                }
+                                            }
                                             if query_result.count_reach() {
                                                 break;
                                             }
                                         }
-                                        if query_result.count_reach() {
-                                            break;
-                                        }
+                                        Err(msg) => eprintln!("Error reading DB: {}", msg),
                                     }
-                                    Err(msg) => eprintln!("Error reading DB: {}", msg),
                                 }
                             }
+                            info!("Nbr files searched: {}", file_count);
                         }
-                        info!("Nbr files searched: {}", file_count);
+                        Err(e) => println!("Error with index error:{}", e),
                     }
-                    Err(e) => println!("Error with index error:{}", e),
-                }
 
-                self.exec_plan.stop();
-                self.exec_plan.show();
-                Ok(query_result.get_result())
+                    self.exec_plan.stop();
+                    self.exec_plan.show();
+                    Ok(query_result.get_result())
+                }
             }
-        } else {
-            Err(String::from("Error reading database"))
+            Err(error) => Err(format!("Error processing query: {:?}", error)),
         }
     }
 
