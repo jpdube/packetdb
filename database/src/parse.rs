@@ -394,14 +394,11 @@ impl Parse {
                         self.query.select.push(SelectField { name: sfield.value });
                     } else {
                         debug!("FIELD: {} NOT valid", sfield.value);
-                        let mut err_list: Vec<ErrorMsg> = Vec::new();
-                        err_list.push(ErrorMsg {
+                        self.error_list.push(ErrorMsg {
                             message: format!("Invalid field: {}", sfield.value),
                             line: sfield.line,
                             column: sfield.column,
                         });
-
-                        return Err(err_list);
                     }
                 }
                 if self.peek(Keyword::Comma) {
@@ -427,7 +424,6 @@ impl Parse {
                 debug!("Where");
                 self.query.filter = self.parse_expression().unwrap();
             }
-
             //--- Interval
             if self.peek(Keyword::Interval) {
                 debug!("Interval");
@@ -508,7 +504,7 @@ impl Parse {
             }
             if self.peek(Keyword::Top) {
                 self.accept(Keyword::Top);
-                if let Some(tok) = self.accept(Keyword::Integer) {
+                if let Some(tok) = self.expect(Keyword::Integer) {
                     self.query.top = tok.value.parse::<usize>().unwrap();
                 } else {
                     self.query.top = 5;
@@ -830,7 +826,14 @@ impl Parse {
                     self.field_type.insert(LayerIndex::DHCP);
                     Some(Expression::Integer(NetConstant::DhcpClient as u32))
                 }
-                _ => None,
+                _ => {
+                    self.error_list.push(ErrorMsg {
+                        message: "Invalid constant".to_string(),
+                        line: tok.line,
+                        column: tok.column,
+                    });
+                    None
+                }
             }
         } else {
             None
