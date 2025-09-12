@@ -12,7 +12,6 @@ use frame::layer_index::LayerIndex;
 use frame::packet::Packet;
 
 use anyhow::Result;
-use core::error;
 use log::{debug, info};
 use std::collections::HashSet;
 use std::fs;
