@@ -68,6 +68,42 @@ impl Field {
         self.name.clone()
     }
 
+    pub fn get_type_len(&self) -> u16 {
+        match &self.field {
+            FieldType::Bool(_) => 1 as u16,
+            FieldType::Int8(_) => 1 as u16,
+            FieldType::Int16(_) => 2 as u16,
+            FieldType::Int32(_) => 4 as u16,
+            FieldType::Int64(_) => 8 as u16,
+            FieldType::Ipv4(_, _) => 4 as u16,
+            FieldType::MacAddr(_) => 6 as u16,
+            FieldType::Timestamp(_) => 4 as u16,
+            FieldType::TimeValue(_) => 4 as u16,
+            FieldType::Ipv6(_, _) => 8 as u16,
+            FieldType::ByteArray(value) => value.len() as u16,
+            FieldType::String(value) => value.len() as u16,
+            FieldType::FieldArray(value) => value.len() as u16,
+        }
+    }
+
+    pub fn get_int_type(&self) -> u16 {
+        match &self.field {
+            FieldType::Bool(_) => 0 as u16,
+            FieldType::Int8(_) => 1 as u16,
+            FieldType::Int16(_) => 2 as u16,
+            FieldType::Int32(_) => 3 as u16,
+            FieldType::Int64(_) => 4 as u16,
+            FieldType::Ipv4(_, _) => 5 as u16,
+            FieldType::MacAddr(_) => 6 as u16,
+            FieldType::Timestamp(_) => 7 as u16,
+            FieldType::TimeValue(_) => 8 as u16,
+            FieldType::Ipv6(_, _) => 9 as u16,
+            FieldType::ByteArray(_) => 0x0a as u16,
+            FieldType::String(_) => 0x0b as u16,
+            FieldType::FieldArray(_) => 0x0c as u16,
+        }
+    }
+
     pub fn to_json(&self) -> Value {
         match &self.field {
             FieldType::Int64(value) => json!(value),
