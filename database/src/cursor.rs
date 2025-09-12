@@ -1,7 +1,8 @@
 use frame::pfield::Field;
 use serde::Serialize;
 use serde_json::Value;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
+use std::collections::HashMap;
 
 #[derive(Debug, Default, Serialize, Clone)]
 pub struct Record {
