@@ -98,13 +98,15 @@ impl Interpreter {
         Self { model }
     }
 
-    pub fn run_pgm_seek(&self, packet_list: &PacketPtr, top_limit: usize) -> Vec<Packet> {
+    pub fn run_pgm_seek(&self, packet_list: &PacketPtr, top_limit: usize) -> (usize, Vec<Packet>) {
         let mut seek_pkt = SeekPacket::new(packet_list);
         let mut counter: usize = 0;
         // let mut packet_ptr: Vec<Record> = Vec::new();
         let mut result: Vec<Packet> = Vec::new();
+        let mut nbr_searched: usize = 0;
 
         while let Some(pkt) = seek_pkt.next() {
+            nbr_searched += 1;
             if self.eval(&pkt) {
                 result.push(pkt);
 
@@ -118,7 +120,7 @@ impl Interpreter {
             }
         }
 
-        result
+        (nbr_searched, result)
     }
 
     pub fn eval(&self, pkt: &Packet) -> bool {

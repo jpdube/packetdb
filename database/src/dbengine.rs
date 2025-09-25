@@ -49,6 +49,7 @@ impl DbEngine {
 
                 self.offset = 0;
                 let mut proto_search: u32 = 0;
+                let mut pkt_searched: usize = 0;
 
                 if expr.has_id_search() {
                     debug!("In ID search");
@@ -87,7 +88,9 @@ impl DbEngine {
                                     }
                                     match pkt_index {
                                         Ok(ptr) => {
-                                            let c = interpreter.run_pgm_seek(&ptr, expr.top);
+                                            let (nbr_searched, c) =
+                                                interpreter.run_pgm_seek(&ptr, expr.top);
+                                            pkt_searched += nbr_searched;
 
                                             for r in c {
                                                 query_result.add(r);
@@ -103,7 +106,10 @@ impl DbEngine {
                                     }
                                 }
                             }
-                            info!("Nbr files searched: {}", file_count);
+                            info!(
+                                "---> Searched {} files, with {} packets",
+                                file_count, pkt_searched
+                            );
                         }
                         Err(e) => println!("Error with index error:{}", e),
                     }
