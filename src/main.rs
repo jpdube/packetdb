@@ -3,6 +3,7 @@ pub mod jwebtoken;
 
 use crate::api_server::web_main;
 use database::config::CONFIG;
+use database::db_file::DBFile;
 use database::dbengine::DbEngine;
 use database::init_db::InitDb;
 use log::info;
@@ -22,6 +23,13 @@ struct Args {
 
     #[arg(long, default_value_t = String::new())]
     capture: String,
+
+    #[arg(short, long, default_value_t = false)]
+    testdb: bool,
+}
+fn test_db() {
+    let mut db_file = DBFile::new("zzzzzzz".to_string());
+    db_file.create_file().unwrap();
 }
 
 fn process_params() {
@@ -46,6 +54,11 @@ fn process_params() {
     if args.index {
         let db = DbEngine::new();
         db.create_index();
+        process::exit(0);
+    }
+
+    if args.testdb {
+        test_db();
         process::exit(0);
     }
 
