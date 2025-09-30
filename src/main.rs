@@ -33,13 +33,17 @@ fn test_db() {
 }
 
 fn process_params() {
-    env::set_var("RUST_LOG", "debug");
+    unsafe {
+        env::set_var("RUST_LOG", "debug");
+    }
 
     let args = Args::parse();
     env_logger::init();
 
     if args.config.len() > 0 {
-        env::set_var("PACKETDB_CONFIG", args.config);
+        unsafe {
+            env::set_var("PACKETDB_CONFIG", args.config);
+        }
         let init_db = InitDb::default();
         init_db.init_db().unwrap();
     }
