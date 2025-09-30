@@ -1,10 +1,14 @@
 use crate::ipv4_address::IPv4;
 use crate::ipv6_address::IPv6;
 use crate::mac_address::MacAddr;
+use crate::to_binary::ToBinary;
 use ::chrono::prelude::*;
+use byteorder::BigEndian;
+use byteorder::WriteBytesExt;
 use serde::Serialize;
 use serde_json::{json, Value};
 use std::fmt;
+use std::io::Write;
 
 #[derive(Debug, Serialize, Clone)]
 #[serde(untagged)]
@@ -53,6 +57,77 @@ pub struct Field {
 impl fmt::Display for Field {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.field)
+    }
+}
+
+impl ToBinary for Field {
+    fn field_def_to_binary(&self) -> Vec<u8> {
+        let mut result: Vec<u8> = Vec::new();
+
+        result.write_u16::<BigEndian>(self.get_int_type()).unwrap();
+        result.write_u16::<BigEndian>(self.get_type_len()).unwrap();
+        result
+            .write_u16::<BigEndian>(self.name.len() as u16)
+            .unwrap();
+        result.write(&self.name.clone().into_bytes()).unwrap();
+
+        result
+    }
+
+    fn field_to_binary(&self) -> Vec<u8> {
+        let mut result: Vec<u8> = Vec::new();
+
+        match &self.field {
+            FieldType::Int64(value) => {
+                result.write_u64::<BigEndian>(*value).unwrap();
+            }
+            FieldType::Int32(value) => {
+                result.write_u32::<BigEndian>(*value).unwrap();
+            }
+            FieldType::Int16(value) => {
+                result.write_u16::<BigEndian>(*value).unwrap();
+            }
+            FieldType::Int8(value) => {
+                result.write_u8(*value).unwrap();
+            }
+            FieldType::Ipv4(address, mask) => {
+                result.write_u32::<BigEndian>(*address).unwrap();
+                result.write_u8(*mask).unwrap();
+            }
+            FieldType::Ipv6(address, mask) => {
+                result.write_u128::<BigEndian>(*address).unwrap();
+                result.write_u8(*mask).unwrap();
+            }
+            FieldType::MacAddr(value) => {
+                result.write_u64::<BigEndian>(*value << 16).unwrap();
+                result = result[0..6].to_vec();
+            }
+            FieldType::String(value) => {
+                result.write_u16::<BigEndian>(value.len() as u16).unwrap();
+                result.write_all(value.as_bytes()).unwrap();
+            }
+            FieldType::Timestamp(value) => {
+                result.write_u32::<BigEndian>(*value).unwrap();
+            }
+            FieldType::TimeValue(value) => {
+                result.write_u32::<BigEndian>(*value).unwrap();
+            }
+            FieldType::Bool(value) => {
+                if *value {
+                    result.write_u8(1).unwrap();
+                } else {
+                    result.write_u8(0).unwrap();
+                }
+            }
+            FieldType::ByteArray(value) => {
+                result.write_u16::<BigEndian>(value.len() as u16).unwrap();
+                result.write_all(&value).unwrap();
+            }
+            // FieldType::FieldArray(value) => json!(self.format_array(value.clone())),
+            _ => {}
+        };
+
+        result
     }
 }
 
@@ -230,4 +305,161 @@ fn timestamp_str(ts: &u32) -> String {
     let naive = Utc.timestamp_opt(*ts as i64, 0).unwrap();
     let timestamp = naive.format("%Y-%m-%d %H:%M:%S");
     format!("{}", timestamp)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_write_bool_false() {
+        let field = Field::set_field(FieldType::Bool(false), "bool_value".to_string());
+
+        let bin_value = field.field_to_binary();
+        println!("Bin value Bool: {}:{:?}", bin_value.len(), bin_value);
+
+        assert_eq!(bin_value[0], 0x00, "Bool serialized");
+        assert_eq!(bin_value.len(), 1, "Bool serialized len");
+    }
+
+    #[test]
+    fn test_write_bool_true() {
+        let field = Field::set_field(FieldType::Bool(true), "bool_value".to_string());
+
+        let bin_value = field.field_to_binary();
+        println!("Bin value Bool: {}:{:?}", bin_value.len(), bin_value);
+
+        assert_eq!(bin_value[0], 0x01, "Bool serialized");
+        assert_eq!(bin_value.len(), 1, "Bool serialized len");
+    }
+
+    #[test]
+    fn test_write_u8() {
+        let field = Field::set_field(FieldType::Int8(0xc0), "byte_value".to_string());
+
+        let bin_value = field.field_to_binary();
+        println!("Bin value U8: {}:{:?}", bin_value.len(), bin_value);
+
+        assert_eq!(bin_value[0], 0xc0, "U8 serialized");
+        assert_eq!(bin_value.len(), 1, "U8 serialized len");
+    }
+
+    #[test]
+    fn test_write_u16() {
+        let field = Field::set_field(FieldType::Int16(0xc0a8), "short_value".to_string());
+
+        let bin_value = field.field_to_binary();
+        println!("Bin value U16: {}:{:?}", bin_value.len(), bin_value);
+
+        assert_eq!(bin_value[0], 0xc0, "U16 serialized");
+        assert_eq!(bin_value.len(), 2, "U16 serialized len");
+    }
+
+    #[test]
+    fn test_write_mac() {
+        let field = Field::set_field(
+            FieldType::MacAddr(0xa0b1c2d3e4f5 as u64),
+            "mac_value".to_string(),
+        );
+
+        let bin_value = field.field_to_binary();
+        println!("Bin value Mac Addr: {}:{:x?}", bin_value.len(), bin_value);
+
+        assert_eq!(bin_value[0], 0xa0, "MacAddr byte 1 serialized");
+        assert_eq!(bin_value[1], 0xb1, "MacAddr byte 2 serialized");
+        assert_eq!(bin_value[2], 0xc2, "MacAddr byte 3 serialized");
+        assert_eq!(bin_value[3], 0xd3, "MacAddr byte 4 serialized");
+        assert_eq!(bin_value[4], 0xe4, "MacAddr byte 5 serialized");
+        assert_eq!(bin_value[5], 0xf5, "MacAddr byte 6 serialized");
+        assert_eq!(bin_value.len(), 6, "MacAddr serialized len");
+    }
+
+    #[test]
+    fn test_write_ipv4() {
+        let field = Field::set_field(FieldType::Ipv4(0xc0a80301, 24), "ipv4_value".to_string());
+
+        let bin_value = field.field_to_binary();
+        println!("Bin value IPv4: {}:{:?}", bin_value.len(), bin_value);
+
+        assert_eq!(bin_value[0], 0xc0, "IpV4 byte 1 serialized");
+        assert_eq!(bin_value[1], 0xa8, "IpV4 byte 2 serialized");
+        assert_eq!(bin_value[2], 0x03, "IpV4 byte 3 serialized");
+        assert_eq!(bin_value[3], 0x01, "IpV4 byte 4 serialized");
+        assert_eq!(bin_value[4], 0x18, "IpV4 byte mask serialized");
+        assert_eq!(bin_value.len(), 5, "IPv4 serialized len");
+    }
+
+    #[test]
+    fn test_write_u32() {
+        let field = Field::set_field(FieldType::Int32(0xc0a80301), "big_value".to_string());
+
+        let bin_value = field.field_to_binary();
+        println!("Bin value U32: {}:{:?}", bin_value.len(), bin_value);
+
+        assert_eq!(bin_value[0], 0xc0, "U32 serialized");
+        assert_eq!(bin_value.len(), 4, "U32 serialized len");
+    }
+
+    #[test]
+    fn test_write_u64() {
+        let field = Field::set_field(
+            FieldType::Int64(0xa0b1c2d3e4f50010),
+            "big_value".to_string(),
+        );
+
+        let bin_value = field.field_to_binary();
+        println!("Bin value U64: {}:{:?}", bin_value.len(), bin_value);
+
+        assert_eq!(bin_value[0], 0xa0, "U64 serialized");
+        assert_eq!(bin_value.len(), 8, "U64 serialized len");
+    }
+
+    #[test]
+    fn test_write_string() {
+        let field = Field::set_field(
+            FieldType::String("athis is a string of 24".to_string()),
+            "string_value".to_string(),
+        );
+
+        let bin_value = field.field_to_binary();
+        println!("String value: {}:{:x?}", bin_value.len(), bin_value);
+
+        assert_eq!(bin_value[2], 0x61, "String serialized");
+        assert_eq!(bin_value.len(), 25, "String serialized len");
+    }
+
+    #[test]
+    fn test_write_byte_array() {
+        let bytes: Vec<u8> = vec![0, 1, 2, 3, 4, 5];
+        let field = Field::set_field(FieldType::ByteArray(bytes), "byte_array_value".to_string());
+
+        let bin_value = field.field_to_binary();
+        println!("ByteArray value: {}:{:x?}", bin_value.len(), bin_value);
+
+        assert_eq!(bin_value[3], 0x01, "Byte array serialized");
+        assert_eq!(bin_value[1], 0x06, "Byte array serialized");
+        assert_eq!(bin_value.len(), 8, "Byte array serialized len");
+    }
+
+    #[test]
+    fn test_write_field_def() {
+        let field = Field::set_field(FieldType::Int32(0xc0a80301), "U32_values".to_string());
+
+        let bin_value = field.field_def_to_binary();
+        println!(
+            "Field definition value: {}:{:x?}",
+            bin_value.len(),
+            bin_value
+        );
+
+        assert_eq!(bin_value[1], 0x03, "Int field type");
+        assert_eq!(bin_value[3], 0x04, "Field type len");
+        assert_eq!(bin_value[5], 0x0a, "Field name len");
+        assert_eq!(
+            String::from_utf8(bin_value[6..].to_vec()).unwrap(),
+            "U32_values".to_string(),
+            "Field name"
+        );
+        assert_eq!(bin_value.len(), 16, "Result len");
+    }
 }
