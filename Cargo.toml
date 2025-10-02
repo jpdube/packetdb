@@ -22,7 +22,7 @@ actix-cors = "0.6.4"
 anyhow = "1.0.75"
 jsonwebtoken = "9.3.0"
 chrono = "0.4.38"
-argon2 = "0.5.3"
+argon2 = { version = "0.5", features = ["std"] }
 
 
 # [build]
