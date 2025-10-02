@@ -1,6 +1,6 @@
 use crate::config::CONFIG;
 use byteorder::{BigEndian, ByteOrder};
-use frame::pfield::{Field, FieldType};
+use frame::pfield::Field;
 use frame::to_binary::ToBinary;
 use std::fs::File;
 use std::fs::OpenOptions;
