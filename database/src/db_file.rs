@@ -3,31 +3,11 @@ use byteorder::{BigEndian, ByteOrder};
 use frame::pfield::{Field, FieldType};
 use frame::to_binary::ToBinary;
 use std::fs::File;
+use std::fs::OpenOptions;
 use std::io::{BufWriter, Write};
 use std::time::Instant;
 
 use anyhow::Result;
-// #[derive(Debug, Clone)]
-// pub struct Field {
-//     ftype: u16,
-//     fname_len: u16,
-//     fname: String,
-//     no: u16,
-// }
-
-// impl Field {
-//     pub fn write_fields(&self) -> Vec<u8> {
-//         let mut fields: Vec<u8> = Vec::new();
-
-//         BigEndian::write_u16(&mut fields, self.no);
-//         BigEndian::write_u16(&mut fields, self.ftype);
-//         BigEndian::write_u16(&mut fields, self.fname_len);
-
-//         fields.append(&mut self.fname.clone().into_bytes());
-
-//         fields
-//     }
-// }
 
 #[derive(Debug, Clone)]
 pub struct Header {
@@ -52,12 +32,11 @@ impl Header {
         BigEndian::write_u16(&mut header[4..6], self.version);
         BigEndian::write_u16(&mut header[6..8], self.nbr_fields);
 
-        // println!("HEADER: {:x?}", header);
         header
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct DBFile {
     fields_list: Vec<Field>,
     header: Header,
@@ -73,55 +52,44 @@ impl DBFile {
         }
     }
 
-    #[allow(dead_code)]
-    pub fn add_record(&mut self, _record: Vec<u8>) {}
+    fn db_filename(&self) -> String {
+        format!("{}/{}.pdb", &CONFIG.db_path, self.file_name)
+    }
 
     pub fn create_file(&mut self) -> Result<()> {
-        let db_filename = &format!("{}/{}.pdb", &CONFIG.db_path, self.file_name);
-        println!("Writing to file: {}", db_filename);
+        println!("Writing to file: {}", self.db_filename());
 
-        let file = File::create(db_filename)?;
+        let file = File::create(self.db_filename())?;
         let mut writer = BufWriter::new(file);
-
-        // writer.write(&self.write_fields()).unwrap();
-        self.fields_list.push(Field::set_field(
-            FieldType::Ipv4(0xc0a80301, 32),
-            "ip.src".to_string(),
-        ));
-
-        self.fields_list.push(Field::set_field(
-            FieldType::Ipv4(0xc0a802b6, 32),
-            "ip.dst".to_string(),
-        ));
-
-        self.fields_list.push(Field::set_field(
-            FieldType::Int16(443),
-            "tcp.dport".to_string(),
-        ));
-
-        self.fields_list.push(Field::set_field(
-            FieldType::Int16(1443),
-            "tcp.sport".to_string(),
-        ));
 
         self.header.nbr_fields = self.fields_list.len() as u16;
 
+        writer.write_all(&self.header.write_header())?;
+
+        Ok(())
+    }
+
+    pub fn append(&mut self) -> Result<()> {
+        let fs = OpenOptions::new()
+            // .create(true)
+            .append(true)
+            .open(self.db_filename())
+            .unwrap();
+
+        let mut writer = BufWriter::new(fs);
+
         let now = Instant::now();
-        writer.write(&self.header.write_header())?;
 
         for f in &self.fields_list {
             writer.write(&f.field_def_to_binary())?;
         }
 
-        for _ in 0..8_000_000 {
-            for f in &self.fields_list {
-                writer.write(&f.field_to_binary())?;
-            }
+        for f in &self.fields_list {
+            writer.write(&f.field_to_binary())?;
         }
 
         let elapsed = now.elapsed();
         println!("Elapsed: {:.2?}", elapsed);
-
         Ok(())
     }
 }
