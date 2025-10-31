@@ -4,7 +4,7 @@ use crate::packet_ptr::PacketPtr;
 use crate::parse::PqlStatement;
 use crate::pcapfile::PcapFile;
 use crate::proto_index::ProtoIndexMgr;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use byteorder::{BigEndian, ByteOrder, WriteBytesExt};
 use frame::ipv4_address::IPv4;
 use frame::layer_index::LayerIndex;
