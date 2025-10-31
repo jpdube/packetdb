@@ -1,3 +1,4 @@
+use crate::packet_ref::PacketRef;
 use anyhow::Result;
 use byteorder::{LittleEndian, WriteBytesExt};
 use database::config::CONFIG;
@@ -15,15 +16,6 @@ const GLOBAL_HDR: [u8; 24] = [
     0xd4, 0xc3, 0xb2, 0xa1, 0x02, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00,
 ];
-
-#[derive(Default, Debug, Clone)]
-struct PacketRef {
-    packet: Vec<u8>,
-    orig_len: u32,
-    cap_len: u32,
-    timestamp: u32,
-    ts_us: u32,
-}
 
 pub fn capture(device_name: &str) -> Result<()> {
     println!("Capture device: {}", device_name);
