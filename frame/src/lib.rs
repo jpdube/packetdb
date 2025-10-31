@@ -18,6 +18,7 @@ pub mod packet_builder;
 pub mod packet_display;
 pub mod pfield;
 pub mod print_hex;
+pub mod sip;
 pub mod tcp;
 pub mod to_binary;
 pub mod udp;
