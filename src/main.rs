@@ -3,8 +3,9 @@ pub mod jwebtoken;
 
 use crate::api_server::web_main;
 use database::config::CONFIG;
-use database::db_file::DBFile;
+// use database::db_file::DBFile;
 use database::dbengine::DbEngine;
+use database::dbstorage::DbSegment;
 use database::init_db::InitDb;
 use log::info;
 use sniffer::capture::capture;
@@ -28,8 +29,12 @@ struct Args {
     testdb: bool,
 }
 fn test_db() {
-    let mut db_file = DBFile::new("zzzzzzz".to_string());
-    db_file.create_file().unwrap();
+    // let mut db_file = DBFile::new("zzzzzzz".to_string());
+    // db_file.create_file().unwrap();
+    let mut dbnode = DbSegment::new("/opt/pcapdb/test.db".to_string(), 0);
+
+    dbnode.create().unwrap();
+    dbnode.add_record().unwrap();
 }
 
 fn process_params() {
