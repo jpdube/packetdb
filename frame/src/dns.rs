@@ -458,7 +458,7 @@ impl<'a> Dns<'a> {
             DNS_TYPE_SRV => self.type_index = self.type_index | INDEX_TYPE_SRV,
             DNS_TYPE_TXT => self.type_index = self.type_index | INDEX_TYPE_TXT,
             DNS_TYPE_DNS_KEY => self.type_index = self.type_index | INDEX_TYPE_DNSKEY,
-            _ => self.type_index = self.type_index,
+            _ => {}
         };
     }
 
@@ -1505,7 +1505,11 @@ mod tests {
         assert_eq!(dns.answer_count(), 1, "DNS long answer 1");
         assert_eq!(dns.question_count(), 1, "DNS long query 1");
         assert_eq!(dns.additional_count(), 1, "DNS long additional 1");
-        assert_eq!(dns.answer_list[0].name, "usrcuaacaakpaiqdahvsea6saqaaazjguijc4lmxuqn34iqdaeaaaaa3aaaaa2p.pvlaacaawaajqa673papgh47ytjutd5js37ayu5s4lmbryai.a.j.e5.sk", "DNS long additional 1");
+        assert_eq!(
+            dns.answer_list[0].name,
+            "usrcuaacaakpaiqdahvsea6saqaaazjguijc4lmxuqn34iqdaeaaaaa3aaaaa2p.pvlaacaawaajqa673papgh47ytjutd5js37ayu5s4lmbryai.a.j.e5.sk",
+            "DNS long additional 1"
+        );
 
         println!("DNS: {:?}", dns);
     }
