@@ -5,7 +5,8 @@ use crate::api_server::web_main;
 use database::config::CONFIG;
 // use database::db_file::DBFile;
 use database::dbengine::DbEngine;
-use database::dbstorage::DbSegment;
+// use database::dbstorage::DbSegment;
+use database::dbstorage::{DbWriter, Row};
 use database::init_db::InitDb;
 use log::info;
 use sniffer::capture::capture;
@@ -31,10 +32,27 @@ struct Args {
 fn test_db() {
     // let mut db_file = DBFile::new("zzzzzzz".to_string());
     // db_file.create_file().unwrap();
-    let mut dbnode = DbSegment::new("/opt/pcapdb/test.db".to_string(), 0);
+    // let mut dbnode = DbSegment::new("/opt/pcapdb/test.db".to_string(), 0);
 
-    dbnode.create().unwrap();
-    dbnode.add_record().unwrap();
+    // dbnode.create().unwrap();
+    // dbnode.add_record().unwrap();
+
+    let mut dbwriter = DbWriter::new("/opt/pcapdb/test_raw.pdb".to_string());
+    dbwriter.create();
+
+    let mut data: Vec<Row> = Vec::new();
+    for i in 0..100_000 {
+        let row = Row {
+            ip_src: i as u32,
+            ip_dst: (i + 1) as u32,
+            dport: (i + 2) as u16,
+            sport: (i + 3) as u16,
+        };
+
+        data.push(row);
+    }
+
+    dbwriter.append(data);
 }
 
 fn process_params() {

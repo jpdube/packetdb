@@ -407,11 +407,13 @@ impl IndexManager {
 
     pub fn save_master(&self, master_index: MasterIndex) {
         let index_file = format!("{}/master.pidx", CONFIG.master_index_path);
-        let mut writer = fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(index_file)
-            .unwrap();
+        let mut writer = BufWriter::new(
+            fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(index_file)
+                .unwrap(),
+        );
         writer
             .write_u32::<BigEndian>(master_index.start_timestamp)
             .unwrap();

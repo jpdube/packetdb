@@ -1,7 +1,7 @@
 use crate::config::CONFIG;
 use crate::file_manager;
 use crate::packet_ptr::PacketPtr;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use byteorder::ByteOrder;
 use byteorder::{BigEndian, WriteBytesExt};
 use log::error;
@@ -129,10 +129,12 @@ impl ProtoIndex {
         {
             println!("Filename: {}", idx_filename);
 
-            let mut writer = fs::OpenOptions::new()
-                .write(true)
-                .open(idx_filename)
-                .unwrap();
+            let mut writer = BufWriter::new(
+                fs::OpenOptions::new()
+                    .write(true)
+                    .open(idx_filename)
+                    .unwrap(),
+            );
 
             writer.seek(std::io::SeekFrom::Start(8)).unwrap();
             writer.write_u32::<BigEndian>(self.header.count).unwrap();
@@ -146,11 +148,13 @@ impl ProtoIndex {
         );
 
         {
-            let mut writer = fs::OpenOptions::new()
-                // .create(true)
-                .append(true)
-                .open(idx_filename)
-                .unwrap();
+            let mut writer = BufWriter::new(
+                fs::OpenOptions::new()
+                    // .create(true)
+                    .append(true)
+                    .open(idx_filename)
+                    .unwrap(),
+            );
 
             for ptr in &self.ptr_list {
                 writer.write_u32::<BigEndian>(*ptr).unwrap();
