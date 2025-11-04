@@ -56,20 +56,20 @@ impl DBStorage {
 #[derive(Debug)]
 pub struct DbSegment {
     filename: String,
-    segment_size: usize,
-    recv: Receiver<String>,
-    xmit: Sender<String>,
+    // segment_size: usize,
+    // recv: Receiver<String>,
+    // xmit: Sender<String>,
 }
 
 impl DbSegment {
     pub fn new(filename: String, segment_size: usize) -> Self {
-        let (tx, rx) = mpsc::channel();
+        // let (tx, rx) = mpsc::channel();
 
         Self {
             filename,
-            segment_size,
-            recv: rx,
-            xmit: tx,
+            // // segment_size,
+            // recv: rx,
+            // xmit: tx,
         }
     }
 
@@ -101,7 +101,10 @@ impl DbSegment {
             [],
         )?;
 
-        conn.execute("create index timestamp_idx on packet_data(ts);", [])?;
+        // conn.execute(
+        //     "create index if not exists timestamp_idx on packet_data(ts);",
+        //     [],
+        // )?;
 
         Ok(())
     }
@@ -162,10 +165,72 @@ impl DbSegment {
         Ok(())
     }
 
-    fn write_db(&mut self, _sql_insert: &str) -> Result<()> {
+    fn _write_db(&mut self, _sql_insert: &str) -> Result<()> {
         // let conn = Connection::open(&self.filename)?;
 
         Ok(())
+    }
+}
+
+use byteorder::{BigEndian, WriteBytesExt};
+use std::fs;
+use std::fs::File;
+use std::io::BufWriter;
+
+pub struct Row {
+    pub ip_src: u32,
+    pub ip_dst: u32,
+    pub dport: u16,
+    pub sport: u16,
+}
+
+pub struct DbWriter {
+    filename: String,
+    magic_no: u32,
+    version: u16,
+}
+
+impl DbWriter {
+    pub fn new(filename: String) -> Self {
+        Self {
+            filename,
+            magic_no: 0xa1b2c3d4,
+            version: 1,
+        }
+    }
+
+    pub fn create(&mut self) {
+        let mut writer = BufWriter::new(File::create(&self.filename).unwrap());
+
+        //--- Write header
+        writer.write_u32::<BigEndian>(self.magic_no).unwrap();
+        writer.write_u16::<BigEndian>(self.version).unwrap();
+    }
+
+    pub fn append(&mut self, data: Vec<Row>) {
+        let start = Instant::now();
+        let mut writer = BufWriter::new(
+            fs::OpenOptions::new()
+                // .create(true)
+                .append(true)
+                .open(&self.filename)
+                .unwrap(),
+        );
+
+        for row in &data {
+            writer.write_u32::<BigEndian>(row.ip_src).unwrap();
+            writer.write_u32::<BigEndian>(row.ip_dst).unwrap();
+            writer.write_u16::<BigEndian>(row.dport).unwrap();
+            writer.write_u16::<BigEndian>(row.sport).unwrap();
+        }
+
+        let duration = start.elapsed();
+
+        println!(
+            "Execution time: {}us per row: {}ns",
+            duration.as_micros(),
+            (duration.as_secs_f32() / data.len() as f32) * 1_000_000_000.0
+        );
     }
 }
 
