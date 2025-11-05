@@ -1,12 +1,14 @@
+use crate::field_type;
 use crate::ipv4_address::IPv4;
 use crate::ipv6_address::IPv6;
 use crate::mac_address::MacAddr;
-use crate::to_binary::ToBinary;
+use crate::serialize_field::SerializeField;
 use ::chrono::prelude::*;
 use byteorder::BigEndian;
+use byteorder::ByteOrder;
 use byteorder::WriteBytesExt;
 use serde::Serialize;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::fmt;
 use std::io::Write;
 
@@ -60,7 +62,50 @@ impl fmt::Display for Field {
     }
 }
 
-impl ToBinary for Field {
+impl SerializeField for Field {
+    fn from_binary_to_field(
+        // &self,
+        field_type: u16,
+        _field_len: u16,
+        field_name: String,
+        value: Vec<u8>,
+    ) -> Self {
+        let ret_field_type: FieldType;
+
+        match field_type {
+            field_type::BOOL => {
+                if value[0] == 0 {
+                    ret_field_type = FieldType::Bool(false)
+                } else {
+                    ret_field_type = FieldType::Bool(true)
+                }
+            }
+            field_type::INT8 => ret_field_type = FieldType::Int8(value[0]),
+            field_type::INT16 => ret_field_type = FieldType::Int16(BigEndian::read_u16(&value)),
+            field_type::INT32 => ret_field_type = FieldType::Int32(BigEndian::read_u32(&value)),
+            field_type::INT64 => ret_field_type = FieldType::Int64(BigEndian::read_u64(&value)),
+            field_type::IPV4 => ret_field_type = FieldType::Ipv4(BigEndian::read_u32(&value), 32),
+            field_type::MACADDR => ret_field_type = FieldType::MacAddr(BigEndian::read_u48(&value)),
+            field_type::TIMESTAMP => {
+                ret_field_type = FieldType::Timestamp(BigEndian::read_u32(&value))
+            }
+            field_type::TIMEVALUE => {
+                ret_field_type = FieldType::TimeValue(BigEndian::read_u32(&value))
+            }
+            field_type::IPV6 => ret_field_type = FieldType::Ipv6(BigEndian::read_u128(&value), 32),
+            field_type::BYTE_ARRAY => ret_field_type = FieldType::ByteArray(value),
+            field_type::STRING => {
+                ret_field_type = FieldType::String(str::from_utf8(&value).unwrap().to_string())
+            }
+            _ => ret_field_type = FieldType::Bool(false),
+        };
+
+        Self {
+            field: ret_field_type,
+            name: field_name,
+        }
+    }
+
     fn field_def_to_binary(&self) -> Vec<u8> {
         let mut result: Vec<u8> = Vec::new();
 
@@ -90,9 +135,8 @@ impl ToBinary for Field {
             FieldType::Int8(value) => {
                 result.write_u8(*value).unwrap();
             }
-            FieldType::Ipv4(address, mask) => {
+            FieldType::Ipv4(address, _) => {
                 result.write_u32::<BigEndian>(*address).unwrap();
-                result.write_u8(*mask).unwrap();
             }
             FieldType::Ipv6(address, mask) => {
                 result.write_u128::<BigEndian>(*address).unwrap();
@@ -163,19 +207,19 @@ impl Field {
 
     pub fn get_int_type(&self) -> u16 {
         match &self.field {
-            FieldType::Bool(_) => 0 as u16,
-            FieldType::Int8(_) => 1 as u16,
-            FieldType::Int16(_) => 2 as u16,
-            FieldType::Int32(_) => 3 as u16,
-            FieldType::Int64(_) => 4 as u16,
-            FieldType::Ipv4(_, _) => 5 as u16,
-            FieldType::MacAddr(_) => 6 as u16,
-            FieldType::Timestamp(_) => 7 as u16,
-            FieldType::TimeValue(_) => 8 as u16,
-            FieldType::Ipv6(_, _) => 9 as u16,
-            FieldType::ByteArray(_) => 0x0a as u16,
-            FieldType::String(_) => 0x0b as u16,
-            FieldType::FieldArray(_) => 0x0c as u16,
+            FieldType::Bool(_) => field_type::BOOL,
+            FieldType::Int8(_) => field_type::INT8,
+            FieldType::Int16(_) => field_type::INT16,
+            FieldType::Int32(_) => field_type::INT32,
+            FieldType::Int64(_) => field_type::INT64,
+            FieldType::Ipv4(_, _) => field_type::IPV4,
+            FieldType::MacAddr(_) => field_type::MACADDR,
+            FieldType::Timestamp(_) => field_type::TIMESTAMP,
+            FieldType::TimeValue(_) => field_type::TIMEVALUE,
+            FieldType::Ipv6(_, _) => field_type::IPV6,
+            FieldType::ByteArray(_) => field_type::BYTE_ARRAY,
+            FieldType::String(_) => field_type::STRING,
+            FieldType::FieldArray(_) => field_type::FIELD_ARRAY,
         }
     }
 

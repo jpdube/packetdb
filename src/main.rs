@@ -3,11 +3,11 @@ pub mod jwebtoken;
 
 use crate::api_server::web_main;
 use database::config::CONFIG;
-// use database::db_file::DBFile;
 use database::dbengine::DbEngine;
-// use database::dbstorage::DbSegment;
-use database::dbstorage::{DbWriter, Row};
+use database::dbstorage::{DBStorage, FieldDefinition, Row};
 use database::init_db::InitDb;
+use frame::field_type;
+use frame::pfield::{Field, FieldType};
 use log::info;
 use sniffer::capture::capture;
 use std::{env, process};
@@ -37,22 +37,60 @@ fn test_db() {
     // dbnode.create().unwrap();
     // dbnode.add_record().unwrap();
 
-    let mut dbwriter = DbWriter::new("/opt/pcapdb/test_raw.pdb".to_string());
-    dbwriter.create();
+    let mut dbwriter = DBStorage::new("/opt/pcapdb/test_raw.pdb".to_string());
+
+    let mut fields_def: Vec<FieldDefinition> = Vec::new();
+    fields_def.push(FieldDefinition::new(field_type::IPV4, "ip.src".to_string()));
+
+    fields_def.push(FieldDefinition::new(field_type::IPV4, "ip.dst".to_string()));
+
+    fields_def.push(FieldDefinition::new(
+        field_type::INT16,
+        "tcp.dport".to_string(),
+    ));
+
+    fields_def.push(FieldDefinition::new(
+        field_type::INT16,
+        "tcp.sport".to_string(),
+    ));
+    fields_def.push(FieldDefinition::new(
+        field_type::STRING,
+        "port_name".to_string(),
+    ));
+
+    dbwriter.define_fields(fields_def);
+    dbwriter.create().unwrap();
+
+    let mut row = Row::new();
+    row.add(Field::set_field(
+        FieldType::Ipv4(0xc0a80310, 32),
+        "ip.src".to_string(),
+    ));
+    row.add(Field::set_field(
+        FieldType::Ipv4(0xc0a802b1, 32),
+        "ip.dst".to_string(),
+    ));
+
+    row.add(Field::set_field(FieldType::Int16(443), "dport".to_string()));
+
+    row.add(Field::set_field(
+        FieldType::Int16(31234),
+        "sport".to_string(),
+    ));
+
+    row.add(Field::set_field(
+        FieldType::String("iface_01".to_string()),
+        "iface.name".to_string(),
+    ));
 
     let mut data: Vec<Row> = Vec::new();
-    for i in 0..100_000 {
-        let row = Row {
-            ip_src: i as u32,
-            ip_dst: (i + 1) as u32,
-            dport: (i + 2) as u16,
-            sport: (i + 3) as u16,
-        };
-
-        data.push(row);
+    for _ in 0..65535 {
+        data.push(row.clone());
     }
 
-    dbwriter.append(data);
+    dbwriter.append(data).unwrap();
+
+    dbwriter.read_record().unwrap();
 }
 
 fn process_params() {
