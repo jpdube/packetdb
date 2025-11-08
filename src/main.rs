@@ -4,7 +4,7 @@ pub mod jwebtoken;
 use crate::api_server::web_main;
 use database::config::CONFIG;
 use database::dbengine::DbEngine;
-use database::dbstorage::{DBStorage, FieldDefinition, Row};
+use database::dbstorage::{DBStorage, Row, Schema};
 use database::init_db::InitDb;
 use frame::field_type;
 use frame::pfield::{Field, FieldType};
@@ -39,24 +39,15 @@ fn test_db() {
 
     let mut dbwriter = DBStorage::new("/opt/pcapdb/test_raw.pdb".to_string());
 
-    let mut fields_def: Vec<FieldDefinition> = Vec::new();
-    fields_def.push(FieldDefinition::new(field_type::IPV4, "ip.src".to_string()));
+    let mut fields_def: Vec<Schema> = Vec::new();
+    fields_def.push(Schema::new(field_type::IPV4, "ip.src".to_string()));
 
-    fields_def.push(FieldDefinition::new(field_type::IPV4, "ip.dst".to_string()));
+    fields_def.push(Schema::new(field_type::IPV4, "ip.dst".to_string()));
 
-    fields_def.push(FieldDefinition::new(
-        field_type::INT16,
-        "tcp.dport".to_string(),
-    ));
+    fields_def.push(Schema::new(field_type::INT16, "tcp.dport".to_string()));
 
-    fields_def.push(FieldDefinition::new(
-        field_type::INT16,
-        "tcp.sport".to_string(),
-    ));
-    fields_def.push(FieldDefinition::new(
-        field_type::STRING,
-        "port_name".to_string(),
-    ));
+    fields_def.push(Schema::new(field_type::INT16, "tcp.sport".to_string()));
+    fields_def.push(Schema::new(field_type::STRING, "port_name".to_string()));
 
     dbwriter.define_fields(fields_def);
     dbwriter.create().unwrap();
@@ -84,7 +75,7 @@ fn test_db() {
     ));
 
     let mut data: Vec<Row> = Vec::new();
-    for _ in 0..65535 {
+    for _ in 0..4096 {
         data.push(row.clone());
     }
 
