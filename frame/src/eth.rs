@@ -1,7 +1,7 @@
 use crate::layer::Layer;
-use crate::mac_address::MacAddr;
 use crate::packet_display::PacketDisplay;
-use crate::pfield::{Field, FieldType};
+use field::mac_address::MacAddr;
+use field::pfield::{Field, FieldType};
 
 use byteorder::{BigEndian, ByteOrder};
 

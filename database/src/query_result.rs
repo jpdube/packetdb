@@ -5,7 +5,7 @@ use frame::packet::Packet;
 
 use crate::cursor::{Cursor, Record};
 use crate::parse::PqlStatement;
-use frame::pfield::{Field, FieldType};
+use field::pfield::{Field, FieldType};
 use log::debug;
 
 pub struct QueryResult {

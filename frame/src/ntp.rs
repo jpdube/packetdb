@@ -1,6 +1,6 @@
 use crate::layer::Layer;
-use crate::pfield::{Field, FieldType};
 use byteorder::{BigEndian, ByteOrder};
+use field::pfield::{Field, FieldType};
 
 #[derive(Debug, Clone)]
 pub struct Ntp<'a> {

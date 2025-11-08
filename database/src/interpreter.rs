@@ -4,9 +4,9 @@ use std::fmt::Display;
 use crate::packet_ptr::PacketPtr;
 use crate::parse::{Expression, Operator, PqlStatement};
 use crate::seek_packet::SeekPacket;
-use frame::ipv4_address::IPv4;
+use field::ipv4_address::IPv4;
+use field::pfield::FieldType;
 use frame::packet::Packet;
-use frame::pfield::FieldType;
 use regex::Regex;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -63,11 +63,7 @@ impl Object {
     }
 
     pub fn get_bool(b: bool) -> Object {
-        if b {
-            TRUE
-        } else {
-            FALSE
-        }
+        if b { TRUE } else { FALSE }
     }
 
     fn get_ip_in_range(sa: u32, ip: u32, mask: u8) -> Object {

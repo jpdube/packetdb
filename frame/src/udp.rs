@@ -1,7 +1,7 @@
 use crate::layer::Layer;
 use crate::packet_display::PacketDisplay;
-use crate::pfield::{Field, FieldType};
 use byteorder::{BigEndian, ByteOrder};
+use field::pfield::{Field, FieldType};
 
 const UDP_HEADER_LEN: usize = 8;
 

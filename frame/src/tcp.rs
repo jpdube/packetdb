@@ -1,8 +1,8 @@
 use crate::layer::Layer;
 use crate::packet_display::PacketDisplay;
 
-use crate::pfield::{Field, FieldType};
 use byteorder::{BigEndian, ByteOrder};
+use field::pfield::{Field, FieldType};
 
 const OPTION_EOL: u16 = 0;
 const OPTION_NOP: u16 = 1;

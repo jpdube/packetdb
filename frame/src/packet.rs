@@ -7,10 +7,10 @@ use crate::ip::IpFrame;
 use crate::layer::Layer;
 use crate::layer_index::LayerIndex;
 use crate::packet_display::PacketDisplay;
-use crate::pfield::Field;
 use crate::tcp::Tcp;
 use crate::udp::UdpFrame;
 use crate::{arp::Arp, dns::Dns, ntp::Ntp};
+use field::pfield::Field;
 use indexmap::IndexMap;
 
 use byteorder::{BigEndian, ByteOrder};

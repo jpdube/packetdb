@@ -6,7 +6,7 @@ use crate::pcapfile::PcapFile;
 use crate::proto_index::ProtoIndexMgr;
 use anyhow::{Result, anyhow};
 use byteorder::{BigEndian, ByteOrder, WriteBytesExt};
-use frame::ipv4_address::IPv4;
+use field::ipv4_address::IPv4;
 use frame::layer_index::LayerIndex;
 use frame::packet::Packet;
 use log::{error, info};

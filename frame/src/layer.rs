@@ -1,5 +1,5 @@
-use crate::pfield::Field;
 use dyn_clone::DynClone;
+use field::pfield::Field;
 
 pub trait Layer: DynClone {
     fn get_name(&self) -> String;

@@ -1,8 +1,8 @@
-use crate::ipv4_address::IPv4;
 use crate::layer::Layer;
 use crate::packet_display::PacketDisplay;
-use crate::pfield::{Field, FieldType};
 use byteorder::{BigEndian, ByteOrder};
+use field::ipv4_address::IPv4;
+use field::pfield::{Field, FieldType};
 
 #[derive(Debug, Clone, Default)]
 pub struct IpFrame<'a> {

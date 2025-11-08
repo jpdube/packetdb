@@ -4,13 +4,13 @@ use crate::aggregate::Aggregate;
 use crate::keywords::Keyword;
 use crate::lexer::Lexer;
 use crate::token::Token;
-use chrono::{prelude::*, Duration};
+use chrono::{Duration, prelude::*};
 use chrono::{Local, TimeZone};
+use field::ipv4_address::{IPv4, from_string_to_ip};
+use field::mac_address::MacAddr;
 use frame::constant::NetConstant;
 use frame::fields::is_field_valid;
-use frame::ipv4_address::{from_string_to_ip, IPv4};
 use frame::layer_index::LayerIndex;
-use frame::mac_address::MacAddr;
 
 use log::debug;
 use std::collections::HashSet;
@@ -147,7 +147,15 @@ impl fmt::Display for PqlStatement {
             write!(
                 f,
                 "Select {} {:?}  From: {:?} Where: {:?} {:?} Top: {} Offset: {} Group By: {:?} Aggregate: {:?}",
-                if self.has_distinct {"DISTINCT"} else {""}, self.select, self.from, self.filter, self.filter_fields, self.top, self.offset, self.groupby_fields, self.aggr_list,
+                if self.has_distinct { "DISTINCT" } else { "" },
+                self.select,
+                self.from,
+                self.filter,
+                self.filter_fields,
+                self.top,
+                self.offset,
+                self.groupby_fields,
+                self.aggr_list,
             )
         }
     }

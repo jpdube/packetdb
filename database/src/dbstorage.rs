@@ -1,7 +1,7 @@
 use anyhow::Result;
-use frame::field_type;
-use frame::pfield::Field;
-use frame::serialize_field::SerializeField;
+use field::field_type;
+use field::pfield::Field;
+use field::serialize_field::SerializeField;
 use std::time::Instant;
 
 use byteorder::{BigEndian, ByteOrder, ReadBytesExt, WriteBytesExt};
@@ -161,7 +161,7 @@ impl DBStorage {
             offset = 0;
             rec_count += 1;
 
-            println!("RECORD: {:x?}", &buffer);
+            // println!("RECORD: {:x?}", &buffer);
 
             for field_def in &self.fields_list {
                 if field_def.ftype == field_type::STRING {
@@ -171,14 +171,14 @@ impl DBStorage {
                     field_len = field_def.type_len as usize;
                 }
 
-                println!(
-                    "RECORD: {:x?}",
-                    Field::from_binary_to_field(
-                        field_def.ftype,
-                        field_def.name.clone(),
-                        buffer[offset..offset + field_len].to_vec()
-                    )
-                );
+                // println!(
+                //     "RECORD: {:x?}",
+                //     Field::from_binary_to_field(
+                //         field_def.ftype,
+                //         field_def.name.clone(),
+                //         buffer[offset..offset + field_len].to_vec()
+                //     )
+                // );
 
                 offset += field_len;
             }

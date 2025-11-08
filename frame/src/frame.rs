@@ -1,6 +1,6 @@
 use crate::layer::Layer;
-use crate::pfield::{Field, FieldType};
 use byteorder::{BigEndian, ByteOrder, LittleEndian};
+use field::pfield::{Field, FieldType};
 
 #[derive(Debug, Clone, Default)]
 pub struct Frame<'a> {

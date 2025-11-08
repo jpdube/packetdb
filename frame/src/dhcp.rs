@@ -3,9 +3,9 @@ use byteorder::{BigEndian, ByteOrder};
 use std::fmt;
 use std::str;
 
-use crate::pfield::{Field, FieldType};
 use crate::print_hex::print_hex;
-use crate::{ipv4_address::IPv4, mac_address::MacAddr};
+use field::pfield::{Field, FieldType};
+use field::{ipv4_address::IPv4, mac_address::MacAddr};
 
 const SERVER_NAME_OFFSET: usize = 0x2c;
 const BOOT_FILE_OFFSET: usize = 0x6c;
@@ -405,7 +405,7 @@ impl<'a> fmt::Display for Dhcp<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "Op code: {}, Hdr type: {}, Hdr len: {},  XID: {:x}, CI Addr: {}, You IP addr: {}, Server IP: {}, Relay IP: {}, Hwd address: {}, Params list: {:?}, Vendor class ID: {:?}", 
+            "Op code: {}, Hdr type: {}, Hdr len: {},  XID: {:x}, CI Addr: {}, You IP addr: {}, Server IP: {}, Relay IP: {}, Hwd address: {}, Params list: {:?}, Vendor class ID: {:?}",
             self.op(),
             self.htype(),
             self.hlen(),

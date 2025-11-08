@@ -1,10 +1,10 @@
-use crate::ipv4_address::IPv4;
-use crate::ipv6_address::IPv6;
 use crate::layer::Layer;
-use crate::pfield::{Field, FieldType};
 use crate::print_hex::print_hex;
 use ::chrono::prelude::*;
 use byteorder::{BigEndian, ByteOrder};
+use field::ipv4_address::IPv4;
+use field::ipv6_address::IPv6;
+use field::pfield::{Field, FieldType};
 use std::str;
 use std::{fmt, usize};
 

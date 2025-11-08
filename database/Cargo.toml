@@ -7,6 +7,7 @@ edition = "2024"
 
 [dependencies]
 frame = { path = "../frame/" }
+field = { path = "../field/" }
 rayon = "1.10"
 regex = "1.7.0"
 chrono = "0.4.38"

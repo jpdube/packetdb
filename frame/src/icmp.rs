@@ -1,6 +1,6 @@
 use crate::layer::Layer;
 use crate::packet_display::PacketDisplay;
-use crate::pfield::{Field, FieldType};
+use field::pfield::{Field, FieldType};
 
 use byteorder::{BigEndian, ByteOrder};
 /*
