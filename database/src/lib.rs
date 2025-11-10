@@ -3,7 +3,6 @@ pub mod config;
 pub mod cursor;
 pub mod dbconfig;
 pub mod dbengine;
-pub mod dbstorage;
 pub mod exec_plan;
 pub mod file_manager;
 pub mod index_manager;
