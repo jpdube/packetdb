@@ -57,16 +57,6 @@ impl DBStorage {
         self.fields_list = fields;
     }
 
-    // fn record_size(&self) -> usize {
-    //     let mut count = 0;
-
-    //     for f in &self.fields_list {
-    //         count += f.type_len as usize
-    //     }
-
-    //     count
-    // }
-
     fn read_header(&mut self) -> Result<()> {
         let mut buffer: Vec<u8> = Vec::new();
         let mut reader = BufReader::new(File::open(&self.filename)?);
@@ -95,20 +85,12 @@ impl DBStorage {
             reader.read_exact(&mut buffer)?;
             let ftype = BigEndian::read_u16(&buffer);
 
-            // reader.read_exact(&mut buffer)?;
-            // let flen = BigEndian::read_u16(&buffer);
-
             reader.read_exact(&mut buffer)?;
             let fname_len = BigEndian::read_u16(&buffer);
 
             buffer.resize(fname_len as usize, 0);
             reader.read_exact(&mut buffer)?;
             let fname = str::from_utf8(&buffer)?;
-
-            // println!(
-            //     "{}:Type: {}, Header size: {}, Field name: {}",
-            //     i, ftype, header_size, fname
-            // );
 
             let field = Schema::new(ftype, fname);
             self.fields_list.push(field);
@@ -147,15 +129,6 @@ impl DBStorage {
                     field_len = field_def.type_len as usize;
                 }
 
-                // println!(
-                //     "RECORD: {:x?}",
-                //     Field::from_binary_to_field(
-                //         field_def.ftype,
-                //         field_def.name.clone(),
-                //         buffer[offset..offset + field_len].to_vec()
-                //     )
-                // );
-
                 offset += field_len;
             }
         }
@@ -182,7 +155,6 @@ impl DBStorage {
         writer.write_u16::<BigEndian>(buffer.len() as u16)?;
         writer.write_all(&buffer)?;
 
-        // self.index.create()?;
         Ok(())
     }
 
