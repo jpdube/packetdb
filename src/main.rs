@@ -37,46 +37,46 @@ fn test_db() {
     // dbnode.create().unwrap();
     // dbnode.add_record().unwrap();
 
-    let mut dbwriter = DBStorage::new("/opt/pcapdb/test_raw.pdb".to_string());
+    let mut dbwriter = DBStorage::new("/opt/pcapdb/test_raw", "ip_src_index");
 
     let mut fields_def: Vec<Schema> = Vec::new();
-    fields_def.push(Schema::new(field_type::IPV4, "ip.src".to_string()));
+    fields_def.push(Schema::new(field_type::IPV4, "ip.src"));
 
-    fields_def.push(Schema::new(field_type::IPV4, "ip.dst".to_string()));
+    fields_def.push(Schema::new(field_type::IPV4, "ip.dst"));
 
-    fields_def.push(Schema::new(field_type::INT16, "tcp.dport".to_string()));
+    fields_def.push(Schema::new(field_type::INT16, "tcp.dport"));
 
-    fields_def.push(Schema::new(field_type::INT16, "tcp.sport".to_string()));
-    fields_def.push(Schema::new(field_type::STRING, "port_name".to_string()));
+    fields_def.push(Schema::new(field_type::INT16, "tcp.sport"));
+    fields_def.push(Schema::new(field_type::STRING, "port_name"));
 
     dbwriter.define_fields(fields_def);
     dbwriter.create().unwrap();
 
-    let mut row = Row::new();
-    row.add(Field::set_field(
-        FieldType::Ipv4(0xc0a80310, 32),
-        "ip.src".to_string(),
-    ));
-    row.add(Field::set_field(
-        FieldType::Ipv4(0xc0a802b1, 32),
-        "ip.dst".to_string(),
-    ));
-
-    row.add(Field::set_field(FieldType::Int16(443), "dport".to_string()));
-
-    row.add(Field::set_field(
-        FieldType::Int16(31234),
-        "sport".to_string(),
-    ));
-
-    row.add(Field::set_field(
-        FieldType::String("iface_01".to_string()),
-        "iface.name".to_string(),
-    ));
-
     let mut data: Vec<Row> = Vec::new();
-    for _ in 0..4096 {
-        data.push(row.clone());
+    for i in 0..8 {
+        let mut row = Row::new();
+        row.add(Field::set_field(
+            FieldType::Ipv4(0xc0a80310, 32),
+            "ip.src".to_string(),
+        ));
+        row.add(Field::set_field(
+            FieldType::Ipv4(0xc0a802b1, 32),
+            "ip.dst".to_string(),
+        ));
+
+        row.add(Field::set_field(FieldType::Int16(443), "dport".to_string()));
+
+        row.add(Field::set_field(
+            FieldType::Int16(31234),
+            "sport".to_string(),
+        ));
+
+        row.add(Field::set_field(
+            FieldType::String(format!("iface-0{}", i * i)),
+            "iface.name".to_string(),
+        ));
+
+        data.push(row);
     }
 
     dbwriter.append(data).unwrap();
