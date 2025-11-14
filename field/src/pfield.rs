@@ -12,7 +12,7 @@ use serde_json::{Value, json};
 use std::fmt;
 use std::io::Write;
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Clone, PartialEq, Eq, Hash)]
 #[serde(untagged)]
 pub enum FieldType {
     Int64(u64),
@@ -50,7 +50,7 @@ impl fmt::Display for FieldType {
     }
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Clone, PartialEq, Eq, Hash)]
 pub struct Field {
     pub field: FieldType,
     pub name: String,
