@@ -4,7 +4,7 @@ use field::pfield::Field;
 use field::serialize_field::SerializeField;
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{BufReader, BufWriter, Read, Write};
+use std::io::{BufWriter, Write};
 
 struct Header {
     magic_no: u32,
@@ -62,14 +62,16 @@ impl StorageIndex {
     }
 
     pub fn save(&mut self) -> Result<()> {
+        println!("Saving index for: {}", self.fieldname);
+
         let mut writer = BufWriter::new(File::create(&self.filename)?);
 
         writer.write_all(&self.header.to_binary())?;
-        println!("Before save: {:?}", self.key_list);
+        // println!("Before save: {:?}", self.key_list);
         let mut buffer: Vec<u8> = Vec::new();
         let mut value_buffer: Vec<u8> = Vec::new();
         for (key, values) in self.key_list.iter() {
-            println!("INDEX Key: {key}, Value: {:?}", values);
+            // println!("INDEX Key: {key}, Value: {:?}", values);
 
             value_buffer.write_all(&key.field_to_binary())?;
 
