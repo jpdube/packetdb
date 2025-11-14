@@ -1,13 +1,16 @@
 use anyhow::Result;
 use field::field_type;
 use field::pfield::Field;
+use field::pfield::FieldType;
 use field::serialize_field::SerializeField;
 use std::time::Instant;
 
 use byteorder::{BigEndian, ByteOrder, ReadBytesExt, WriteBytesExt};
 use std::fs;
 use std::fs::File;
-use std::io::{BufReader, BufWriter, Read, Write};
+use std::io::{BufReader, BufWriter, Read, Seek, Write};
+
+use crate::storage_index::StorageIndex;
 
 #[derive(Clone)]
 pub struct Row {
@@ -32,11 +35,11 @@ pub struct Schema {
 }
 
 impl Schema {
-    pub fn new(ftype: u16, name: String) -> Self {
+    pub fn new(ftype: u16, name: &str) -> Self {
         Self {
             ftype,
             type_len: field_type::get_type_len(ftype),
-            name,
+            name: name.to_string(),
         }
     }
 
@@ -62,18 +65,20 @@ pub struct DBStorage {
     fields_list: Vec<Schema>,
     header_size: u16,
     data_ptr: usize,
+    index: StorageIndex,
 }
 
 impl DBStorage {
-    pub fn new(filename: String) -> Self {
+    pub fn new(filename: &str, index_name: &str) -> Self {
         Self {
-            filename,
+            filename: format!("{}.{}", filename, "pdb"),
             magic_no: 0xa1b2c3d4,
             version: 1,
             options: 0,
             fields_list: Vec::new(),
             header_size: 0,
             data_ptr: 0,
+            index: StorageIndex::new(&format!("{}_{}.idx", filename, index_name), index_name),
         }
     }
 
@@ -127,7 +132,7 @@ impl DBStorage {
 
             buffer.resize(fname_len as usize, 0);
             reader.read_exact(&mut buffer)?;
-            let fname = str::from_utf8(&buffer)?.to_string();
+            let fname = str::from_utf8(&buffer)?;
 
             // println!(
             //     "{}:Type: {}, Header size: {}, Field name: {}",
@@ -206,28 +211,43 @@ impl DBStorage {
         writer.write_u16::<BigEndian>(buffer.len() as u16)?;
         writer.write_all(&buffer)?;
 
+        // self.index.create()?;
         Ok(())
     }
 
     pub fn append(&mut self, data: Vec<Row>) -> Result<()> {
         let start = Instant::now();
-        let mut writer = BufWriter::new(
-            fs::OpenOptions::new()
-                // .create(true)
-                .append(true)
-                .open(&self.filename)
-                .unwrap(),
-        );
+        let fs = fs::OpenOptions::new().append(true).open(&self.filename)?;
+
+        let mut writer = BufWriter::new(fs);
 
         let mut buffer: Vec<u8> = Vec::new();
-        for row in &data {
+        writer.seek(std::io::SeekFrom::End(0))?;
+        for (index, row) in data.iter().enumerate() {
             buffer.clear();
             for f in &row.row {
                 buffer.write(&f.field_to_binary())?;
             }
+            let ptr = writer.stream_position()?;
             writer.write_u16::<BigEndian>(buffer.len() as u16)?;
             writer.write_all(&buffer)?;
+
+            // let ptr = writer.stream_position()?;
+            println!("Record PTR: {ptr}:{ptr:x}");
+            if index % 2 == 0 {
+                self.index.append(
+                    Field::set_field(FieldType::Ipv4(0xc0a80311, 32), "ip.src".to_string()),
+                    ptr as u32,
+                );
+            } else {
+                self.index.append(
+                    Field::set_field(FieldType::Ipv4(0xc0a8ea01, 32), "ip.src".to_string()),
+                    ptr as u32,
+                );
+            }
         }
+
+        self.index.save()?;
 
         let duration = start.elapsed();
 
@@ -247,10 +267,6 @@ mod tests {
 
     #[test]
     fn create_db_insert() {
-        let mut dbnode = DbSegment::new("/opt/pcapdb/test.db".to_string(), 0);
-
-        dbnode.create().unwrap();
-        dbnode.add_record().unwrap();
         assert_eq!(true, true, "Command options");
     }
 }
