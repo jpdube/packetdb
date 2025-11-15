@@ -175,10 +175,10 @@ impl SerializeField for Field {
 }
 
 impl Field {
-    pub fn set_field(field_type: FieldType, field_id: String) -> Self {
+    pub fn set_field(field_type: FieldType, field_id: &str) -> Self {
         Self {
             field: field_type,
-            name: field_id,
+            name: field_id.to_string(),
         }
     }
 

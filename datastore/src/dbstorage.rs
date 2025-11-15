@@ -179,12 +179,12 @@ impl DBStorage {
             println!("Record PTR: {ptr}:{ptr:x}");
             if index % 2 == 0 {
                 self.index.append(
-                    Field::set_field(FieldType::Ipv4(0xc0a80311, 32), "ip.src".to_string()),
+                    Field::set_field(FieldType::Ipv4(0xc0a80311, 32), "ip.src"),
                     ptr as u32,
                 );
             } else {
                 self.index.append(
-                    Field::set_field(FieldType::Ipv4(0xc0a8ea01, 32), "ip.src".to_string()),
+                    Field::set_field(FieldType::Ipv4(0xc0a8ea01, 32), "ip.src"),
                     ptr as u32,
                 );
             }

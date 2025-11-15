@@ -63,12 +63,12 @@ impl<'a> Sip<'a> {
 impl<'a> Layer for Sip<'a> {
     fn get_field(&self, field: String) -> Option<Field> {
         match field.as_str() {
-            "method" => Some(Field::set_field(FieldType::String(self.method()), field)),
+            "method" => Some(Field::set_field(FieldType::String(self.method()), &field)),
             "request_uri" => Some(Field::set_field(
                 FieldType::String(self.request_uri()),
-                field,
+                &field,
             )),
-            "version" => Some(Field::set_field(FieldType::String(self.version()), field)),
+            "version" => Some(Field::set_field(FieldType::String(self.version()), &field)),
             _ => None,
         }
     }

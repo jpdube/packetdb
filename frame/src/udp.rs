@@ -62,10 +62,10 @@ impl<'a> UdpFrame<'a> {
 impl<'a> Layer for UdpFrame<'a> {
     fn get_field(&self, field: String) -> Option<Field> {
         match field.as_str() {
-            "udp.sport" => Some(Field::set_field(FieldType::Int16(self.sport()), field)),
-            "udp.dport" => Some(Field::set_field(FieldType::Int16(self.dport()), field)),
-            "udp.length" => Some(Field::set_field(FieldType::Int16(self.length()), field)),
-            "udp.checksum" => Some(Field::set_field(FieldType::Int16(self.checksum()), field)),
+            "udp.sport" => Some(Field::set_field(FieldType::Int16(self.sport()), &field)),
+            "udp.dport" => Some(Field::set_field(FieldType::Int16(self.dport()), &field)),
+            "udp.length" => Some(Field::set_field(FieldType::Int16(self.length()), &field)),
+            "udp.checksum" => Some(Field::set_field(FieldType::Int16(self.checksum()), &field)),
             _ => None,
         }
     }

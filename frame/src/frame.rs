@@ -53,10 +53,10 @@ impl<'a> Layer for Frame<'a> {
 
     fn get_field(&self, field: String) -> Option<Field> {
         match field.as_str() {
-            "frame.timestamp" => Some(Field::set_field(FieldType::Int32(self.timestamp()), field)),
-            "frame.offset" => Some(Field::set_field(FieldType::Int32(self.ts_offset()), field)),
-            "frame.inclen" => Some(Field::set_field(FieldType::Int32(self.inc_len()), field)),
-            "frame.origlen" => Some(Field::set_field(FieldType::Int32(self.orig_len()), field)),
+            "frame.timestamp" => Some(Field::set_field(FieldType::Int32(self.timestamp()), &field)),
+            "frame.offset" => Some(Field::set_field(FieldType::Int32(self.ts_offset()), &field)),
+            "frame.inclen" => Some(Field::set_field(FieldType::Int32(self.inc_len()), &field)),
+            "frame.origlen" => Some(Field::set_field(FieldType::Int32(self.orig_len()), &field)),
 
             _ => None,
         }

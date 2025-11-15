@@ -56,25 +56,16 @@ fn test_db() {
     let mut data: Vec<Row> = Vec::new();
     for i in 0..8 {
         let mut row = Row::new();
-        row.add(Field::set_field(
-            FieldType::Ipv4(0xc0a80310, 32),
-            "ip.src".to_string(),
-        ));
-        row.add(Field::set_field(
-            FieldType::Ipv4(0xc0a802b1, 32),
-            "ip.dst".to_string(),
-        ));
+        row.add(Field::set_field(FieldType::Ipv4(0xc0a80310, 32), "ip.src"));
+        row.add(Field::set_field(FieldType::Ipv4(0xc0a802b1, 32), "ip.dst"));
 
-        row.add(Field::set_field(FieldType::Int16(443), "dport".to_string()));
+        row.add(Field::set_field(FieldType::Int16(443), "dport"));
 
-        row.add(Field::set_field(
-            FieldType::Int16(31234),
-            "sport".to_string(),
-        ));
+        row.add(Field::set_field(FieldType::Int16(31234), "sport"));
 
         row.add(Field::set_field(
             FieldType::String(format!("iface-0{}", i * i)),
-            "iface.name".to_string(),
+            "iface.name",
         ));
 
         data.push(row);

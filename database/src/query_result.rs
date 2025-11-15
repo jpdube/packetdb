@@ -60,10 +60,7 @@ impl QueryResult {
 
         for field in &self.model.select {
             if let Some(field_value) = pkt.get_field(field.name.clone()) {
-                record.add_field(Field::set_field(
-                    field_value.field.clone(),
-                    field.name.clone(),
-                ));
+                record.add_field(Field::set_field(field_value.field.clone(), &field.name));
 
                 if self.model.has_distinct {
                     distinct_key = format!("{}|{}", distinct_key, field_value.to_string());
@@ -72,10 +69,7 @@ impl QueryResult {
         }
 
         let pkt_id = pkt.get_id() as u64;
-        record.add_field(Field::set_field(
-            FieldType::Int64(pkt_id),
-            String::from("frame.id"),
-        ));
+        record.add_field(Field::set_field(FieldType::Int64(pkt_id), "frame.id"));
 
         if let Some(ts_temp) = pkt.get_field("frame.timestamp".to_string()) {
             let mut ts = ts_temp;
@@ -141,7 +135,7 @@ impl AggregateResult {
         for aggr in &self.model.aggr_list {
             let aggr_field = Field::set_field(
                 FieldType::Int64(aggr.compute(&self.pkt_list) as u64),
-                aggr.as_of().clone(),
+                &aggr.as_of().clone(),
             );
 
             record.add_field(aggr_field);
@@ -208,7 +202,7 @@ impl GroupBy {
                     field_value = FieldType::Int64(*gfield as u64);
                 }
 
-                let aggr_field = Field::set_field(field_value, field_name);
+                let aggr_field = Field::set_field(field_value, &field_name);
                 // let aggr_field = Field::set_field_with_name(field_value, field_name);
 
                 record.add_field(aggr_field);
@@ -218,7 +212,7 @@ impl GroupBy {
                 let aggr_field = Field::set_field(
                     // let aggr_field = Field::set_field_with_name(
                     FieldType::Int32(aggr.compute(grp) as u32),
-                    aggr.as_of().clone(),
+                    &aggr.as_of().clone(),
                 );
 
                 record.add_field(aggr_field);

@@ -98,45 +98,48 @@ impl<'a> Layer for Ntp<'a> {
         match field.as_str() {
             "ntp.leap_indicator" => Some(Field::set_field(
                 FieldType::Int8(self.leap_indicator()),
-                field,
+                &field,
             )),
 
-            "ntp.version" => Some(Field::set_field(FieldType::Int8(self.version_no()), field)),
-            "ntp.mode" => Some(Field::set_field(FieldType::Int8(self.mode()), field)),
-            "mtp.mode_label" => Some(Field::set_field(FieldType::String(self.mode_str()), field)),
+            "ntp.version" => Some(Field::set_field(FieldType::Int8(self.version_no()), &field)),
+            "ntp.mode" => Some(Field::set_field(FieldType::Int8(self.mode()), &field)),
+            "mtp.mode_label" => Some(Field::set_field(FieldType::String(self.mode_str()), &field)),
 
-            "ntp.stratum" => Some(Field::set_field(FieldType::Int8(self.stratum()), field)),
-            "ntp.poll" => Some(Field::set_field(FieldType::Int8(self.poll()), field)),
-            "ntp.precision" => Some(Field::set_field(FieldType::Int8(self.precision()), field)),
-            "ntp.root_delay" => Some(Field::set_field(FieldType::Int32(self.root_delay()), field)),
+            "ntp.stratum" => Some(Field::set_field(FieldType::Int8(self.stratum()), &field)),
+            "ntp.poll" => Some(Field::set_field(FieldType::Int8(self.poll()), &field)),
+            "ntp.precision" => Some(Field::set_field(FieldType::Int8(self.precision()), &field)),
+            "ntp.root_delay" => Some(Field::set_field(
+                FieldType::Int32(self.root_delay()),
+                &field,
+            )),
             "ntp.root_dispersion" => Some(Field::set_field(
                 FieldType::Int32(self.root_dispersion()),
-                field,
+                &field,
             )),
-            "ntp.ref_id" => Some(Field::set_field(FieldType::Int32(self.ref_id()), field)),
+            "ntp.ref_id" => Some(Field::set_field(FieldType::Int32(self.ref_id()), &field)),
             "ntp.ref_timestamp" => Some(Field::set_field(
                 FieldType::Int64(self.ref_timestamp()),
-                field,
+                &field,
             )),
             "ntp.origin_timestamp" => Some(Field::set_field(
                 FieldType::Int64(self.origin_timestamp()),
-                field,
+                &field,
             )),
             "ntp.recv_timestamp" => Some(Field::set_field(
                 FieldType::Int64(self.recv_timestamp()),
-                field,
+                &field,
             )),
             "ntp.xmit_timestamp" => Some(Field::set_field(
                 FieldType::Int64(self.xmit_timestamp()),
-                field,
+                &field,
             )),
             "ntp.opt_extension" => Some(Field::set_field(
                 FieldType::Int32(self.optional_ext()),
-                field,
+                &field,
             )),
             "ntp.key_id" => Some(Field::set_field(
                 FieldType::ByteArray(self.msg_digest()),
-                field,
+                &field,
             )),
             _ => None,
         }
