@@ -129,8 +129,17 @@ impl DBStorage {
                     field_len = field_def.type_len as usize;
                 }
 
+                let field = Field::from_binary_to_field(
+                    field_def.ftype,
+                    &field_def.name,
+                    buffer[offset..(offset + field_len)].to_vec(),
+                );
+
+                println!("Field read: {field}");
+
                 offset += field_len;
             }
+            println!("---------------------------------");
         }
 
         println!("READ {rec_count} Records");
