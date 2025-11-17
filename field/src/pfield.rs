@@ -66,7 +66,7 @@ impl SerializeField for Field {
     fn from_binary_to_field(
         // &self,
         field_type: u16,
-        field_name: String,
+        field_name: &str,
         value: Vec<u8>,
     ) -> Self {
         let ret_field_type: FieldType;
@@ -101,7 +101,7 @@ impl SerializeField for Field {
 
         Self {
             field: ret_field_type,
-            name: field_name,
+            name: field_name.to_string(),
         }
     }
 
