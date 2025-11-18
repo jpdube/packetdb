@@ -129,17 +129,17 @@ impl DBStorage {
                     field_len = field_def.type_len as usize;
                 }
 
-                let field = Field::from_binary_to_field(
+                let _field = Field::from_binary_to_field(
                     field_def.ftype,
                     &field_def.name,
                     buffer[offset..(offset + field_len)].to_vec(),
                 );
 
-                println!("Field read: {field}");
+                // println!("Field read: {field}");
 
                 offset += field_len;
             }
-            println!("---------------------------------");
+            // println!("---------------------------------");
         }
 
         println!("READ {rec_count} Records");
@@ -185,7 +185,7 @@ impl DBStorage {
             writer.write_all(&buffer)?;
 
             // let ptr = writer.stream_position()?;
-            println!("Record PTR: {ptr}:{ptr:x}");
+            // println!("Record PTR: {ptr}:{ptr:x}");
             if index % 2 == 0 {
                 self.index.append(
                     Field::set_field(FieldType::Ipv4(0xc0a80311, 32), "ip.src"),
