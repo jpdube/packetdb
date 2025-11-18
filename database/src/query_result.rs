@@ -135,7 +135,7 @@ impl AggregateResult {
         for aggr in &self.model.aggr_list {
             let aggr_field = Field::set_field(
                 FieldType::Int64(aggr.compute(&self.pkt_list) as u64),
-                &aggr.as_of().clone(),
+                &aggr.as_of(),
             );
 
             record.add_field(aggr_field);
