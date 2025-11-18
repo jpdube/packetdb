@@ -1,4 +1,3 @@
-pub mod cursor;
 pub mod dbconfig;
 pub mod dbengine;
 pub mod exec_plan;
@@ -6,4 +5,3 @@ pub mod file_manager;
 pub mod index_manager;
 pub mod init_db;
 pub mod proto_index;
-pub mod query_result;

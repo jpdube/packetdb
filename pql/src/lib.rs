@@ -1,6 +1,9 @@
+pub mod aggregate;
+pub mod cursor;
 pub mod interpreter;
 pub mod keywords;
 pub mod lexer;
 pub mod parse;
 pub mod preparser;
+pub mod query_result;
 pub mod token;

@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 frame = { path = "../frame/"}
+field = { path = "../field/"}
 log = "0.4.22"
 toml = "0.7.4"
 lazy_static = "1.4.0"

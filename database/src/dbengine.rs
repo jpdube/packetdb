@@ -1,15 +1,15 @@
-use crate::cursor::Cursor;
 use crate::exec_plan::ExecutionPlan;
 use crate::index_manager::IndexManager;
 use crate::proto_index::ProtoIndex;
-use crate::query_result::QueryResult;
 use dblib::config::CONFIG;
 use frame::layer_index::LayerIndex;
 use frame::packet::Packet;
 use pcap::packet_ptr::PacketPtr;
 use pcap::pcapfile::PcapFile;
+use pql::cursor::Cursor;
 use pql::interpreter::Interpreter;
 use pql::parse::Parse;
+use pql::query_result::QueryResult;
 
 use anyhow::Result;
 use log::{debug, info};
