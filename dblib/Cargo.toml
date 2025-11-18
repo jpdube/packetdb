@@ -1,0 +1,12 @@
+[package]
+name = "dblib"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+frame = { path = "../frame/"}
+log = "0.4.22"
+toml = "0.7.4"
+lazy_static = "1.4.0"
+serde = { version = "1.0.160", features = ["derive"] }
+serde_derive = "1.0.136"

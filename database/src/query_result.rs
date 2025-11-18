@@ -4,9 +4,9 @@ use std::usize;
 use frame::packet::Packet;
 
 use crate::cursor::{Cursor, Record};
-use crate::parse::PqlStatement;
 use field::pfield::{Field, FieldType};
 use log::debug;
+use pql::parse::PqlStatement;
 
 pub struct QueryResult {
     model: PqlStatement,

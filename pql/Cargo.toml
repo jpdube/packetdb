@@ -1,0 +1,14 @@
+[package]
+name = "pql"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+chrono = "0.4.38"
+anyhow = "1.0.75"
+regex = "1.7.0"
+log = "0.4.22"
+field = {path = "../field/"}
+frame = {path = "../frame/"}
+dblib = {path = "../dblib/"}
+pcap = { path = "../pcap/"}

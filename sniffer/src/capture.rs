@@ -1,9 +1,9 @@
 use crate::packet_ref::PacketRef;
 use anyhow::Result;
 use byteorder::{LittleEndian, WriteBytesExt};
-use database::config::CONFIG;
 use database::dbconfig::DBConfig;
 use database::index_manager::IndexManager;
+use dblib::config::CONFIG;
 use pcap::Capture;
 use std::fs::File;
 use std::io::{BufWriter, Write};

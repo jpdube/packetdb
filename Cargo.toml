@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [workspace]
-members = ["frame", "database",  "sniffer", "field", "datastore"]
+members = ["frame", "database",  "sniffer", "field", "datastore", "pql", "dblib", "pcap"]
 
 [dependencies]
 frame = { path = "./frame/" }
@@ -12,6 +12,7 @@ database = { path = "./database/" }
 sniffer = {path = "./sniffer/"}
 field = {path = "./field/"}
 datastore = {path = "./datastore/"}
+dblib = {path = "./dblib/"}
 lazy_static = "1.4.0"
 log = "0.4.17"
 env_logger = "0.10.0"

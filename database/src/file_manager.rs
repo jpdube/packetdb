@@ -3,7 +3,7 @@ use filetime::FileTime;
 use std::fs;
 use std::path::Path;
 
-use crate::config::CONFIG;
+use dblib::config::CONFIG;
 
 pub fn clean_indexes() {
     clean_index();

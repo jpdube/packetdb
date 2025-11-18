@@ -1,12 +1,12 @@
 // use chrono::{Local, TimeZone};
 use std::fmt::Display;
 
-use crate::packet_ptr::PacketPtr;
 use crate::parse::{Expression, Operator, PqlStatement};
-use crate::seek_packet::SeekPacket;
 use field::ipv4_address::IPv4;
 use field::pfield::FieldType;
 use frame::packet::Packet;
+use pcap::packet_ptr::PacketPtr;
+use pcap::seek_packet::SeekPacket;
 use regex::Regex;
 
 #[derive(Debug, PartialEq, Eq, Clone)]

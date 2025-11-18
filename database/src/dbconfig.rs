@@ -1,5 +1,5 @@
-use crate::config::CONFIG;
 use anyhow::Result;
+use dblib::config::CONFIG;
 use rusqlite::Connection;
 
 struct FileID {
