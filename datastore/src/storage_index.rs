@@ -6,6 +6,25 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 
+//                      Index file structure
+// +------------------------------+--------------+---------------+
+// |           Magic no           |   Version    |    Options    |
+// |             u32              |     u16      |      u16      |
+// |                              |              |               |
+// +---------------+--------------+--------------+---------------+
+// |  Field type   |   FieldLen   |          Fieldname           |
+// |      u16      |     u16      |             [u8]             |
+// |               |              |                              |
+// +---------------+--------------+------------------------------+
+// |        Index (1) size        |        Index (1) data        |
+// |             u32              |             [u8]             |
+// |                              |                              |
+// +------------------------------+------------------------------+
+// |        Index (n) size        |        Index (n) data        |
+// |             u32              |             [u8]             |
+// |                              |                              |
+// +------------------------------+------------------------------+
+
 struct Header {
     magic_no: u32,
     version: u16,
@@ -66,8 +85,13 @@ impl StorageIndex {
 
         let mut writer = BufWriter::new(File::create(&self.filename)?);
 
+        // Write the header of the index
         writer.write_all(&self.header.to_binary())?;
-        // println!("Before save: {:?}", self.key_list);
+
+        writer.write_u16::<BigEndian>(self.fieldname.len() as u16)?;
+        writer.write_all(&self.fieldname.clone().into_bytes())?;
+
+        // Write the index to disk
         let mut buffer: Vec<u8> = Vec::new();
         let mut value_buffer: Vec<u8> = Vec::new();
         for (key, values) in self.key_list.iter() {
@@ -85,13 +109,6 @@ impl StorageIndex {
             value_buffer.clear();
         }
         writer.write_all(&buffer)?;
-
-        Ok(())
-    }
-
-    pub fn create(&mut self) -> Result<()> {
-        let mut writer = BufWriter::new(File::create(&self.filename)?);
-        writer.write_all(&self.header.to_binary())?;
 
         Ok(())
     }
