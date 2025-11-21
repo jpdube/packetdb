@@ -1,8 +1,9 @@
 use byteorder::{BigEndian, WriteBytesExt};
 use field::field_type;
+use std::fmt;
 use std::io::Write;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Schema {
     pub ftype: u16,
     pub type_len: u16,
@@ -18,7 +19,7 @@ impl Schema {
         }
     }
 
-    pub fn to_binary(&self) -> Vec<u8> {
+    pub fn into_bytes(&self) -> Vec<u8> {
         let mut result: Vec<u8> = Vec::new();
 
         result.write_u16::<BigEndian>(self.ftype).unwrap();
@@ -29,5 +30,15 @@ impl Schema {
         result.write(&self.name.clone().into_bytes()).unwrap();
 
         result
+    }
+}
+
+impl fmt::Display for Schema {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "SCHEMA: Type: {}, Length: {}, Name: {}",
+            self.ftype, self.type_len, self.name
+        )
     }
 }

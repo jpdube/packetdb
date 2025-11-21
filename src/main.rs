@@ -4,8 +4,9 @@ pub mod jwebtoken;
 use crate::api_server::web_main;
 use database::dbengine::DbEngine;
 use database::init_db::InitDb;
-use datastore::dbstorage::{DBStorage, Row};
+use datastore::row::Row;
 use datastore::schema::Schema;
+use datastore::table::DBTable;
 use dblib::config::CONFIG;
 use field::field_type;
 use field::pfield::{Field, FieldType};
@@ -38,7 +39,18 @@ fn test_db() {
     // dbnode.create().unwrap();
     // dbnode.add_record().unwrap();
 
-    let mut dbwriter = DBStorage::new("/opt/pcapdb/test_raw", "ip_src_index");
+    let mut db = DBTable::new("/opt/pcapdb/new_table");
+    db.create_table(
+        vec![
+            Schema::new(field_type::IPV4, "ip.src"),
+            Schema::new(field_type::IPV4, "ip.dst"),
+        ],
+        vec![
+            Schema::new(field_type::IPV4, "ip.src"),
+            Schema::new(field_type::INT16, "tcp.dport"),
+        ],
+    )
+    .unwrap();
 
     let mut fields_def: Vec<Schema> = Vec::new();
     fields_def.push(Schema::new(field_type::IPV4, "ip.src"));
@@ -49,31 +61,42 @@ fn test_db() {
 
     fields_def.push(Schema::new(field_type::INT16, "tcp.sport"));
     fields_def.push(Schema::new(field_type::STRING, "port_name"));
+    fields_def.push(Schema::new(field_type::BYTE_ARRAY, "raw_packet"));
 
-    dbwriter.define_fields(fields_def);
-    dbwriter.create().unwrap();
+    // let mut dbwriter = DBStorage::new("/opt/pcapdb/test_raw");
+    // dbwriter.define_fields(fields_def);
+    // dbwriter.create().unwrap();
 
     let mut data: Vec<Row> = Vec::new();
-    for i in 0..8 {
+    let mut raw_packet: Vec<u8> = Vec::new();
+    raw_packet.resize(8, 0xaa);
+
+    for i in 0..1024 {
         let mut row = Row::new();
         row.add(Field::set_field(FieldType::Ipv4(0xc0a80310, 32), "ip.src"));
         row.add(Field::set_field(FieldType::Ipv4(0xc0a802b1, 32), "ip.dst"));
 
-        row.add(Field::set_field(FieldType::Int16(443), "dport"));
+        row.add(Field::set_field(FieldType::Int16(443), "tcp.dport"));
 
-        row.add(Field::set_field(FieldType::Int16(31234), "sport"));
+        row.add(Field::set_field(FieldType::Int16(31234), "tcp.sport"));
 
         row.add(Field::set_field(
             FieldType::String(format!("iface-0{}", i * i)),
             "iface.name",
         ));
 
+        row.add(Field::set_field(
+            FieldType::ByteArray(raw_packet.clone()),
+            // FieldType::ByteArray(vec![0x00, 0x01, 0x02, 0x03, 0x04]),
+            "raw_packet",
+        ));
+
         data.push(row);
     }
 
-    dbwriter.append(data).unwrap();
+    db.append(data).unwrap();
 
-    dbwriter.read_record().unwrap();
+    db.read_record().unwrap();
 }
 
 fn process_params() {

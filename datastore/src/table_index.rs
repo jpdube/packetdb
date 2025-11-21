@@ -1,8 +1,11 @@
+use crate::row::Row;
+use crate::schema::Schema;
 use anyhow::Result;
 use byteorder::{BigEndian, WriteBytesExt};
 use field::pfield::Field;
 use field::serialize_field::SerializeField;
 use std::collections::HashMap;
+use std::fmt;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 
@@ -25,6 +28,7 @@ use std::io::{BufWriter, Write};
 // |                              |                              |
 // +------------------------------+------------------------------+
 
+#[derive(Clone)]
 struct Header {
     magic_no: u32,
     version: u16,
@@ -34,7 +38,7 @@ struct Header {
 impl Header {
     pub fn new() -> Self {
         Self {
-            magic_no: 0x11223344,
+            magic_no: 0x1a2b3c4d,
             version: 1,
             options: 0,
         }
@@ -51,33 +55,46 @@ impl Header {
     }
 }
 
-pub struct StorageIndex {
+#[derive(Clone)]
+pub struct TableIndex {
     filename: String,
-    fieldname: String,
+    fieldname: Schema,
     key_list: HashMap<Field, Vec<u32>>,
     write_ptr: usize,
     header: Header,
 }
 
-impl StorageIndex {
-    pub fn new(filename: &str, fieldname: &str) -> Self {
+impl fmt::Display for TableIndex {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "Filename: {}, Fieldname: {}",
+            self.filename, self.fieldname
+        )
+    }
+}
+
+impl TableIndex {
+    pub fn new(filename: &str, fieldname: Schema) -> Self {
         Self {
-            filename: filename.to_string(),
-            fieldname: fieldname.to_string(),
+            filename: format!("{}_{}.idx", filename, fieldname.name),
+            fieldname,
             key_list: HashMap::new(),
             write_ptr: 0,
             header: Header::new(),
         }
     }
 
-    pub fn append(&mut self, field: Field, ptr: u32) {
-        if let Some(key) = self.key_list.get_mut(&field) {
-            key.push(ptr);
-        } else {
-            self.key_list.insert(field, vec![ptr]);
-        }
+    pub fn append(&mut self, row: Row, ptr: u32) {
+        if let Some(field) = row.get_field(&self.fieldname.name) {
+            if let Some(key) = self.key_list.get_mut(&field) {
+                key.push(ptr);
+            } else {
+                self.key_list.insert(field, vec![ptr]);
+            }
 
-        self.write_ptr += 1;
+            self.write_ptr += 1;
+        }
     }
 
     pub fn save(&mut self) -> Result<()> {
@@ -88,8 +105,8 @@ impl StorageIndex {
         // Write the header of the index
         writer.write_all(&self.header.to_binary())?;
 
-        writer.write_u16::<BigEndian>(self.fieldname.len() as u16)?;
-        writer.write_all(&self.fieldname.clone().into_bytes())?;
+        // writer.write_u16::<BigEndian>(self.fieldname.len() as u16)?;
+        writer.write_all(&self.fieldname.into_bytes())?;
 
         // Write the index to disk
         let mut buffer: Vec<u8> = Vec::new();
