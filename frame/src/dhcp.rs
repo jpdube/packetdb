@@ -102,7 +102,7 @@ impl DomainName {
     }
 
     pub fn value(&self) -> String {
-        str::from_utf8(&self._raw_data[0..0 + (self._length as usize) - 1])
+        str::from_utf8(&self._raw_data[0..(self._length as usize) - 1])
             .unwrap()
             .to_string()
     }
@@ -229,7 +229,7 @@ impl ClientIdentifier {
     }
 
     pub fn mac_addr(&self) -> u64 {
-        BigEndian::read_u48(&self._raw_data[1..7]) as u64
+        BigEndian::read_u48(&self._raw_data[1..7])
     }
 }
 
@@ -248,7 +248,7 @@ impl Hostname {
     }
 
     pub fn value(&self) -> String {
-        str::from_utf8(&self._raw_data[0..0 + self._length as usize])
+        str::from_utf8(&self._raw_data[0..self._length as usize])
             .unwrap()
             .to_string()
     }
@@ -328,7 +328,7 @@ impl VendorClassID {
     }
 
     pub fn value(&self) -> String {
-        str::from_utf8(&self._raw_data[0..0 + (self._length) as usize])
+        str::from_utf8(&self._raw_data[0..self._length as usize])
             .unwrap()
             .to_string()
     }
@@ -349,7 +349,7 @@ impl VendorInfo {
     }
 
     pub fn value(&self) -> Vec<u8> {
-        self._raw_data[0..0 + (self._length) as usize].to_vec()
+        self._raw_data[0..self._length as usize].to_vec()
     }
 }
 
@@ -451,19 +451,19 @@ impl<'a> Dhcp<'a> {
     }
 
     pub fn op(&self) -> u8 {
-        self.raw_data[0] as u8
+        self.raw_data[0]
     }
 
     pub fn htype(&self) -> u8 {
-        self.raw_data[1] as u8
+        self.raw_data[1]
     }
 
     pub fn hlen(&self) -> u8 {
-        self.raw_data[2] as u8
+        self.raw_data[2]
     }
 
     pub fn hops(&self) -> u8 {
-        self.raw_data[3] as u8
+        self.raw_data[3]
     }
 
     pub fn xid(&self) -> u32 {
@@ -495,7 +495,7 @@ impl<'a> Dhcp<'a> {
     }
 
     pub fn chaddr(&self) -> MacAddr {
-        MacAddr::set_from_int(&(BigEndian::read_u48(&self.raw_data[28..34]) as u64))
+        MacAddr::set_from_int(&(BigEndian::read_u48(&self.raw_data[28..34])))
     }
 
     pub fn server_name(&self) -> String {
@@ -507,51 +507,31 @@ impl<'a> Dhcp<'a> {
     }
 
     pub fn ip_lease_time(&self, field: &str) -> Option<Field> {
-        if let Some(ip_lease) = &self.ip_addr_lease_time {
-            Some(Field::set_field(
-                FieldType::TimeValue(ip_lease.value()),
-                &field,
-            ))
-        } else {
-            None
-        }
+        self.ip_addr_lease_time
+            .as_ref()
+            .map(|ip_lease| Field::set_field(FieldType::TimeValue(ip_lease.value()), field))
     }
 
     pub fn rebinding_time(&self, field: &str) -> Option<Field> {
-        if let Some(rebind_time) = &self.rebinding_time {
-            Some(Field::set_field(
-                FieldType::TimeValue(rebind_time.value()),
-                &field,
-            ))
-        } else {
-            None
-        }
+        self.rebinding_time
+            .as_ref()
+            .map(|rebind_time| Field::set_field(FieldType::TimeValue(rebind_time.value()), field))
     }
 
     pub fn renewal_time(&self, field: &str) -> Option<Field> {
-        if let Some(renewal_time) = &self.renewal_time {
-            Some(Field::set_field(
-                FieldType::TimeValue(renewal_time.value()),
-                &field,
-            ))
-        } else {
-            None
-        }
+        self.renewal_time
+            .as_ref()
+            .map(|renewal_time| Field::set_field(FieldType::TimeValue(renewal_time.value()), field))
     }
 
     pub fn domain_name(&self, field: &str) -> Option<Field> {
-        if let Some(domain_name) = &self.domain_name {
-            Some(Field::set_field(
-                FieldType::String(domain_name.value()),
-                &field,
-            ))
-        } else {
-            None
-        }
+        self.domain_name
+            .as_ref()
+            .map(|domain_name| Field::set_field(FieldType::String(domain_name.value()), field))
     }
 
     pub fn client_ip(&self, field: &str) -> Option<Field> {
-        Some(Field::set_field(FieldType::Ipv4(self.ciaddr(), 32), &field))
+        Some(Field::set_field(FieldType::Ipv4(self.ciaddr(), 32), field))
     }
 
     pub fn domain_servers(&self, field: &str) -> Option<Field> {
@@ -562,152 +542,94 @@ impl<'a> Dhcp<'a> {
                 field_list.push(FieldType::Ipv4(ip, 32));
             }
 
-            Some(Field::set_field(FieldType::FieldArray(field_list), &field))
+            Some(Field::set_field(FieldType::FieldArray(field_list), field))
         } else {
             None
         }
     }
 
     pub fn router(&self, field: &str) -> Option<Field> {
-        if let Some(router) = &self.router {
-            Some(Field::set_field(
-                FieldType::Ipv4(router.value(), 32),
-                &field,
-            ))
-        } else {
-            None
-        }
+        self.router
+            .as_ref()
+            .map(|router| Field::set_field(FieldType::Ipv4(router.value(), 32), field))
     }
 
     pub fn subnet_mask(&self, field: &str) -> Option<Field> {
-        if let Some(mask) = &self.subnet_mask {
-            Some(Field::set_field(FieldType::Ipv4(mask.value(), 32), &field))
-        } else {
-            None
-        }
+        self.subnet_mask
+            .as_ref()
+            .map(|mask| Field::set_field(FieldType::Ipv4(mask.value(), 32), field))
     }
 
     pub fn server_id(&self, field: &str) -> Option<Field> {
-        if let Some(srv) = &self.server_id {
-            Some(Field::set_field(FieldType::Ipv4(srv.value(), 32), &field))
-        } else {
-            None
-        }
+        self.server_id
+            .as_ref()
+            .map(|srv| Field::set_field(FieldType::Ipv4(srv.value(), 32), field))
     }
 
     pub fn requested_id(&self, field: &str) -> Option<Field> {
-        if let Some(req_ip) = &self.requested_ip_addr {
-            Some(Field::set_field(
-                FieldType::Ipv4(req_ip.value(), 32),
-                &field,
-            ))
-        } else {
-            None
-        }
+        self.requested_ip_addr
+            .as_ref()
+            .map(|req_ip| Field::set_field(FieldType::Ipv4(req_ip.value(), 32), field))
     }
 
     pub fn client_id_hwnd_type(&self, field: &str) -> Option<Field> {
-        if let Some(client_id) = &self.client_id {
-            Some(Field::set_field(
-                FieldType::Int8(client_id.hwnd_type()),
-                &field,
-            ))
-        } else {
-            None
-        }
+        self.client_id
+            .as_ref()
+            .map(|client_id| Field::set_field(FieldType::Int8(client_id.hwnd_type()), field))
     }
 
     pub fn client_id_mac_addr(&self, field: &str) -> Option<Field> {
-        if let Some(client_id) = &self.client_id {
-            Some(Field::set_field(
-                FieldType::MacAddr(client_id.mac_addr()),
-                &field,
-            ))
-        } else {
-            None
-        }
+        self.client_id
+            .as_ref()
+            .map(|client_id| Field::set_field(FieldType::MacAddr(client_id.mac_addr()), field))
     }
 
     pub fn hostname(&self, field: &str) -> Option<Field> {
-        if let Some(hostname) = &self.hostname {
-            Some(Field::set_field(
-                FieldType::String(hostname.value()),
-                &field,
-            ))
-        } else {
-            None
-        }
+        self.hostname
+            .as_ref()
+            .map(|hostname| Field::set_field(FieldType::String(hostname.value()), field))
     }
 
     pub fn client_fqdn_flags(&self, field: &str) -> Option<Field> {
-        if let Some(client_id) = &self.client_fqdn {
-            Some(Field::set_field(FieldType::Int8(client_id.flags()), &field))
-        } else {
-            None
-        }
+        self.client_fqdn
+            .as_ref()
+            .map(|client_id| Field::set_field(FieldType::Int8(client_id.flags()), field))
     }
 
     pub fn client_fqdn_a_result(&self, field: &str) -> Option<Field> {
-        if let Some(client_id) = &self.client_fqdn {
-            Some(Field::set_field(
-                FieldType::Int8(client_id.a_rr_result()),
-                &field,
-            ))
-        } else {
-            None
-        }
+        self.client_fqdn
+            .as_ref()
+            .map(|client_id| Field::set_field(FieldType::Int8(client_id.a_rr_result()), field))
     }
 
     pub fn client_fqdn_ptr_rr_result(&self, field: &str) -> Option<Field> {
-        if let Some(client_id) = &self.client_fqdn {
-            Some(Field::set_field(
-                FieldType::Int8(client_id.ptr_rr_result()),
-                &field,
-            ))
-        } else {
-            None
-        }
+        self.client_fqdn.as_ref().map(|client_fqdn| {
+            Field::set_field(FieldType::Int8(client_fqdn.ptr_rr_result()), field)
+        })
     }
 
     pub fn client_fqdn_name(&self, field: &str) -> Option<Field> {
-        if let Some(client_id) = &self.client_fqdn {
-            Some(Field::set_field(
-                FieldType::String(client_id.client_name()),
-                &field,
-            ))
-        } else {
-            None
-        }
+        self.client_fqdn.as_ref().map(|client_fqdn| {
+            Field::set_field(FieldType::String(client_fqdn.client_name()), field)
+        })
     }
 
     pub fn vendor_class_id(&self, field: &str) -> Option<Field> {
-        if let Some(vendor) = &self.vendor_class_id {
-            Some(Field::set_field(FieldType::String(vendor.value()), &field))
-        } else {
-            None
-        }
+        self.vendor_class_id
+            .as_ref()
+            .map(|vendor| Field::set_field(FieldType::String(vendor.value()), field))
     }
 
     pub fn vendor_info(&self, field: &str) -> Option<Field> {
-        if let Some(vendor) = &self.vendor_info {
-            Some(Field::set_field(
-                FieldType::ByteArray(vendor.value()),
-                &&field,
-            ))
-        } else {
-            None
-        }
+        self.vendor_info
+            .as_ref()
+            .map(|vendor| Field::set_field(FieldType::ByteArray(vendor.value()), field))
     }
 
     pub fn param_req_list(&self, field: &str) -> Option<Field> {
-        if let Some(params) = &self.param_req_list {
-            Some(Field::set_field(
-                FieldType::ByteArray(params.value()),
-                &field,
-            ))
-        } else {
-            None
-        }
+        self.param_req_list
+            .as_ref()
+            .map(|params| Field::set_field(FieldType::ByteArray(params.value()), field))
     }
 
     //-------------------------------------------------------------
