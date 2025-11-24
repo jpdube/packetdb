@@ -5,8 +5,8 @@ use byteorder::{BigEndian, ByteOrder};
 use field::ipv4_address::IPv4;
 use field::ipv6_address::IPv6;
 use field::pfield::{Field, FieldType};
+use std::fmt;
 use std::str;
-use std::{fmt, usize};
 
 pub const DNS_TYPE_A: u16 = 1;
 pub const DNS_TYPE_AAAA: u16 = 28;
@@ -114,7 +114,7 @@ struct DnsKey {
     public_key: Vec<u8>,
 }
 
-impl<'a> fmt::Display for DnsKey {
+impl fmt::Display for DnsKey {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -198,8 +198,8 @@ impl fmt::Display for Answer {
             self.rdlength,
             self.cname,
             self.txt,
-            IPv4::new(self.ipv4_addr, 32).to_string(),
-            IPv6::new(self.ipv6_addr, 128).to_string(),
+            IPv4::new(self.ipv4_addr, 32),
+            IPv6::new(self.ipv6_addr, 128),
             self.asize,
             self.srv,
             self.dns_key.clone().unwrap(),
@@ -222,14 +222,12 @@ impl<'a> Answer {
         match str::from_utf8(&raw_data[index..index + txt_len]) {
             Ok(txt_value) => {
                 let txt = String::from(txt_value);
-                return Ok((txt.clone(), index + txt.len()));
+                Ok((txt.clone(), index + txt.len()))
             }
-            Err(msg) => {
-                return Err(format!(
-                    "Error reading TXT field: {} ID: {:x}, Length: {}:{:x}",
-                    msg, id, txt_len, txt_len
-                ));
-            }
+            Err(msg) => Err(format!(
+                "Error reading TXT field: {} ID: {:x}, Length: {}:{:x}",
+                msg, id, txt_len, txt_len
+            )),
         }
     }
 
@@ -252,7 +250,7 @@ impl<'a> Answer {
 
         match self.rtype {
             DNS_TYPE_CNAME => {
-                (self.cname, _) = get_name(&raw_data, index, id);
+                (self.cname, _) = get_name(raw_data, index, id);
                 self.asize = index + self.rdlength;
             }
             DNS_TYPE_A => {
@@ -292,15 +290,22 @@ impl<'a> Answer {
                 srv_rec.port = BigEndian::read_u16(&raw_data[index..index + 2]);
                 index += 2;
 
-                (srv_rec.target, label_size) = get_name(&raw_data, index, id);
+                (srv_rec.target, label_size) = get_name(raw_data, index, id);
 
                 self.asize = index + label_size;
                 self.srv = srv_rec;
             }
             DNS_TYPE_DNS_KEY => {
-                let mut dns_key = DnsKey::default();
+                // let a = A {
+                //     i: 42,
+                //     ..Default::default()
+                // };
 
-                dns_key.flags = BigEndian::read_u16(&raw_data[index..index + 2]);
+                let mut dns_key = DnsKey {
+                    flags: BigEndian::read_u16(&raw_data[index..index + 2]),
+                    ..Default::default()
+                };
+
                 index += 2;
 
                 dns_key.protocol = raw_data[index];
@@ -341,7 +346,7 @@ impl<'a> Answer {
                 rrsig.key_tag = BigEndian::read_u16(&raw_data[index..index + 2]);
                 index += 2;
 
-                (rrsig.signer_name, label_size) = get_name(&raw_data, index, id);
+                (rrsig.signer_name, label_size) = get_name(raw_data, index, id);
                 index += label_size;
 
                 let sig_len = index - start_pos;
@@ -352,10 +357,10 @@ impl<'a> Answer {
             DNS_TYPE_SOA => {
                 let mut soa = SOARecord::default();
 
-                (soa.name, label_size) = get_name(&raw_data, index, id);
+                (soa.name, label_size) = get_name(raw_data, index, id);
                 index += label_size;
 
-                (soa.auth_mailbox, label_size) = get_name(&raw_data, index, id);
+                (soa.auth_mailbox, label_size) = get_name(raw_data, index, id);
                 index += label_size;
 
                 soa.serial_no = BigEndian::read_u32(&raw_data[index..index + 4]);
@@ -448,16 +453,16 @@ impl<'a> Dns<'a> {
 
     fn set_index(&mut self, rtype: u16) {
         match rtype {
-            DNS_TYPE_A => self.type_index = self.type_index | INDEX_TYPE_A,
-            DNS_TYPE_AAAA => self.type_index = self.type_index | INDEX_TYPE_AAAA,
-            DNS_TYPE_CNAME => self.type_index = self.type_index | INDEX_TYPE_CNAME,
-            DNS_TYPE_MX => self.type_index = self.type_index | INDEX_TYPE_MX,
-            DNS_TYPE_PTR => self.type_index = self.type_index | INDEX_TYPE_PTR,
-            DNS_TYPE_RRSIG => self.type_index = self.type_index | INDEX_TYPE_RRSIG,
-            DNS_TYPE_SOA => self.type_index = self.type_index | INDEX_TYPE_SOA,
-            DNS_TYPE_SRV => self.type_index = self.type_index | INDEX_TYPE_SRV,
-            DNS_TYPE_TXT => self.type_index = self.type_index | INDEX_TYPE_TXT,
-            DNS_TYPE_DNS_KEY => self.type_index = self.type_index | INDEX_TYPE_DNSKEY,
+            DNS_TYPE_A => self.type_index |= INDEX_TYPE_A,
+            DNS_TYPE_AAAA => self.type_index |= INDEX_TYPE_AAAA,
+            DNS_TYPE_CNAME => self.type_index |= INDEX_TYPE_CNAME,
+            DNS_TYPE_MX => self.type_index |= INDEX_TYPE_MX,
+            DNS_TYPE_PTR => self.type_index |= INDEX_TYPE_PTR,
+            DNS_TYPE_RRSIG => self.type_index |= INDEX_TYPE_RRSIG,
+            DNS_TYPE_SOA => self.type_index |= INDEX_TYPE_SOA,
+            DNS_TYPE_SRV => self.type_index |= INDEX_TYPE_SRV,
+            DNS_TYPE_TXT => self.type_index |= INDEX_TYPE_TXT,
+            DNS_TYPE_DNS_KEY => self.type_index |= INDEX_TYPE_DNSKEY,
             _ => {}
         };
     }
@@ -520,7 +525,7 @@ impl<'a> Dns<'a> {
     }
 
     pub fn is_response(&self) -> bool {
-        self.is_query() == false
+        !self.is_query()
     }
 
     pub fn opcode(&self) -> u8 {
@@ -625,7 +630,7 @@ impl<'a> Layer for Dns<'a> {
                     }
                 }
 
-                if field_list.len() > 0 {
+                if !field_list.is_empty() {
                     Some(Field::set_field(FieldType::FieldArray(field_list), &field))
                 } else {
                     None
@@ -704,7 +709,7 @@ fn get_name(raw_packet: &[u8], start_pos: usize, id: u16) -> (String, usize) {
             break;
         }
 
-        if temp_name.len() != 0 {
+        if !temp_name.is_empty() {
             seperator = "."
         }
 
@@ -733,7 +738,7 @@ fn get_name(raw_packet: &[u8], start_pos: usize, id: u16) -> (String, usize) {
         label_offset += 1;
     }
 
-    return (temp_name, label_offset);
+    (temp_name, label_offset)
 }
 
 //------------------------------------------------------
