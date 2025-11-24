@@ -27,7 +27,8 @@ pub enum FieldType {
     MacAddr(u64),
     Bool(bool),
     ByteArray(Vec<u8>),
-    FieldArray(Vec<Box<FieldType>>),
+    FieldArray(Vec<FieldType>),
+    // FieldArray(Vec<Box<FieldType>>),
 }
 
 impl fmt::Display for FieldType {
@@ -113,7 +114,7 @@ impl SerializeField for Field {
         result
             .write_u16::<BigEndian>(self.name.len() as u16)
             .unwrap();
-        result.write(&self.name.clone().into_bytes()).unwrap();
+        result.write_all(&self.name.clone().into_bytes()).unwrap();
 
         result
     }
@@ -164,7 +165,7 @@ impl SerializeField for Field {
             }
             FieldType::ByteArray(value) => {
                 result.write_u16::<BigEndian>(value.len() as u16).unwrap();
-                result.write_all(&value).unwrap();
+                result.write_all(value).unwrap();
             }
             // FieldType::FieldArray(value) => json!(self.format_array(value.clone())),
             _ => {}
@@ -188,16 +189,16 @@ impl Field {
 
     pub fn get_type_len(&self) -> u16 {
         match &self.field {
-            FieldType::Bool(_) => 1 as u16,
-            FieldType::Int8(_) => 1 as u16,
-            FieldType::Int16(_) => 2 as u16,
-            FieldType::Int32(_) => 4 as u16,
-            FieldType::Int64(_) => 8 as u16,
-            FieldType::Ipv4(_, _) => 4 as u16,
-            FieldType::MacAddr(_) => 6 as u16,
-            FieldType::Timestamp(_) => 4 as u16,
-            FieldType::TimeValue(_) => 4 as u16,
-            FieldType::Ipv6(_, _) => 8 as u16,
+            FieldType::Bool(_) => 1,
+            FieldType::Int8(_) => 1,
+            FieldType::Int16(_) => 2,
+            FieldType::Int32(_) => 4,
+            FieldType::Int64(_) => 8,
+            FieldType::Ipv4(_, _) => 4,
+            FieldType::MacAddr(_) => 6,
+            FieldType::Timestamp(_) => 4,
+            FieldType::TimeValue(_) => 4,
+            FieldType::Ipv6(_, _) => 8,
             FieldType::ByteArray(value) => value.len() as u16,
             FieldType::String(value) => value.len() as u16,
             FieldType::FieldArray(value) => value.len() as u16,
@@ -232,7 +233,7 @@ impl Field {
             FieldType::Ipv6(address, mask) => json!(IPv6::new(*address, *mask).to_string()),
             FieldType::MacAddr(value) => json!(MacAddr::set_from_int(value).to_string()),
             FieldType::String(value) => json!(value),
-            FieldType::Timestamp(value) => json!(timestamp_str(&value)),
+            FieldType::Timestamp(value) => json!(timestamp_str(value)),
             FieldType::TimeValue(value) => json!(timevalue_str(value)),
             FieldType::Bool(value) => json!(value),
             FieldType::ByteArray(value) => json!(value),
@@ -240,11 +241,12 @@ impl Field {
         }
     }
 
-    fn format_array(&self, value: Vec<Box<FieldType>>) -> Vec<String> {
+    fn format_array(&self, value: Vec<FieldType>) -> Vec<String> {
+        // fn format_array(&self, value: Vec<Box<FieldType>>) -> Vec<String> {
         let mut result: Vec<String> = Vec::new();
 
         for field in value {
-            match *field {
+            match field {
                 FieldType::Ipv4(adr, mask) => result.push(IPv4::new(adr, mask).to_string()),
                 FieldType::Ipv6(adr, mask) => result.push(IPv6::new(adr, mask).to_string()),
                 FieldType::MacAddr(addr) => result.push(MacAddr::set_from_int(&addr).to_string()),
@@ -286,7 +288,7 @@ impl Field {
             FieldType::Int64(value) => value,
             FieldType::Bool(value) => value as u64,
             FieldType::Ipv4(value, _) => value as u64,
-            FieldType::MacAddr(value) => value as u64,
+            FieldType::MacAddr(value) => value,
             _ => 0,
         }
     }
@@ -321,23 +323,14 @@ impl Field {
             _ => 0,
         }
     }
-
-    pub fn to_string(&self) -> String {
-        match &self.field {
-            FieldType::String(value) => value.clone(),
-            _ => String::new(),
-        }
-    }
 }
 
 fn timevalue_str(tv: &u32) -> String {
-    let days: u32;
     let mut hours: u32 = 0;
 
-    let result: u32 = tv / 360 / 24;
-    days = result;
+    let days: u32 = tv / 360 / 24;
 
-    if tv % 360 != 0 {
+    if !tv.is_multiple_of(360) {
         hours = tv % 360 * 60;
     }
 
