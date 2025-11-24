@@ -98,17 +98,13 @@ impl Layer for Arp {
 
 impl PacketDisplay for Arp {
     fn summary(&self) -> String {
-        let result: String;
-
-        result = format!(
+        format!(
             "Eth -> SHA: {}, SPA: {} THA: {} TPA: {}\n",
             MacAddr::set_from_int(&self.get_sha()).to_string(),
             IPv4::new(self.get_spa(), 32).to_string(),
             MacAddr::set_from_int(&self.get_tha()).to_string(),
             IPv4::new(self.get_tpa(), 32).to_string(),
-        );
-
-        result
+        )
     }
 
     fn show_detail(&self) -> String {
