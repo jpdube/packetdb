@@ -1,15 +1,11 @@
 use field::pfield::Field;
 
-#[derive(Clone)]
+#[derive(Default, Clone)]
 pub struct Row {
     pub row: Vec<Field>,
 }
 
 impl Row {
-    pub fn new() -> Self {
-        Self { row: Vec::new() }
-    }
-
     pub fn add(&mut self, field: Field) {
         self.row.push(field);
     }
