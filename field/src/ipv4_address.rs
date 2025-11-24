@@ -10,7 +10,15 @@ pub struct IPv4 {
 
 impl fmt::Display for IPv4 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}/{}", self.to_string(), self.mask)
+        write!(
+            f,
+            "{}.{}.{}.{}/{}",
+            (self.address >> 24) as u8,
+            (self.address >> 16) as u8,
+            (self.address >> 8) as u8,
+            (self.address & 0xff) as u8,
+            self.mask
+        )
     }
 }
 
@@ -24,20 +32,6 @@ impl IPv4 {
             address: from_string_to_ip(ip_str),
             mask: 32,
         }
-    }
-
-    pub fn to_string(&self) -> String {
-        let result: String;
-
-        result = format!(
-            "{}.{}.{}.{}",
-            (self.address >> 24) as u8,
-            (self.address >> 16) as u8,
-            (self.address >> 8) as u8,
-            (self.address & 0xff) as u8
-        );
-
-        result
     }
 
     pub fn is_in_subnet(&self, sa: u32) -> bool {

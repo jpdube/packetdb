@@ -6,7 +6,16 @@ pub struct MacAddr {
 
 impl fmt::Display for MacAddr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.to_string())
+        write!(
+            f,
+            "{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}",
+            (self.address >> 40) as u8,
+            (self.address >> 32) as u8,
+            (self.address >> 24) as u8,
+            (self.address >> 16) as u8,
+            (self.address >> 8) as u8,
+            (self.address & 0xff) as u8
+        )
     }
 }
 
@@ -19,22 +28,6 @@ impl MacAddr {
         Self {
             address: string_mac_to_int(address),
         }
-    }
-
-    pub fn to_string(&self) -> String {
-        let result: String;
-
-        result = format!(
-            "{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}",
-            (self.address >> 40) as u8,
-            (self.address >> 32) as u8,
-            (self.address >> 24) as u8,
-            (self.address >> 16) as u8,
-            (self.address >> 8) as u8,
-            (self.address & 0xff) as u8
-        );
-
-        result
     }
 }
 
