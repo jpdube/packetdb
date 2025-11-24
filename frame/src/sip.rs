@@ -35,9 +35,9 @@ impl<'a> Sip<'a> {
         let (method, request_uri, version) = process_method(&packet);
         let myself = Sip {
             raw_packet: packet,
-            method: method,
-            request_uri: request_uri,
-            version: version,
+            method,
+            request_uri,
+            version,
         };
 
         myself
