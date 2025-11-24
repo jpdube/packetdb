@@ -556,10 +556,10 @@ impl<'a> Dhcp<'a> {
 
     pub fn domain_servers(&self, field: &str) -> Option<Field> {
         if let Some(iplt) = &self.dns_server {
-            let mut field_list: Vec<Box<FieldType>> = Vec::new();
+            let mut field_list: Vec<FieldType> = Vec::new();
 
             for ip in iplt.dns_ip() {
-                field_list.push(Box::new(FieldType::Ipv4(ip, 32)));
+                field_list.push(FieldType::Ipv4(ip, 32));
             }
 
             Some(Field::set_field(FieldType::FieldArray(field_list), &field))
