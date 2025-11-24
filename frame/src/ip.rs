@@ -69,15 +69,11 @@ impl<'a> Layer for IpFrame<'a> {
 
 impl<'a> PacketDisplay for IpFrame<'a> {
     fn summary(&self) -> String {
-        let result: String;
-
-        result = format!(
+        format!(
             "IP -> Src:{}, Dst:{}",
             IPv4::new(self.src(), 32),
             IPv4::new(self.dst(), 32),
-        );
-
-        result
+        )
     }
 
     fn show_detail(&self) -> String {
