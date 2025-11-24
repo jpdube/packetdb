@@ -22,7 +22,7 @@ pub fn get_type_len(field_type: u16) -> u16 {
         IPV4 => 4,
         MACADDR => 6,
         TIMESTAMP => 4,
-        TIMEVALUE => 4 as u16,
+        TIMEVALUE => 4,
         IPV6 => 8,
         _ => 0,
     }
