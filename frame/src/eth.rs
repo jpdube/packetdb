@@ -72,17 +72,13 @@ impl<'a> Layer for EtherFrame<'a> {
 
 impl<'a> PacketDisplay for EtherFrame<'a> {
     fn summary(&self) -> String {
-        let result: String;
-
-        result = format!(
+        format!(
             "Eth -> DMac: {}, SMac: {} Etype: {:04x} Vlan: {}\n",
             MacAddr::set_from_int(&self.dst()),
             MacAddr::set_from_int(&self.src()),
             self.ethertype(),
             self.vlan_id(),
-        );
-
-        result
+        )
     }
 
     fn show_detail(&self) -> String {
