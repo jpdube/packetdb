@@ -14,16 +14,16 @@ pub const FIELD_ARRAY: u16 = 0x0c;
 
 pub fn get_type_len(field_type: u16) -> u16 {
     match field_type {
-        BOOL => 1 as u16,
-        INT8 => 1 as u16,
-        INT16 => 2 as u16,
-        INT32 => 4 as u16,
-        INT64 => 8 as u16,
-        IPV4 => 4 as u16,
-        MACADDR => 6 as u16,
-        TIMESTAMP => 4 as u16,
+        BOOL => 1,
+        INT8 => 1,
+        INT16 => 2,
+        INT32 => 4,
+        INT64 => 8,
+        IPV4 => 4,
+        MACADDR => 6,
+        TIMESTAMP => 4,
         TIMEVALUE => 4 as u16,
-        IPV6 => 8 as u16,
-        _ => 0 as u16,
+        IPV6 => 8,
+        _ => 0,
     }
 }
