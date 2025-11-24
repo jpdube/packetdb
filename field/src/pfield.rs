@@ -28,7 +28,6 @@ pub enum FieldType {
     Bool(bool),
     ByteArray(Vec<u8>),
     FieldArray(Vec<FieldType>),
-    // FieldArray(Vec<Box<FieldType>>),
 }
 
 impl fmt::Display for FieldType {
@@ -242,7 +241,6 @@ impl Field {
     }
 
     fn format_array(&self, value: Vec<FieldType>) -> Vec<String> {
-        // fn format_array(&self, value: Vec<Box<FieldType>>) -> Vec<String> {
         let mut result: Vec<String> = Vec::new();
 
         for field in value {
