@@ -155,22 +155,18 @@ impl<'a> Layer for Icmp<'a> {
     }
 
     fn get_name(&self) -> String {
-        return "icmp".to_string();
+        "icmp".to_string()
     }
 }
 
 impl<'a> PacketDisplay for Icmp<'a> {
     fn summary(&self) -> String {
-        let result: String;
-
-        result = format!(
+        format!(
             "ICMP Echo -> Type: {}, Code: {}, Seq: {}",
             self.itype(),
             self.code(),
             self.seq_no(),
-        );
-
-        result
+        )
     }
 
     fn show_detail(&self) -> String {
