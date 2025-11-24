@@ -614,14 +614,14 @@ impl<'a> Layer for Dns<'a> {
                 &field,
             )),
             "dns.type_a" => {
-                let mut field_list: Vec<Box<FieldType>> = Vec::new();
+                let mut field_list: Vec<FieldType> = Vec::new();
 
                 if !self.has_type(DNS_TYPE_A) {
                     return None;
                 }
                 for answer in &self.answer_list {
                     if answer.rtype == DNS_TYPE_A {
-                        field_list.push(Box::new(FieldType::Ipv4(answer.ipv4_addr, 32)));
+                        field_list.push(FieldType::Ipv4(answer.ipv4_addr, 32));
                     }
                 }
 
@@ -636,10 +636,10 @@ impl<'a> Layer for Dns<'a> {
                 &field,
             )),
             "dns.answers" => {
-                let mut field_list: Vec<Box<FieldType>> = Vec::new();
+                let mut field_list: Vec<FieldType> = Vec::new();
 
                 for answer in &self.answer_list {
-                    field_list.push(Box::new(FieldType::String(answer.name.clone())));
+                    field_list.push(FieldType::String(answer.name.clone()));
                 }
 
                 Some(Field::set_field(FieldType::FieldArray(field_list), &field))
