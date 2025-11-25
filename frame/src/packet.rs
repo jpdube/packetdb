@@ -76,70 +76,50 @@ impl Packet {
     }
 
     fn get_ipv4_packet(&self) -> Option<IpFrame<'_>> {
-        if let Some(raw_pkt) = self.get_layer_bytes(LayerIndex::IPv4) {
-            return Some(IpFrame::new(raw_pkt));
-        } else {
-            return None;
-        }
+        self.get_layer_bytes(LayerIndex::IPv4)
+            .as_ref()
+            .map(|raw_pkt| IpFrame::new(raw_pkt))
     }
 
     fn get_tcp_packet(&self) -> Option<Tcp<'_>> {
-        if let Some(raw_pkt) = &self.get_layer_bytes(LayerIndex::TCP) {
-            let tcp = Tcp::new(raw_pkt);
-            return Some(tcp);
-        } else {
-            return None;
-        }
+        self.get_layer_bytes(LayerIndex::TCP)
+            .as_ref()
+            .map(|raw_pkt| Tcp::new(raw_pkt))
     }
 
     fn get_udp_packet(&self) -> Option<UdpFrame<'_>> {
-        if let Some(raw_pkt) = self.get_layer_bytes(LayerIndex::UDP) {
-            return Some(UdpFrame::new(raw_pkt));
-        } else {
-            return None;
-        }
+        self.get_layer_bytes(LayerIndex::UDP)
+            .as_ref()
+            .map(|raw_pkt| UdpFrame::new(raw_pkt))
     }
 
     fn get_eth_packet(&self) -> Option<EtherFrame<'_>> {
-        if let Some(raw_pkt) = self.get_layer_bytes(LayerIndex::ETH) {
-            return Some(EtherFrame::new(raw_pkt));
-        } else {
-            return None;
-        }
+        self.get_layer_bytes(LayerIndex::ETH)
+            .as_ref()
+            .map(|raw_pkt| EtherFrame::new(raw_pkt))
     }
 
     fn get_frame_packet(&self) -> Option<Frame<'_>> {
-        if let Some(raw_pkt) = self.get_layer_bytes(LayerIndex::FRAME) {
-            return Some(Frame::new(raw_pkt, self.little_endian));
-        } else {
-            return None;
-        }
+        self.get_layer_bytes(LayerIndex::FRAME)
+            .as_ref()
+            .map(|raw_pkt| Frame::new(raw_pkt, self.little_endian))
     }
 
     fn get_dns_packet(&self) -> Option<Dns<'_>> {
-        if let Some(raw_pkt) = self.get_layer_bytes(LayerIndex::DNS) {
-            let dns = Dns::new(raw_pkt);
-            return Some(dns);
-        } else {
-            return None;
-        }
+        self.get_layer_bytes(LayerIndex::DNS)
+            .as_ref()
+            .map(|raw_pkt| Dns::new(raw_pkt))
     }
 
     fn get_dhcp_packet(&self) -> Option<Dhcp<'_>> {
-        if let Some(raw_pkt) = self.get_layer_bytes(LayerIndex::DHCP) {
-            let dhcp = Dhcp::new(raw_pkt);
-            return Some(dhcp);
-        } else {
-            return None;
-        }
+        self.get_layer_bytes(LayerIndex::DHCP)
+            .as_ref()
+            .map(|raw_pkt| Dhcp::new(raw_pkt))
     }
     fn get_ntp_packet(&self) -> Option<Ntp<'_>> {
-        if let Some(raw_pkt) = self.get_layer_bytes(LayerIndex::NTP) {
-            let ntp = Ntp::new(raw_pkt);
-            return Some(ntp);
-        } else {
-            return None;
-        }
+        self.get_layer_bytes(LayerIndex::NTP)
+            .as_ref()
+            .map(|raw_pkt| Ntp::new(raw_pkt))
     }
 
     pub fn print_layers(&self) {
@@ -172,16 +152,10 @@ impl Packet {
         self.raw_packet = packet.clone();
 
         let header = BigEndian::read_u16(&self.raw_packet[12..14]);
-        let vo: usize;
-        let ip_header_len: usize;
 
-        if header == 0x8100 {
-            vo = 18;
-        } else {
-            vo = 14;
-        }
+        let vo: usize = if header == 0x8100 { 18 } else { 14 };
 
-        ip_header_len = (self.raw_packet[vo] as usize & 0x0f) * 4;
+        let ip_header_len: usize = (self.raw_packet[vo] as usize & 0x0f) * 4;
 
         let ether = EtherFrame::new(&packet[0..vo]);
 
@@ -247,33 +221,33 @@ impl Packet {
                             end_pos: self.raw_packet.len(),
                         });
 
-                        if let Some(dns) = self.get_udp_packet() {
-                            if dns.is_dns() {
-                                self.add_layer(LayerInfo {
-                                    layer_type: LayerIndex::DNS,
-                                    start_pos: vo + ip_header_len + dns.header_len(),
-                                    end_pos: self.raw_packet.len(),
-                                });
-                            }
+                        if let Some(dns) = self.get_udp_packet()
+                            && dns.is_dns()
+                        {
+                            self.add_layer(LayerInfo {
+                                layer_type: LayerIndex::DNS,
+                                start_pos: vo + ip_header_len + dns.header_len(),
+                                end_pos: self.raw_packet.len(),
+                            });
                         }
 
-                        if let Some(dhcp) = self.get_udp_packet() {
-                            if dhcp.is_dhcp() {
-                                self.add_layer(LayerInfo {
-                                    layer_type: LayerIndex::DHCP,
-                                    start_pos: vo + ip_header_len + dhcp.header_len(),
-                                    end_pos: self.raw_packet.len(),
-                                });
-                            }
+                        if let Some(dhcp) = self.get_udp_packet()
+                            && dhcp.is_dhcp()
+                        {
+                            self.add_layer(LayerInfo {
+                                layer_type: LayerIndex::DHCP,
+                                start_pos: vo + ip_header_len + dhcp.header_len(),
+                                end_pos: self.raw_packet.len(),
+                            });
                         }
-                        if let Some(ntp) = self.get_udp_packet() {
-                            if ntp.is_ntp() {
-                                self.add_layer(LayerInfo {
-                                    layer_type: LayerIndex::NTP,
-                                    start_pos: vo + ip_header_len + ntp.header_len(),
-                                    end_pos: self.raw_packet.len(),
-                                });
-                            }
+                        if let Some(ntp) = self.get_udp_packet()
+                            && ntp.is_ntp()
+                        {
+                            self.add_layer(LayerInfo {
+                                layer_type: LayerIndex::NTP,
+                                start_pos: vo + ip_header_len + ntp.header_len(),
+                                end_pos: self.raw_packet.len(),
+                            });
                         }
                     }
                     IP_ICMP_PROTO => {
@@ -317,28 +291,28 @@ impl Packet {
 
     pub fn has_https(&self) -> bool {
         if let Some(pkt) = self.get_tcp_packet() {
-            return pkt.is_https();
+            pkt.is_https()
         } else {
             false
         }
     }
     pub fn has_http(&self) -> bool {
         if let Some(pkt) = self.get_tcp_packet() {
-            return pkt.is_http();
+            pkt.is_http()
         } else {
             false
         }
     }
     pub fn has_ssh(&self) -> bool {
         if let Some(pkt) = self.get_tcp_packet() {
-            return pkt.is_ssh();
+            pkt.is_ssh()
         } else {
             false
         }
     }
     pub fn has_telnet(&self) -> bool {
         if let Some(pkt) = self.get_tcp_packet() {
-            return pkt.is_telnet();
+            pkt.is_telnet()
         } else {
             false
         }
@@ -346,7 +320,7 @@ impl Packet {
 
     pub fn has_rdp(&self) -> bool {
         if let Some(pkt) = self.get_tcp_packet() {
-            return pkt.is_rdp();
+            pkt.is_rdp()
         } else {
             false
         }
@@ -354,7 +328,7 @@ impl Packet {
 
     pub fn has_smb(&self) -> bool {
         if let Some(pkt) = self.get_tcp_packet() {
-            return pkt.is_smb();
+            pkt.is_smb()
         } else {
             false
         }
@@ -362,7 +336,7 @@ impl Packet {
 
     pub fn has_smtp(&self) -> bool {
         if let Some(pkt) = self.get_tcp_packet() {
-            return pkt.is_smtp();
+            pkt.is_smtp()
         } else {
             false
         }
@@ -370,34 +344,34 @@ impl Packet {
 
     pub fn has_dns(&self) -> bool {
         if let Some(pkt) = &self.get_udp_packet() {
-            return pkt.is_dns();
+            pkt.is_dns()
+        } else {
+            false
         }
-
-        false
     }
 
     pub fn has_snmp(&self) -> bool {
         if let Some(pkt) = &self.get_udp_packet() {
-            return pkt.is_snmp();
+            pkt.is_snmp()
+        } else {
+            false
         }
-
-        false
     }
 
     pub fn has_ntp(&self) -> bool {
         if let Some(pkt) = &self.get_udp_packet() {
-            return pkt.is_ntp();
+            pkt.is_ntp()
+        } else {
+            false
         }
-
-        false
     }
 
     pub fn has_dhcp(&self) -> bool {
         if let Some(pkt) = &self.get_udp_packet() {
-            return pkt.is_dhcp();
+            pkt.is_dhcp()
+        } else {
+            false
         }
-
-        false
     }
 
     fn field_type(&self, field: &str, field_base: u32) -> bool {
@@ -405,27 +379,27 @@ impl Packet {
 
         if base.len() == 2 {
             match field_base {
-                fields::FRAME_BASE => return base[0] == "frame",
-                fields::ETH_BASE => return base[0] == "eth",
-                fields::ARP_BASE => return base[0] == "arp",
-                fields::IPV4_BASE => return base[0] == "ip",
-                fields::TCP_BASE => return base[0] == "tcp",
-                fields::UDP_BASE => return base[0] == "udp",
-                fields::ICMP_BASE => return base[0] == "icmp",
-                fields::DNS_BASE => return base[0] == "dns",
-                fields::DHCP_BASE => return base[0] == "dhcp",
-                fields::NTP_BASE => return base[0] == "ntp",
-                _ => return false,
+                fields::FRAME_BASE => base[0] == "frame",
+                fields::ETH_BASE => base[0] == "eth",
+                fields::ARP_BASE => base[0] == "arp",
+                fields::IPV4_BASE => base[0] == "ip",
+                fields::TCP_BASE => base[0] == "tcp",
+                fields::UDP_BASE => base[0] == "udp",
+                fields::ICMP_BASE => base[0] == "icmp",
+                fields::DNS_BASE => base[0] == "dns",
+                fields::DHCP_BASE => base[0] == "dhcp",
+                fields::NTP_BASE => base[0] == "ntp",
+                _ => false,
             }
         } else {
-            return false;
+            false
         }
     }
 
     pub fn get_field(&self, field: String) -> Option<Field> {
         if self.field_type(&field, fields::ETH_BASE) && self.has_layer(LayerIndex::ETH) {
             if let Some(eth_packet) = self.get_eth_packet() {
-                return eth_packet.get_field(field);
+                eth_packet.get_field(field)
             } else {
                 None
             }
@@ -433,13 +407,13 @@ impl Packet {
             self.arp_packet.as_ref().unwrap().get_field(field)
         } else if self.field_type(&field, fields::TCP_BASE) && self.has_layer(LayerIndex::TCP) {
             if let Some(tcp_packet) = self.get_tcp_packet() {
-                return tcp_packet.get_field(field);
+                tcp_packet.get_field(field)
             } else {
                 None
             }
         } else if self.field_type(&field, fields::IPV4_BASE) && self.has_layer(LayerIndex::IPv4) {
             if let Some(ip_packet) = self.get_ipv4_packet() {
-                return ip_packet.get_field(field);
+                ip_packet.get_field(field)
             } else {
                 None
             }
@@ -488,8 +462,8 @@ impl Packet {
     pub fn get_id(&self) -> u64 {
         let mut result: u64 = self.file_id as u64;
 
-        result = result << 32;
-        result = result | self.pkt_ptr as u64;
+        result <<= 32;
+        result |= self.pkt_ptr as u64;
 
         result
     }
@@ -515,10 +489,11 @@ impl Packet {
                 let icmp = Icmp::new(pkt_bytes);
                 return icmp.payload_range(offset, len);
             }
-        } else if self.field_type(&field, fields::ETH_BASE) && self.has_layer(LayerIndex::ETH) {
-            if let Some(eth) = self.get_eth_packet() {
-                return eth.payload_range(offset, len);
-            }
+        } else if self.field_type(&field, fields::ETH_BASE)
+            && self.has_layer(LayerIndex::ETH)
+            && let Some(eth) = self.get_eth_packet()
+        {
+            return eth.payload_range(offset, len);
         }
 
         let pkt: Vec<u8> = Vec::new();
@@ -534,29 +509,29 @@ impl PacketDisplay for Packet {
             result += &eth.summary();
         }
 
-        if self.has_layer(LayerIndex::ETH) {
-            if let Some(ip) = self.get_ipv4_packet() {
-                result += &format!("  {}{}", ip.summary(), "\n");
-            }
+        if self.has_layer(LayerIndex::ETH)
+            && let Some(ip) = self.get_ipv4_packet()
+        {
+            result += &format!("  {}{}", ip.summary(), "\n");
         }
 
         if let Some(ip) = self.get_ipv4_packet() {
-            if ip.proto() == IP_TCP_PROTO {
-                if let Some(tcp) = self.get_tcp_packet() {
-                    result += &format!("    {}\n", &tcp.summary());
-                }
+            if ip.proto() == IP_TCP_PROTO
+                && let Some(tcp) = self.get_tcp_packet()
+            {
+                result += &format!("    {}\n", &tcp.summary());
             }
-            if ip.proto() == IP_UDP_PROTO {
-                if let Some(udp) = self.get_udp_packet() {
-                    result += &format!("    {}\n", &udp.summary());
-                }
+            if ip.proto() == IP_UDP_PROTO
+                && let Some(udp) = self.get_udp_packet()
+            {
+                result += &format!("    {}\n", &udp.summary());
             }
 
-            if ip.proto() == IP_ICMP_PROTO {
-                if let Some(pkt_bytes) = self.get_layer_bytes(LayerIndex::ICMP) {
-                    let icmp = Icmp::new(pkt_bytes);
-                    result += &format!("    {}\n", &icmp.summary());
-                }
+            if ip.proto() == IP_ICMP_PROTO
+                && let Some(pkt_bytes) = self.get_layer_bytes(LayerIndex::ICMP)
+            {
+                let icmp = Icmp::new(pkt_bytes);
+                result += &format!("    {}\n", &icmp.summary());
             }
         }
 
