@@ -1,7 +1,6 @@
 use anyhow::Result;
 use field::field_type;
 use field::pfield::Field;
-// use field::pfield::FieldType;
 use field::serialize_field::SerializeField;
 use std::time::Instant;
 
@@ -166,7 +165,7 @@ impl DBTable {
         buffer.write_u16::<BigEndian>(self.fields_list.len() as u16)?;
 
         for f in &self.fields_list {
-            buffer.write(&f.into_bytes())?;
+            buffer.write_all(&f.into_bytes())?;
         }
 
         writer.write_u16::<BigEndian>(buffer.len() as u16)?;
@@ -187,7 +186,7 @@ impl DBTable {
             let ptr = writer.stream_position()?;
             buffer.clear();
             for f in &row.row {
-                buffer.write(&f.field_to_binary())?;
+                buffer.write_all(&f.field_to_binary())?;
             }
 
             writer.write_u16::<BigEndian>(buffer.len() as u16)?;

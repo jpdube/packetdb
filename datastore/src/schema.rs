@@ -27,7 +27,7 @@ impl Schema {
         result
             .write_u16::<BigEndian>(self.name.len() as u16)
             .unwrap();
-        result.write(&self.name.clone().into_bytes()).unwrap();
+        result.write_all(&self.name.clone().into_bytes()).unwrap();
 
         result
     }
