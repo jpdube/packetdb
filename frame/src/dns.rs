@@ -190,7 +190,7 @@ impl fmt::Display for Answer {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "Label: {}, Type: {}, Class: {}, TTL: {},  Data length: {}, CNAME: {}, TXT: {}, IPv4 Address: {}, IPv6 Address: {}, Nbr bytes: {}, Srv: {}, Dns key: {}",
+            "Label: {}, Type: {}, Class: {}, TTL: {},  Data length: {}, CNAME: {}, TXT: {}, IPv4 Address: {}, IPv6 Address: {}, Nbr bytes: {}, Srv: {}, Dns key: {:?}",
             self.name,
             rtype_to_str(self.rtype),
             class_to_str(self.class),
@@ -202,7 +202,7 @@ impl fmt::Display for Answer {
             IPv6::new(self.ipv6_addr, 128),
             self.asize,
             self.srv,
-            self.dns_key.clone().unwrap(),
+            self.dns_key.clone(),
         )
     }
 }
