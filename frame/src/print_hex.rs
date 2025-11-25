@@ -2,9 +2,8 @@ pub fn format_hex(bytes: Vec<u8>) -> String {
     let mut count: usize = 0;
     let mut byte_count: usize = 0;
     let mut result: String = String::new();
-    let spacing: usize;
 
-    for i in bytes.to_owned() {
+    for i in bytes.clone() {
         if count == 0 {
             result.push_str(&format!("{:04x}: ", byte_count));
         }
@@ -14,7 +13,7 @@ pub fn format_hex(bytes: Vec<u8>) -> String {
         byte_count += 1;
 
         if count == 8 {
-            result.push_str(" ");
+            result.push(' ');
         }
 
         if count == 16 {
@@ -23,7 +22,9 @@ pub fn format_hex(bytes: Vec<u8>) -> String {
             count = 0;
         }
     }
-    spacing = (16 - count) * 3;
+
+    let spacing: usize = (16 - count) * 3;
+
     // if count <= 8 {
     //     spacing += 1;
     // }
@@ -41,10 +42,11 @@ fn get_char(bytes: Vec<u8>) -> String {
     let mut result: String = String::new();
 
     for i in bytes {
-        if i >= (0x21 as u8) && i <= (0x7e as u8) {
+        if (0x21..=0x7e).contains(&i) {
+            // if i >= 0x21 && i <= 0x7e {
             result.push(i as char);
         } else {
-            result.push_str("\u{00b7}");
+            result.push('\u{00b7}');
         }
     }
 

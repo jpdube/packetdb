@@ -32,15 +32,13 @@ pub struct Sip<'a> {
 
 impl<'a> Sip<'a> {
     pub fn new(packet: &'a [u8]) -> Self {
-        let (method, request_uri, version) = process_method(&packet);
-        let myself = Sip {
+        let (method, request_uri, version) = process_method(packet);
+        Sip {
             raw_packet: packet,
             method,
             request_uri,
             version,
-        };
-
-        myself
+        }
     }
 
     pub fn method(&self) -> String {
@@ -78,17 +76,13 @@ impl<'a> Layer for Sip<'a> {
     }
 
     fn get_name(&self) -> String {
-        return "icmp".to_string();
+        "icmp".to_string()
     }
 }
 
 impl<'a> PacketDisplay for Sip<'a> {
     fn summary(&self) -> String {
-        let result: String;
-
-        result = format!("SIP -> Method: {}", self.method(),);
-
-        result
+        format!("SIP -> Method: {}", self.method(),)
     }
 
     fn show_detail(&self) -> String {

@@ -470,19 +470,34 @@ impl<'a> Dns<'a> {
     fn has_type(&self, rtype: u16) -> bool {
         match rtype {
             DNS_TYPE_A => (self.type_index & INDEX_TYPE_A) == INDEX_TYPE_A,
-            DNS_TYPE_AAAA => (self.type_index | INDEX_TYPE_AAAA) == INDEX_TYPE_AAAA,
-            DNS_TYPE_CNAME => (self.type_index | INDEX_TYPE_CNAME) == INDEX_TYPE_CNAME,
-            DNS_TYPE_MX => (self.type_index | INDEX_TYPE_MX) == INDEX_TYPE_MX,
-            DNS_TYPE_PTR => (self.type_index | INDEX_TYPE_PTR) == INDEX_TYPE_PTR,
-            DNS_TYPE_RRSIG => (self.type_index | INDEX_TYPE_RRSIG) == INDEX_TYPE_RRSIG,
-            DNS_TYPE_SOA => (self.type_index | INDEX_TYPE_SOA) == INDEX_TYPE_SOA,
-            DNS_TYPE_SRV => (self.type_index | INDEX_TYPE_SRV) == INDEX_TYPE_SRV,
-            DNS_TYPE_TXT => (self.type_index | INDEX_TYPE_TXT) == INDEX_TYPE_TXT,
-            DNS_TYPE_DNS_KEY => (self.type_index | INDEX_TYPE_DNSKEY) == INDEX_TYPE_DNSKEY,
+            DNS_TYPE_AAAA => (self.type_index & INDEX_TYPE_AAAA) == INDEX_TYPE_AAAA,
+            DNS_TYPE_CNAME => (self.type_index & INDEX_TYPE_CNAME) == INDEX_TYPE_CNAME,
+            DNS_TYPE_MX => (self.type_index & INDEX_TYPE_MX) == INDEX_TYPE_MX,
+            DNS_TYPE_PTR => (self.type_index & INDEX_TYPE_PTR) == INDEX_TYPE_PTR,
+            DNS_TYPE_RRSIG => (self.type_index & INDEX_TYPE_RRSIG) == INDEX_TYPE_RRSIG,
+            DNS_TYPE_SOA => (self.type_index & INDEX_TYPE_SOA) == INDEX_TYPE_SOA,
+            DNS_TYPE_SRV => (self.type_index & INDEX_TYPE_SRV) == INDEX_TYPE_SRV,
+            DNS_TYPE_TXT => (self.type_index & INDEX_TYPE_TXT) == INDEX_TYPE_TXT,
+            DNS_TYPE_DNS_KEY => (self.type_index & INDEX_TYPE_DNSKEY) == INDEX_TYPE_DNSKEY,
             _ => false,
         }
     }
 
+    // fn has_type(&self, rtype: u16) -> bool {
+    //     match rtype {
+    //         DNS_TYPE_A => (self.type_index & INDEX_TYPE_A) == INDEX_TYPE_A,
+    //         DNS_TYPE_AAAA => (self.type_index | INDEX_TYPE_AAAA) == INDEX_TYPE_AAAA,
+    //         DNS_TYPE_CNAME => (self.type_index | INDEX_TYPE_CNAME) == INDEX_TYPE_CNAME,
+    //         DNS_TYPE_MX => (self.type_index | INDEX_TYPE_MX) == INDEX_TYPE_MX,
+    //         DNS_TYPE_PTR => (self.type_index | INDEX_TYPE_PTR) == INDEX_TYPE_PTR,
+    //         DNS_TYPE_RRSIG => (self.type_index | INDEX_TYPE_RRSIG) == INDEX_TYPE_RRSIG,
+    //         DNS_TYPE_SOA => (self.type_index | INDEX_TYPE_SOA) == INDEX_TYPE_SOA,
+    //         DNS_TYPE_SRV => (self.type_index | INDEX_TYPE_SRV) == INDEX_TYPE_SRV,
+    //         DNS_TYPE_TXT => (self.type_index | INDEX_TYPE_TXT) == INDEX_TYPE_TXT,
+    //         DNS_TYPE_DNS_KEY => (self.type_index | INDEX_TYPE_DNSKEY) == INDEX_TYPE_DNSKEY,
+    //         _ => false,
+    //     }
+    // }
     pub fn decode(&mut self) {
         self.offset = 12;
 

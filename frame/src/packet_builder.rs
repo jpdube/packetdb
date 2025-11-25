@@ -26,6 +26,7 @@ pub struct PktLayer {
     length: usize,
 }
 
+#[derive(Default)]
 pub struct PacketBuilder {
     layers_list: HashMap<LayerName, PktLayer>,
     pub file_id: u32,
@@ -63,17 +64,12 @@ impl PacketBuilder {
     fn set_ethernet(&mut self) {
         let header = BigEndian::read_u16(&self.raw_packet[12..14]);
 
-        let vo: usize;
+        let vo: usize = if header == 0x8100 { 18 } else { 14 };
 
-        if header == 0x8100 {
-            vo = 18;
-        } else {
-            vo = 14;
-        }
-
-        let mut layer = PktLayer::default();
-        layer.offset = 0;
-        layer.length = vo;
+        let layer = PktLayer {
+            offset: 0,
+            length: vo,
+        };
 
         self.layers_list.insert(LayerName::Ethernet, layer);
     }

@@ -198,34 +198,31 @@ impl<'a> Tcp<'a> {
     }
 
     pub fn is_https(&self) -> bool {
-        return self.sport() == 443 || self.dport() == 443;
+        self.sport() == 443 || self.dport() == 443
     }
 
     pub fn is_http(&self) -> bool {
-        return self.sport() == 80 || self.dport() == 80;
+        self.sport() == 80 || self.dport() == 80
     }
 
     pub fn is_ssh(&self) -> bool {
-        return self.sport() == 22 || self.dport() == 22;
+        self.sport() == 22 || self.dport() == 22
     }
 
     pub fn is_telnet(&self) -> bool {
-        return self.sport() == 23 || self.dport() == 23;
+        self.sport() == 23 || self.dport() == 23
     }
 
     pub fn is_rdp(&self) -> bool {
-        return self.sport() == 3389 || self.dport() == 3389;
+        self.sport() == 3389 || self.dport() == 3389
     }
 
     pub fn is_smtp(&self) -> bool {
-        return self.sport() == 25 || self.dport() == 25;
+        self.sport() == 25 || self.dport() == 25
     }
 
     pub fn is_smb(&self) -> bool {
-        return self.sport() == 445
-            || self.dport() == 445
-            || self.sport() == 139
-            || self.dport() == 139;
+        self.sport() == 445 || self.dport() == 445 || self.sport() == 139 || self.dport() == 139
     }
 }
 
@@ -306,23 +303,19 @@ impl<'a> Layer for Tcp<'a> {
     }
 
     fn get_name(&self) -> String {
-        return "tcp".to_string();
+        "tcp".to_string()
     }
 }
 
 impl<'a> PacketDisplay for Tcp<'a> {
     fn summary(&self) -> String {
-        let result: String;
-
-        result = format!(
+        format!(
             "TCP -> Src port: {}, Dst port: {}, Seq: {}, MSS: {}",
             self.sport(),
             self.dport(),
             self.seq_no(),
             self.options.mss
-        );
-
-        result
+        )
     }
 
     fn show_detail(&self) -> String {

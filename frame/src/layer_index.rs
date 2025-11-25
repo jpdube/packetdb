@@ -1,4 +1,5 @@
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[allow(clippy::enum_clike_unportable_variant)]
 pub enum LayerIndex {
     ETH = 0x01,
     IPv4 = 0x02,

@@ -75,21 +75,17 @@ impl<'a> Layer for UdpFrame<'a> {
     }
 
     fn get_name(&self) -> String {
-        return "Udp".to_string();
+        "Udp".to_string()
     }
 }
 
 impl<'a> PacketDisplay for UdpFrame<'a> {
     fn summary(&self) -> String {
-        let result: String;
-
-        result = format!(
+        format!(
             "UDP -> Src port: {}, Dst port: {}",
             self.sport(),
             self.dport(),
-        );
-
-        result
+        )
     }
 
     fn show_detail(&self) -> String {

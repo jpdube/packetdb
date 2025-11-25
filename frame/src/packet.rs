@@ -68,7 +68,7 @@ impl Packet {
             }
         }
 
-        return None;
+        None
     }
 
     pub fn has_layer(&self, layer: LayerIndex) -> bool {
