@@ -77,13 +77,11 @@ impl<'a> Ntp<'a> {
     }
 
     fn mode_str(&self) -> String {
-        let mode_str: &str;
-
-        match self.mode() {
-            3 => mode_str = "Client",
-            4 => mode_str = "Server",
-            _ => mode_str = "Undefined",
-        }
+        let mode_str = match self.mode() {
+            3 => "Client",
+            4 => "Server",
+            _ => "Undefined",
+        };
 
         mode_str.to_string()
     }
