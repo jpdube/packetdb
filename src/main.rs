@@ -72,7 +72,7 @@ fn test_db() {
     raw_packet.resize(8, 0xaa);
 
     for i in 0..1024 {
-        let mut row = Row::new();
+        let mut row = Row::default();
         row.add(Field::set_field(FieldType::Ipv4(0xc0a80310, 32), "ip.src"));
         row.add(Field::set_field(FieldType::Ipv4(0xc0a802b1, 32), "ip.dst"));
 
