@@ -83,7 +83,7 @@ pub fn capture(device_name: &str) -> Result<()> {
             packet: packet.data.to_vec(),
         };
 
-        let _ = tx_packet.send(pkt)?;
+        tx_packet.send(pkt)?;
     }
 
     Ok(())

@@ -18,7 +18,7 @@ pub fn clean_proto_index() {
 
     for path in paths {
         println!("Deleting: {:?}", path.path());
-        fs::remove_dir_all(&path.path()).unwrap();
+        fs::remove_dir_all(path.path()).unwrap();
     }
 }
 
@@ -30,7 +30,7 @@ pub fn clean_index() {
 
     for path in paths {
         println!("Deleting: {:?}", path.path());
-        fs::remove_file(&path.path()).unwrap();
+        fs::remove_file(path.path()).unwrap();
     }
 }
 
@@ -47,20 +47,14 @@ pub fn index_filename(file_id: u32) -> String {
 
 pub fn path_exists(path_name: &str) -> bool {
     let path = Path::new(path_name);
-    if path.exists() && path.is_dir() {
-        // println!("The directory exists.");
-        return true;
-    } else {
-        // println!("The directory does not exist.");
-        return false;
-    }
+    path.exists() && path.is_dir()
 }
 
 pub fn create_path(path_name: &str) -> Result<()> {
     if !path_exists(path_name) {
         fs::create_dir(path_name)?;
     }
-    return Ok(());
+    Ok(())
 }
 
 pub fn proto_index_list() -> Vec<String> {

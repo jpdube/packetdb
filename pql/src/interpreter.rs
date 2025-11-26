@@ -120,7 +120,7 @@ impl Interpreter {
     }
 
     pub fn eval(&self, pkt: &Packet) -> bool {
-        let result = self.eval_expression(&self.model.filter, &pkt).unwrap();
+        let result = self.eval_expression(&self.model.filter, pkt).unwrap();
         result == TRUE
     }
 
@@ -128,7 +128,7 @@ impl Interpreter {
         match expression {
             Expression::Integer(i) => Ok(Object::Integer(*i as u64)),
             Expression::ArrayLong(values) => Ok(Object::LongArray(values.clone())),
-            Expression::Long(i) => Ok(Object::Integer(*i as u64)),
+            Expression::Long(i) => Ok(Object::Integer(*i)),
             Expression::String(s) => Ok(Object::String(s.clone())),
             Expression::Timestamp(t) => Ok(Object::Timestamp(*t)),
             Expression::Label(value) => {
@@ -153,11 +153,11 @@ impl Interpreter {
             Expression::IPv4(addr, mask) => Ok(Object::IPv4(*addr, *mask)),
             Expression::MacAddress(addr) => Ok(Object::MacAddress(*addr)),
             Expression::Boolean(b) => Ok(Object::Boolean(*b)),
-            Expression::Group(expr) => self.eval_expression(expr, &pkt),
+            Expression::Group(expr) => self.eval_expression(expr, pkt),
             Expression::NoOp => Ok(Object::Null),
             Expression::BinOp(operator, left, right) => {
-                let left = self.eval_expression(left, &pkt)?;
-                let right = self.eval_expression(right, &pkt)?;
+                let left = self.eval_expression(left, pkt)?;
+                let right = self.eval_expression(right, pkt)?;
                 self.eval_infix_expression(operator, left, right)
             } // _ => Ok(Object::Null),
         }
@@ -189,14 +189,13 @@ impl Interpreter {
                 self.eval_integer_infix_expression(operator, *sa, *addr)
             }
             (Object::Integer(pts), Object::Timestamp(ts)) => {
-                self.eval_integer_infix_expression(operator, *pts as u64, *ts as u64)
+                self.eval_integer_infix_expression(operator, *pts, *ts as u64)
             }
             (Object::ByteArray(pts), Object::ByteArray(ts)) => {
                 self.eval_array_infix_expression(operator, pts.clone(), ts.clone())
             }
             (Object::Integer(b0), Object::Boolean(b1)) => {
-                let lb = if *b0 == 1 { true } else { false };
-                self.eval_boolean_infix_expression(operator, lb, *b1)
+                self.eval_boolean_infix_expression(operator, *b0 == 1, *b1)
             }
             // (Object::Str(s0), Object::Str(s1)) => eval_string_infix_expression(operator, s0, s1),
             (_, _) => Err(EvalError::TypeMismatch(
@@ -325,7 +324,7 @@ impl Interpreter {
         }
     }
 
-    fn like_string(&self, source: &String, target: &String) -> bool {
+    fn like_string(&self, source: &str, target: &str) -> bool {
         let pattern = Regex::new(target).unwrap();
 
         pattern.is_match(source)

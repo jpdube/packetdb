@@ -106,7 +106,7 @@ impl ProtoStat {
 
         tx.execute("delete from proto_stats where file_id = ?", [self.file_id])?;
 
-        for (proto, count) in self.proto_count.to_owned().into_iter() {
+        for (proto, count) in self.proto_count.clone().into_iter() {
             tx.execute(
                 "INSERT INTO proto_stats (file_id, proto, count) values (?, ?, ?);",
                 [self.file_id, proto, count],
@@ -158,30 +158,24 @@ impl IndexManager {
         let idx_filename = &format!("{}/{}.pidx", &CONFIG.index_path, file_id);
         let mut file = BufReader::new(File::open(idx_filename)?);
         let mut buffer = [0; 20];
-        let mut packet_ptr = PacketPtr::default();
-        packet_ptr.file_id = file_id;
+        let mut packet_ptr = PacketPtr {
+            file_id,
+            ..Default::default()
+        };
+
         let search_value = self.build_search_index(&pql.search_type);
 
-        loop {
-            match file.read_exact(&mut buffer) {
-                Ok(_) => {
-                    if let Some(interval) = &pql.interval {
-                        let timestamp = BigEndian::read_u32(&buffer[0..4]);
-                        if timestamp >= interval.from
-                            && timestamp <= interval.to
-                            && self.match_index(&buffer, search_value, &pql.ip_list)
-                        {
-                            packet_ptr.pkt_ptr.push(BigEndian::read_u32(&buffer[4..8]));
-                        }
-                    } else {
-                        if self.match_index(&buffer, search_value, &pql.ip_list) {
-                            packet_ptr.pkt_ptr.push(BigEndian::read_u32(&buffer[4..8]));
-                        }
-                    }
+        while file.read_exact(&mut buffer).is_ok() {
+            if let Some(interval) = &pql.interval {
+                let timestamp = BigEndian::read_u32(&buffer[0..4]);
+                if timestamp >= interval.from
+                    && timestamp <= interval.to
+                    && self.match_index(&buffer, search_value, &pql.ip_list)
+                {
+                    packet_ptr.pkt_ptr.push(BigEndian::read_u32(&buffer[4..8]));
                 }
-                Err(_) => {
-                    break;
-                }
+            } else if self.match_index(&buffer, search_value, &pql.ip_list) {
+                packet_ptr.pkt_ptr.push(BigEndian::read_u32(&buffer[4..8]));
             }
         }
 
@@ -194,7 +188,7 @@ impl IndexManager {
         let ip_src = BigEndian::read_u32(&buffer[16..20]);
         let mut ip_found = true;
 
-        if ip_list.len() > 0 {
+        if ip_list.is_empty() {
             ip_found = false;
             for ip in ip_list {
                 if IPv4::new(ip.address, ip.mask).is_in_subnet(ip_dst)
@@ -369,7 +363,7 @@ impl IndexManager {
     }
 
     fn get_packet_files(&self) -> Result<Vec<u32>> {
-        let pcap_path = format!("{}", &CONFIG.db_path);
+        let pcap_path = &CONFIG.db_path.to_string();
         let paths = fs::read_dir(pcap_path).unwrap();
 
         let mut file_id_list: Vec<u32> = Vec::new();
@@ -396,7 +390,7 @@ impl IndexManager {
             Ok(files_list) => {
                 let result: Vec<MasterIndex> = (files_list)
                     .into_par_iter()
-                    .map(|pkt| self.index_file(pkt as u32))
+                    .map(|pkt| self.index_file(pkt))
                     .collect();
 
                 self.create_master(result);
@@ -474,7 +468,7 @@ impl IndexManager {
             }
         }
 
-        return ret_type;
+        ret_type
     }
 
     pub fn search_master_index(&self, start_ts: u32, end_ts: u32) -> Vec<MasterIndex> {
@@ -485,42 +479,35 @@ impl IndexManager {
         let mut buffer = [0; 12];
         let mut start_found = false;
 
-        loop {
-            match file.read_exact(&mut buffer) {
-                Ok(_) => {
-                    let idx_start = BigEndian::read_u32(&buffer[0..4]);
-                    let idx_end = BigEndian::read_u32(&buffer[4..8]);
-                    if !start_found && (start_ts >= idx_start && start_ts <= idx_end) {
-                        start_found = true;
-                        let index = MasterIndex {
-                            start_timestamp: idx_start,
-                            end_timestamp: idx_end,
-                            file_ptr: BigEndian::read_u32(&buffer[8..12]),
-                        };
-                        index_list.push(index);
-                    } else if start_found && (idx_end <= end_ts) {
-                        let index = MasterIndex {
-                            start_timestamp: idx_start,
-                            end_timestamp: idx_end,
-                            file_ptr: BigEndian::read_u32(&buffer[8..12]),
-                        };
-                        index_list.push(index);
-                    } else if start_found && (idx_end >= end_ts) {
-                        let index = MasterIndex {
-                            start_timestamp: idx_start,
-                            end_timestamp: idx_end,
-                            file_ptr: BigEndian::read_u32(&buffer[8..12]),
-                        };
-                        index_list.push(index);
-                        break;
-                    }
-                }
-                Err(_) => {
-                    break;
-                }
+        while file.read_exact(&mut buffer).is_ok() {
+            let idx_start = BigEndian::read_u32(&buffer[0..4]);
+            let idx_end = BigEndian::read_u32(&buffer[4..8]);
+            if !start_found && (start_ts >= idx_start && start_ts <= idx_end) {
+                start_found = true;
+                let index = MasterIndex {
+                    start_timestamp: idx_start,
+                    end_timestamp: idx_end,
+                    file_ptr: BigEndian::read_u32(&buffer[8..12]),
+                };
+                index_list.push(index);
+            } else if start_found && (idx_end <= end_ts) {
+                let index = MasterIndex {
+                    start_timestamp: idx_start,
+                    end_timestamp: idx_end,
+                    file_ptr: BigEndian::read_u32(&buffer[8..12]),
+                };
+                index_list.push(index);
+            } else if start_found && (idx_end >= end_ts) {
+                let index = MasterIndex {
+                    start_timestamp: idx_start,
+                    end_timestamp: idx_end,
+                    file_ptr: BigEndian::read_u32(&buffer[8..12]),
+                };
+                index_list.push(index);
+                break;
             }
         }
 
-        return index_list;
+        index_list
     }
 }

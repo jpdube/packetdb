@@ -76,16 +76,17 @@ impl DbEngine {
                             while !query_result.count_reach() {
                                 for file_id in &search_list {
                                     file_count += 1;
-                                    let pkt_index: Result<PacketPtr>;
 
-                                    if proto_search > LayerIndex::ARP as u32 {
-                                        let mut proto_index =
-                                            ProtoIndex::new(*file_id, proto_search);
-                                        pkt_index = proto_index.read();
-                                    } else {
-                                        let mut index = IndexManager::default();
-                                        pkt_index = index.search_index(&expr, *file_id);
-                                    }
+                                    let pkt_index: Result<PacketPtr> =
+                                        if proto_search > LayerIndex::ARP as u32 {
+                                            let mut proto_index =
+                                                ProtoIndex::new(*file_id, proto_search);
+                                            proto_index.read()
+                                        } else {
+                                            let mut index = IndexManager::default();
+                                            index.search_index(&expr, *file_id)
+                                        };
+
                                     match pkt_index {
                                         Ok(ptr) => {
                                             let (nbr_searched, c) =
@@ -147,12 +148,12 @@ impl DbEngine {
         ];
 
         for st in search_type {
-            if search_proto.contains(&st) {
+            if search_proto.contains(st) {
                 return Some(st.clone());
             }
         }
 
-        return None;
+        None
     }
 
     fn get_id_packets(&self, id_list: Vec<u64>) -> Vec<Packet> {

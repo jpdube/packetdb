@@ -1,8 +1,9 @@
 use crate::keywords::Keyword;
 use crate::preparser::Preparser;
-use crate::token::{get_constants, get_keywords, get_token_one, get_token_two, Token};
+use crate::token::{Token, get_constants, get_keywords, get_token_one, get_token_two};
 use std::io::Read;
 
+#[derive(Default)]
 pub struct Lexer {
     token_list: Vec<Token>,
     index: usize,
@@ -28,7 +29,7 @@ impl Lexer {
         let mut lines = String::new();
         file.read_to_string(&mut lines).unwrap();
 
-        return lines;
+        lines
     }
 
     pub fn tokenize(&mut self, lines: &str) -> &Vec<Token> {
@@ -53,7 +54,7 @@ impl Lexer {
         self.token_list.push(token);
 
         self.token_list = preparser.parse(self.token_list.clone());
-        return &self.token_list;
+        &self.token_list
     }
 
     fn get_hex_digit(&mut self) -> Option<Token> {

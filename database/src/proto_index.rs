@@ -49,17 +49,15 @@ impl ProtoIndex {
             &CONFIG.proto_index_path, self.proto_id, self.file_id
         );
 
-        // info!("Loading proto index file: {}", idx_filename);
-
-        // let mut result: Vec<u32> = Vec::new();
-        let mut result = PacketPtr::default();
-        result.file_id = self.file_id;
+        let mut result = PacketPtr {
+            file_id: self.file_id,
+            ..Default::default()
+        };
 
         let file = File::open(idx_filename)?;
         let mut reader = BufReader::new(file);
-        let mut buffer: Vec<u8> = Vec::new();
+        let mut buffer: Vec<u8> = vec![0; 4];
 
-        buffer.resize(4, 0);
         reader.read_exact(&mut buffer)?;
         self.header.magic_no = BigEndian::read_u32(&buffer);
 
@@ -254,7 +252,7 @@ impl ProtoIndexMgr {
     }
 
     pub fn save(&mut self) {
-        for (_, idx) in &mut self.index_list {
+        for idx in self.index_list.values_mut() {
             idx.create_index();
         }
     }

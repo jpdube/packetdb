@@ -27,14 +27,14 @@ impl<'a> SeekPacket<'a> {
 
         let mut magic_file = BufReader::new(File::open(fname).unwrap());
         let mut gheader = [0; 24];
-        let magic_no: u32;
-        if magic_file.read_exact(&mut gheader).is_ok() {
-            magic_no = BigEndian::read_u32(&gheader[0..4]);
-        } else {
-            magic_no = HEADER_LE
-        }
 
-        let self_conf = Self {
+        let magic_no: u32 = if magic_file.read_exact(&mut gheader).is_ok() {
+            BigEndian::read_u32(&gheader[0..4])
+        } else {
+            HEADER_LE
+        };
+
+        Self {
             file: BufReader::new(File::open(fname).unwrap()),
             index: 0,
             plist: packet_list,
@@ -42,13 +42,12 @@ impl<'a> SeekPacket<'a> {
             relative_ptr: 0,
             psize: 0,
             magic_no,
-        };
-
-        self_conf
+        }
     }
 
+    #[allow(clippy::should_implement_trait)]
     pub fn next(&mut self) -> Option<Packet> {
-        if self.index >= self.plist.pkt_ptr.len() || self.plist.pkt_ptr.len() == 0 {
+        if self.index >= self.plist.pkt_ptr.len() || self.plist.pkt_ptr.is_empty() {
             return None;
         }
 
@@ -57,7 +56,7 @@ impl<'a> SeekPacket<'a> {
 
         self.file.seek_relative(ptr as i64).unwrap();
 
-        if !self.file.read_exact(&mut pheader).is_ok() {
+        if self.file.read_exact(&mut pheader).is_err() {
             return None;
         }
 
@@ -90,7 +89,7 @@ impl<'a> SeekPacket<'a> {
             self.data.clone(),
             pheader,
             self.plist.file_id,
-            self.plist.pkt_ptr[self.index] as u32,
+            self.plist.pkt_ptr[self.index],
             little_endian,
         );
         self.index += 1;

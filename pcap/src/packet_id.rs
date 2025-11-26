@@ -1,7 +1,15 @@
+use std::fmt;
+
 #[derive(Default, Clone)]
 pub struct PacketID {
     file_id: u32,
     pkt_ptr: u32,
+}
+
+impl fmt::Display for PacketID {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}:{}", self.file_id, self.pkt_ptr)
+    }
 }
 
 impl PacketID {
@@ -10,9 +18,5 @@ impl PacketID {
         id += self.pkt_ptr as u64;
 
         id
-    }
-
-    pub fn to_string(&self) -> String {
-        format!("{}:{}", self.file_id, self.pkt_ptr)
     }
 }

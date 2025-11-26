@@ -1,20 +1,20 @@
 use actix_cors::Cors;
 use database::dbengine::DbEngine;
-use serde_json::json;
 use serde_json::Value;
+use serde_json::json;
 use std::collections::BTreeMap;
 
 use actix_web::{
-    http::header, middleware::Logger, post, web, App, HttpResponse, HttpServer, Responder,
+    App, HttpResponse, HttpServer, Responder, http::header, middleware::Logger, post, web,
 };
 
 use actix_web::web::Json;
 use argon2::{
-    password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
+    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},
 };
 
-use crate::jwebtoken::{get_jwt, User};
+use crate::jwebtoken::{User, get_jwt};
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 use serde::{Deserialize, Serialize};
 
@@ -41,10 +41,10 @@ async fn execute(name: web::Json<Command>) -> impl Responder {
                 result: response.to_json(),
             };
 
-            return HttpResponse::Ok().json(result);
+            HttpResponse::Ok().json(result)
         }
 
-        Err(e) => return HttpResponse::Ok().json(e),
+        Err(e) => HttpResponse::Ok().json(e),
     }
 
     // let result = CmdResponse {
@@ -128,7 +128,7 @@ fn _get_hash_pwd(password: &str) -> String {
 }
 
 fn _validate_pwd(password: &str, password_hash: &str) -> bool {
-    let parsed_hash = PasswordHash::new(&password_hash).unwrap();
+    let parsed_hash = PasswordHash::new(password_hash).unwrap();
     Argon2::default()
         .verify_password(password.as_bytes(), &parsed_hash)
         .is_ok()

@@ -21,10 +21,10 @@ impl Preparser {
     }
 
     pub fn peek_at(&self, offset: usize, search_tok: Keyword) -> Option<&Token> {
-        if (self.index + offset) < self.len {
-            if self.token_src[self.index + offset].token == search_tok {
-                return Some(&self.token_src[self.index + offset]);
-            }
+        if (self.index + offset) < self.len
+            && self.token_src[self.index + offset].token == search_tok
+        {
+            return Some(&self.token_src[self.index + offset]);
         }
 
         None

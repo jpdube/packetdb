@@ -32,13 +32,6 @@ struct Args {
     testdb: bool,
 }
 fn test_db() {
-    // let mut db_file = DBFile::new("zzzzzzz".to_string());
-    // db_file.create_file().unwrap();
-    // let mut dbnode = DbSegment::new("/opt/pcapdb/test.db".to_string(), 0);
-
-    // dbnode.create().unwrap();
-    // dbnode.add_record().unwrap();
-
     let mut db = DBTable::new("/opt/pcapdb/new_table");
     db.create_table(
         vec![
@@ -51,21 +44,6 @@ fn test_db() {
         ],
     )
     .unwrap();
-
-    let mut fields_def: Vec<Schema> = Vec::new();
-    fields_def.push(Schema::new(field_type::IPV4, "ip.src"));
-
-    fields_def.push(Schema::new(field_type::IPV4, "ip.dst"));
-
-    fields_def.push(Schema::new(field_type::INT16, "tcp.dport"));
-
-    fields_def.push(Schema::new(field_type::INT16, "tcp.sport"));
-    fields_def.push(Schema::new(field_type::STRING, "port_name"));
-    fields_def.push(Schema::new(field_type::BYTE_ARRAY, "raw_packet"));
-
-    // let mut dbwriter = DBStorage::new("/opt/pcapdb/test_raw");
-    // dbwriter.define_fields(fields_def);
-    // dbwriter.create().unwrap();
 
     let mut data: Vec<Row> = Vec::new();
     let mut raw_packet: Vec<u8> = Vec::new();
@@ -107,7 +85,7 @@ fn process_params() {
     let args = Args::parse();
     env_logger::init();
 
-    if args.config.len() > 0 {
+    if !args.config.is_empty() {
         unsafe {
             env::set_var("PACKETDB_CONFIG", args.config);
         }
@@ -115,7 +93,7 @@ fn process_params() {
         init_db.init_db().unwrap();
     }
 
-    if args.capture.len() > 0 {
+    if !args.capture.is_empty() {
         match capture(&args.capture) {
             Ok(()) => println!("Capture sucessfull"),
             Err(msg) => eprintln!("Error capturing: {}", msg),

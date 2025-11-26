@@ -14,7 +14,7 @@ use frame::layer_index::LayerIndex;
 
 use log::debug;
 use std::collections::HashSet;
-use std::{fmt, usize};
+use std::fmt;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Operator {
@@ -116,15 +116,15 @@ pub struct PqlStatement {
 
 impl PqlStatement {
     pub fn has_groupby(&self) -> bool {
-        self.groupby_fields.len() != 0
+        !self.groupby_fields.is_empty()
     }
 
     pub fn has_aggregate(&self) -> bool {
-        self.aggr_list.len() != 0
+        !self.aggr_list.is_empty()
     }
 
     pub fn has_id_search(&self) -> bool {
-        self.id_search.len() > 0
+        !self.id_search.is_empty()
     }
 }
 
@@ -183,7 +183,7 @@ impl Default for PqlStatement {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub enum Expression {
     BinOp(Operator, Box<Expression>, Box<Expression>),
     Group(Box<Expression>),
@@ -198,13 +198,8 @@ pub enum Expression {
     Timestamp(u32),
     MacAddress(u64),
     String(String),
+    #[default]
     NoOp,
-}
-
-impl Default for Expression {
-    fn default() -> Self {
-        Self::NoOp
-    }
 }
 
 impl fmt::Display for Expression {
@@ -221,7 +216,7 @@ impl fmt::Display for Expression {
             Self::Integer(value) => write!(f, "Integer({})", value),
             Self::Long(value) => write!(f, "Logn({})", value),
             Self::Timestamp(value) => write!(f, "Timestamp({})", value),
-            Self::IPv4(ip_addr, cidr) => write!(f, "IPv4({})", IPv4::new(*ip_addr, *cidr as u8)),
+            Self::IPv4(ip_addr, cidr) => write!(f, "IPv4({})", IPv4::new(*ip_addr, *cidr)),
             Self::Boolean(value) => write!(f, "Bool: {}", value),
             Self::MacAddress(mac_addr) => write!(f, "Mac({})", MacAddr::set_from_int(mac_addr)),
             Self::Array(array_bytes) => write!(f, "Array({:?})", array_bytes),
@@ -262,6 +257,12 @@ pub struct Parse {
     query: PqlStatement,
 }
 
+impl Default for Parse {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Parse {
     pub fn new() -> Self {
         Self {
@@ -294,11 +295,7 @@ impl Parse {
             self.prev_token = self.lookahead.to_owned();
         }
 
-        if self.lookahead.as_mut().unwrap().token == keyword {
-            true
-        } else {
-            false
-        }
+        self.lookahead.as_mut().unwrap().token == keyword
     }
 
     fn accept(&mut self, keyword: Keyword) -> Option<Token> {
@@ -344,7 +341,7 @@ impl Parse {
     pub fn parse(&mut self, pql: &str) -> Option<Expression> {
         let mut lexer = Lexer::new();
 
-        self.token_list = lexer.tokenize(&pql).clone();
+        self.token_list = lexer.tokenize(pql).clone();
 
         let result = self.parse_stmt().unwrap();
         if !self.has_error {
@@ -386,7 +383,7 @@ impl Parse {
     pub fn parse_select(&mut self, pql: &str) -> Result<PqlStatement, Vec<ErrorMsg>> {
         let mut tokenizer = Lexer::new();
 
-        self.token_list = tokenizer.tokenize(&pql).clone();
+        self.token_list = tokenizer.tokenize(pql).clone();
 
         if self.expect(Keyword::Select).is_some() {
             loop {
@@ -438,12 +435,12 @@ impl Parse {
                 self.accept(Keyword::Interval);
                 let mut ts_start: u32 = 0;
                 let mut ts_end: u32 = 0;
-                if self.peek(Keyword::Timestamp) {
-                    if let Some(_start_ts) = self.expect(Keyword::Timestamp) {
-                        self.accept(Keyword::Timestamp);
-                        if let Some(start_ts) = self.get_timestamp(&_start_ts.value) {
-                            ts_start = start_ts;
-                        }
+                if self.peek(Keyword::Timestamp)
+                    && let Some(_start_ts) = self.expect(Keyword::Timestamp)
+                {
+                    self.accept(Keyword::Timestamp);
+                    if let Some(start_ts) = self.get_timestamp(&_start_ts.value) {
+                        ts_start = start_ts;
                     }
                 }
                 if self.peek(Keyword::Now) {
@@ -524,7 +521,7 @@ impl Parse {
             self.query.search_type = self.field_type.clone();
         }
 
-        if self.error_list.len() == 0 {
+        if self.error_list.is_empty() {
             Ok(self.query.clone())
         } else {
             debug!("Select parse error: {:#?}", &self.error_list);
@@ -533,23 +530,22 @@ impl Parse {
     }
 
     fn get_now(&self) -> u32 {
-        return Local::now().timestamp() as u32;
+        Local::now().timestamp() as u32
     }
 
     fn get_now_ts(&self, offset: u8, modifier: &str) -> u32 {
         let result = Local::now();
-        let duration: Duration;
 
-        match modifier {
-            "s" => duration = Duration::seconds(offset as i64),
-            "m" => duration = Duration::minutes(offset as i64),
-            "h" => duration = Duration::hours(offset as i64),
-            "d" => duration = Duration::days(offset as i64),
-            "w" => duration = Duration::weeks(offset as i64),
-            _ => duration = Duration::seconds(0),
-        }
+        let duration: Duration = match modifier {
+            "s" => Duration::seconds(offset as i64),
+            "m" => Duration::minutes(offset as i64),
+            "h" => Duration::hours(offset as i64),
+            "d" => Duration::days(offset as i64),
+            "w" => Duration::weeks(offset as i64),
+            _ => Duration::seconds(0),
+        };
 
-        return (result - duration).timestamp() as u32;
+        (result - duration).timestamp() as u32
     }
 
     fn get_timestamp(&self, timestamp: &str) -> Option<u32> {
@@ -761,12 +757,12 @@ impl Parse {
     fn parse_int(&mut self) -> Option<Expression> {
         if let Some(tok) = self.accept(Keyword::Integer) {
             if let Ok(int_val) = tok.value.parse::<u32>() {
-                return Some(Expression::Integer(int_val));
+                Some(Expression::Integer(int_val))
             } else if let Ok(long_val) = tok.value.parse::<u64>() {
                 debug!("Found Long: {}", long_val);
-                return Some(Expression::Long(long_val));
+                Some(Expression::Long(long_val))
             } else {
-                return None;
+                None
             }
             // Expression::Integer(tok.value.parse().unwrap())
             // Some(Expression::Integer(tok.value.parse().unwrap()))
@@ -932,7 +928,7 @@ impl Parse {
                 }
             }
 
-            return Some(Expression::Array(index_values.clone()));
+            Some(Expression::Array(index_values.clone()))
         } else {
             None
         }
@@ -964,7 +960,7 @@ impl Parse {
                 self.query.prev_label, self.query.id_search
             );
 
-            return Some(Expression::ArrayLong(index_values));
+            Some(Expression::ArrayLong(index_values))
         } else {
             None
         }
@@ -1009,7 +1005,7 @@ impl Parse {
             return Some(Expression::Label(tok.value));
         }
 
-        return None;
+        None
     }
 
     fn add_type(&mut self, field: &str) {

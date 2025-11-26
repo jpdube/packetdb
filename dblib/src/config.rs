@@ -19,6 +19,7 @@ pub struct Config {
     pub block_size: usize,
 }
 
+#[allow(clippy::needless_return)]
 pub fn read() -> Config {
     match &env::var("PACKETDB_CONFIG") {
         Ok(config_file) => {

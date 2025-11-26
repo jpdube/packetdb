@@ -1,5 +1,5 @@
 use chrono::{Duration, Utc};
-use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
+use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -14,7 +14,7 @@ struct Claims {
 }
 
 pub fn get_jwt(user: User) -> Result<String, String> {
-    let token = encode(
+    encode(
         &Header::default(),
         &Claims {
             email: user.email,
@@ -22,9 +22,7 @@ pub fn get_jwt(user: User) -> Result<String, String> {
         },
         &EncodingKey::from_secret("mykey".as_bytes()),
     )
-    .map_err(|e| e.to_string());
-
-    return token;
+    .map_err(|e| e.to_string())
 }
 
 pub fn decode_jwt(token: &str) -> Result<User, String> {

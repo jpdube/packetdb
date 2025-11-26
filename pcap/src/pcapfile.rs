@@ -28,6 +28,7 @@ impl PcapFile {
         }
     }
 
+    #[allow(clippy::should_implement_trait)]
     pub fn next(&mut self) -> Option<Packet> {
         let mut gheader = [0; 24];
         let mut pheader = [0; 16];

@@ -1,5 +1,4 @@
 use std::collections::{HashMap, HashSet};
-use std::usize;
 
 use frame::packet::Packet;
 
@@ -22,7 +21,7 @@ pub struct QueryResult {
 impl QueryResult {
     pub fn new(model: PqlStatement) -> Self {
         Self {
-            ts_start: u32::max_value(),
+            ts_start: u32::MAX,
             ts_end: 0,
             result: Cursor::default(),
             offset: 0,
@@ -35,11 +34,11 @@ impl QueryResult {
 
     pub fn count_reach(&self) -> bool {
         if self.model.has_groupby() {
-            return self.groupby.count_reach();
+            self.groupby.count_reach()
         } else if self.model.has_distinct {
-            return self.distinct_list.len() >= self.model.top;
+            self.distinct_list.len() >= self.model.top
         } else {
-            return self.result.len() >= self.model.top;
+            self.result.len() >= self.model.top
         }
     }
 
@@ -63,12 +62,12 @@ impl QueryResult {
                 record.add_field(Field::set_field(field_value.field.clone(), &field.name));
 
                 if self.model.has_distinct {
-                    distinct_key = format!("{}|{}", distinct_key, field_value.to_string());
+                    distinct_key = format!("{}|{}", distinct_key, field_value);
                 }
             }
         }
 
-        let pkt_id = pkt.get_id() as u64;
+        let pkt_id = pkt.get_id();
         record.add_field(Field::set_field(FieldType::Int64(pkt_id), "frame.id"));
 
         if let Some(ts_temp) = pkt.get_field("frame.timestamp".to_string()) {
@@ -98,11 +97,11 @@ impl QueryResult {
     pub fn get_result(&mut self) -> Cursor {
         debug!("Start ts: {}, end ts: {}", self.ts_start, self.ts_end);
         if self.model.has_groupby() {
-            return self.groupby.get_result();
+            self.groupby.get_result()
         } else if self.model.has_aggregate() && !self.model.has_groupby() {
-            return self.aggregate.get_result();
+            self.aggregate.get_result()
         } else {
-            return self.result.clone();
+            self.result.clone()
         }
     }
 }
@@ -135,7 +134,7 @@ impl AggregateResult {
         for aggr in &self.model.aggr_list {
             let aggr_field = Field::set_field(
                 FieldType::Int64(aggr.compute(&self.pkt_list) as u64),
-                &aggr.as_of(),
+                aggr.as_of(),
             );
 
             record.add_field(aggr_field);
@@ -178,12 +177,9 @@ impl GroupBy {
         if let Some(aggr_key) = self.grp_result.get_mut(&key) {
             aggr_key.push(pkt);
         } else {
-            let mut grp_vec: Vec<Packet> = Vec::new();
-            grp_vec.push(pkt);
+            let grp_vec: Vec<Packet> = vec![pkt];
             self.grp_result.insert(key, grp_vec);
         }
-
-        // debug!("Group ADD: {:#?}", &self.grp_result);
     }
 
     pub fn get_result(&mut self) -> Cursor {
@@ -194,13 +190,12 @@ impl GroupBy {
 
             for (idx, gfield) in k.iter().enumerate() {
                 let field_name = self.model.groupby_fields[idx].name.clone();
-                let field_value: FieldType;
 
-                if field_name.contains("ip") {
-                    field_value = FieldType::Ipv4(*gfield as u32, 32);
+                let field_value: FieldType = if field_name.contains("ip") {
+                    FieldType::Ipv4(*gfield as u32, 32)
                 } else {
-                    field_value = FieldType::Int64(*gfield as u64);
-                }
+                    FieldType::Int64(*gfield as u64)
+                };
 
                 let aggr_field = Field::set_field(field_value, &field_name);
                 // let aggr_field = Field::set_field_with_name(field_value, field_name);
