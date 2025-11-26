@@ -61,6 +61,10 @@ impl Cursor {
         self.record_list.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.record_list.is_empty()
+    }
+
     pub fn print(&self) {
         println!("Record count: {}", self.record_list.len());
         let mut first_line = true;
