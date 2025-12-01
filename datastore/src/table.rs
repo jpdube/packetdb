@@ -210,9 +210,9 @@ impl DBTable {
         let duration = start.elapsed();
 
         println!(
-            "Execution time: {}us per row: {}ns",
-            duration.as_micros(),
-            (duration.as_secs_f32() / data.len() as f32) * 1_000_000_000.0
+            "Execution time: {:4.2}s per row: {:4.2}us",
+            duration.as_secs_f32(),
+            (duration.as_secs_f32() / data.len() as f32) * 1_000_000.0
         );
 
         Ok(())
