@@ -31,6 +31,7 @@ struct Args {
     #[arg(short, long, default_value_t = false)]
     testdb: bool,
 }
+
 fn test_db() {
     let mut db = DBTable::new("/opt/pcapdb/new_table");
     db.create_table(
@@ -47,9 +48,9 @@ fn test_db() {
 
     let mut data: Vec<Row> = Vec::new();
     let mut raw_packet: Vec<u8> = Vec::new();
-    raw_packet.resize(8, 0xaa);
+    raw_packet.resize(300, 0xaa);
 
-    for i in 0..1024 {
+    for i in 0..360_000 {
         let mut row = Row::default();
         row.add(Field::set_field(FieldType::Ipv4(0xc0a80310, 32), "ip.src"));
         row.add(Field::set_field(FieldType::Ipv4(0xc0a802b1, 32), "ip.dst"));
@@ -65,7 +66,6 @@ fn test_db() {
 
         row.add(Field::set_field(
             FieldType::ByteArray(raw_packet.clone()),
-            // FieldType::ByteArray(vec![0x00, 0x01, 0x02, 0x03, 0x04]),
             "raw_packet",
         ));
 
