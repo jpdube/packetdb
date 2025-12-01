@@ -44,14 +44,14 @@ impl Header {
         }
     }
 
-    pub fn to_binary(&self) -> Vec<u8> {
-        let mut result: Vec<u8> = Vec::new();
+    pub fn to_binary(&self) -> Result<Vec<u8>> {
+        let mut result: Vec<u8> = Vec::with_capacity(32);
 
-        result.write_u32::<BigEndian>(self.magic_no).unwrap();
-        result.write_u16::<BigEndian>(self.version).unwrap();
-        result.write_u16::<BigEndian>(self.options).unwrap();
+        result.write_u32::<BigEndian>(self.magic_no)?;
+        result.write_u16::<BigEndian>(self.version)?;
+        result.write_u16::<BigEndian>(self.options)?;
 
-        result
+        Ok(result)
     }
 }
 
@@ -103,10 +103,10 @@ impl TableIndex {
         let mut writer = BufWriter::new(File::create(&self.filename)?);
 
         // Write the header of the index
-        writer.write_all(&self.header.to_binary())?;
+        writer.write_all(&self.header.to_binary()?)?;
 
         // writer.write_u16::<BigEndian>(self.fieldname.len() as u16)?;
-        writer.write_all(&self.fieldname.into_bytes())?;
+        writer.write_all(&self.fieldname.into_bytes()?)?;
 
         // Write the index to disk
         let mut buffer: Vec<u8> = Vec::new();

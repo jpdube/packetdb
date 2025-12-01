@@ -165,7 +165,7 @@ impl DBTable {
         buffer.write_u16::<BigEndian>(self.fields_list.len() as u16)?;
 
         for f in &self.fields_list {
-            buffer.write_all(&f.into_bytes())?;
+            buffer.write_all(&f.into_bytes()?)?;
         }
 
         writer.write_u16::<BigEndian>(buffer.len() as u16)?;

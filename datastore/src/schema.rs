@@ -1,3 +1,4 @@
+use anyhow::Result;
 use byteorder::{BigEndian, WriteBytesExt};
 use field::field_type;
 use std::fmt;
@@ -19,17 +20,14 @@ impl Schema {
         }
     }
 
-    pub fn into_bytes(&self) -> Vec<u8> {
+    pub fn into_bytes(&self) -> Result<Vec<u8>> {
         let mut result: Vec<u8> = Vec::new();
 
-        result.write_u16::<BigEndian>(self.ftype).unwrap();
-        // result.write_u16::<BigEndian>(self.type_len).unwrap();
-        result
-            .write_u16::<BigEndian>(self.name.len() as u16)
-            .unwrap();
-        result.write_all(&self.name.clone().into_bytes()).unwrap();
+        result.write_u16::<BigEndian>(self.ftype)?;
+        result.write_u16::<BigEndian>(self.name.len() as u16)?;
+        result.write_all(&self.name.clone().into_bytes())?;
 
-        result
+        Ok(result)
     }
 }
 
