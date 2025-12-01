@@ -7,3 +7,4 @@ config/
 .DS_Store
 .idea
 .vscode
+perf.data*
