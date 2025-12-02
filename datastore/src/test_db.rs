@@ -1,6 +1,7 @@
 use crate::row::Row;
 use crate::schema::Schema;
 use crate::table::DBTable;
+use crate::table_index::TableIndex;
 use field::field_type;
 use field::pfield::{Field, FieldType};
 
@@ -22,7 +23,7 @@ pub fn test_db() {
     let mut raw_packet: Vec<u8> = Vec::new();
     raw_packet.resize(300, 0xaa);
 
-    for i in 0..16 {
+    for i in 0..500_000 {
         let mut row = Row::default();
 
         if i % 2 == 0 {
@@ -51,5 +52,10 @@ pub fn test_db() {
 
     db.append(data).unwrap();
 
-    db.read_record().unwrap();
+    let mut ip_src_idx = TableIndex::new(
+        "/opt/pcapdb/new_table",
+        Schema::new(field_type::IPV4, "ip.src"),
+    );
+    ip_src_idx.read().unwrap();
+    // db.read_record().unwrap();
 }
