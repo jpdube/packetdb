@@ -347,7 +347,7 @@ mod tests {
 
     #[test]
     fn test_write_bool_false() {
-        let field = Field::set_field(FieldType::Bool(false), "bool_value".to_string());
+        let field = Field::set_field(FieldType::Bool(false), "bool_value");
 
         let bin_value = field.field_to_binary();
         println!("Bin value Bool: {}:{:?}", bin_value.len(), bin_value);
@@ -358,7 +358,7 @@ mod tests {
 
     #[test]
     fn test_write_bool_true() {
-        let field = Field::set_field(FieldType::Bool(true), "bool_value".to_string());
+        let field = Field::set_field(FieldType::Bool(true), "bool_value");
 
         let bin_value = field.field_to_binary();
         println!("Bin value Bool: {}:{:?}", bin_value.len(), bin_value);
@@ -369,7 +369,7 @@ mod tests {
 
     #[test]
     fn test_write_u8() {
-        let field = Field::set_field(FieldType::Int8(0xc0), "byte_value".to_string());
+        let field = Field::set_field(FieldType::Int8(0xc0), "byte_value");
 
         let bin_value = field.field_to_binary();
         println!("Bin value U8: {}:{:?}", bin_value.len(), bin_value);
@@ -380,7 +380,7 @@ mod tests {
 
     #[test]
     fn test_write_u16() {
-        let field = Field::set_field(FieldType::Int16(0xc0a8), "short_value".to_string());
+        let field = Field::set_field(FieldType::Int16(0xc0a8), "short_value");
 
         let bin_value = field.field_to_binary();
         println!("Bin value U16: {}:{:?}", bin_value.len(), bin_value);
@@ -391,10 +391,7 @@ mod tests {
 
     #[test]
     fn test_write_mac() {
-        let field = Field::set_field(
-            FieldType::MacAddr(0xa0b1c2d3e4f5 as u64),
-            "mac_value".to_string(),
-        );
+        let field = Field::set_field(FieldType::MacAddr(0xa0b1c2d3e4f5 as u64), "mac_value");
 
         let bin_value = field.field_to_binary();
         println!("Bin value Mac Addr: {}:{:x?}", bin_value.len(), bin_value);
@@ -410,7 +407,7 @@ mod tests {
 
     #[test]
     fn test_write_ipv4() {
-        let field = Field::set_field(FieldType::Ipv4(0xc0a80301, 24), "ipv4_value".to_string());
+        let field = Field::set_field(FieldType::Ipv4(0xc0a80301, 24), "ipv4_value");
 
         let bin_value = field.field_to_binary();
         println!("Bin value IPv4: {}:{:?}", bin_value.len(), bin_value);
@@ -425,7 +422,7 @@ mod tests {
 
     #[test]
     fn test_write_u32() {
-        let field = Field::set_field(FieldType::Int32(0xc0a80301), "big_value".to_string());
+        let field = Field::set_field(FieldType::Int32(0xc0a80301), "big_value");
 
         let bin_value = field.field_to_binary();
         println!("Bin value U32: {}:{:?}", bin_value.len(), bin_value);
@@ -436,10 +433,7 @@ mod tests {
 
     #[test]
     fn test_write_u64() {
-        let field = Field::set_field(
-            FieldType::Int64(0xa0b1c2d3e4f50010),
-            "big_value".to_string(),
-        );
+        let field = Field::set_field(FieldType::Int64(0xa0b1c2d3e4f50010), "big_value");
 
         let bin_value = field.field_to_binary();
         println!("Bin value U64: {}:{:?}", bin_value.len(), bin_value);
@@ -452,7 +446,7 @@ mod tests {
     fn test_write_string() {
         let field = Field::set_field(
             FieldType::String("athis is a string of 24".to_string()),
-            "string_value".to_string(),
+            "string_value",
         );
 
         let bin_value = field.field_to_binary();
@@ -465,7 +459,7 @@ mod tests {
     #[test]
     fn test_write_byte_array() {
         let bytes: Vec<u8> = vec![0, 1, 2, 3, 4, 5];
-        let field = Field::set_field(FieldType::ByteArray(bytes), "byte_array_value".to_string());
+        let field = Field::set_field(FieldType::ByteArray(bytes), "byte_array_value");
 
         let bin_value = field.field_to_binary();
         println!("ByteArray value: {}:{:x?}", bin_value.len(), bin_value);
@@ -477,7 +471,7 @@ mod tests {
 
     #[test]
     fn test_write_field_def() {
-        let field = Field::set_field(FieldType::Int32(0xc0a80301), "U32_values".to_string());
+        let field = Field::set_field(FieldType::Int32(0xc0a80301), "U32_values");
 
         let bin_value = field.field_def_to_binary();
         println!(
