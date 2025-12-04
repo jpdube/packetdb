@@ -1,6 +1,7 @@
 use crate::schema::Schema;
 use anyhow::Result;
-use byteorder::{BigEndian, ByteOrder, WriteBytesExt};
+use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use field::field_type::get_type_len;
 use field::pfield::Field;
 use field::serialize_field::SerializeField;
 use std::fs;
@@ -37,8 +38,39 @@ impl IndexMeta {
 
     pub fn read(&mut self) -> Result<()> {
         println!("Opening {} of Field len {}", self.name, self.field.type_len);
-        if self.is_valid() {
-            todo!();
+
+        if Path::new(&self.filename).exists() {
+            let mut reader = BufReader::new(File::open(&self.filename)?);
+
+            self.magic_no = reader.read_u32::<BigEndian>()?;
+
+            self.version = reader.read_u16::<BigEndian>()?;
+
+            let ftype: u16 = reader.read_u16::<BigEndian>()?;
+
+            let fname_len: u16 = reader.read_u16::<BigEndian>()?;
+
+            let mut buffer: Vec<u8> = vec![0; fname_len as usize];
+            reader.read_exact(&mut buffer)?;
+            let fname = str::from_utf8(&buffer)?;
+
+            let schema = Schema::new(ftype, fname);
+
+            if self.is_valid() {
+                let mut buffer_field: Vec<u8> = Vec::new();
+                buffer_field.resize(get_type_len(schema.ftype) as usize, 0);
+
+                let mut ptr: u32;
+
+                while reader.read_exact(&mut buffer_field).is_ok() {
+                    ptr = reader.read_u32::<BigEndian>()?;
+
+                    let field = Field::from_binary_to_field(ftype, fname, buffer_field.to_vec());
+
+                    eprintln!("Reading meta index: {}:{:x}", field, ptr);
+                    self.ptr_list.push((field, ptr));
+                }
+            }
         }
 
         Ok(())
@@ -68,7 +100,7 @@ impl IndexMeta {
             writer = BufWriter::new(File::create(&self.filename)?);
             writer.write_u32::<BigEndian>(self.magic_no)?;
             writer.write_u16::<BigEndian>(self.version)?;
-            writer.write_u16::<BigEndian>(self.field.type_len)?;
+            writer.write_all(&self.field.into_bytes()?)?;
         };
 
         for f in &self.ptr_list {
