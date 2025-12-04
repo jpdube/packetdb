@@ -1,3 +1,4 @@
+use crate::index_meta::IndexMeta;
 use crate::row::Row;
 use crate::schema::Schema;
 use anyhow::Result;
@@ -10,6 +11,7 @@ use std::fmt;
 use std::fs;
 use std::fs::File;
 use std::io::Read;
+use std::io::Seek;
 use std::io::{BufReader, BufWriter, Write};
 use std::path::Path;
 use std::time::Instant;
@@ -82,6 +84,7 @@ pub struct TableIndex {
     key_list: HashMap<Field, Vec<u32>>,
     write_ptr: usize,
     header: Header,
+    meta: IndexMeta,
 }
 
 impl fmt::Display for TableIndex {
@@ -98,10 +101,11 @@ impl TableIndex {
     pub fn new(filename: &str, fieldname: Schema) -> Self {
         Self {
             filename: format!("{}_{}.idx", filename, fieldname.name),
-            fieldname,
+            fieldname: fieldname.clone(),
             key_list: HashMap::new(),
             write_ptr: 0,
             header: Header::new(),
+            meta: IndexMeta::new(filename, fieldname.clone()),
         }
     }
 
@@ -117,21 +121,16 @@ impl TableIndex {
         }
 
         if self.write_ptr >= 1024 {
-            // println!("---> Dumping block: {}", self.write_ptr);
             self.save().unwrap();
         }
     }
 
     pub fn save(&mut self) -> Result<()> {
-        // println!(
-        //     "Saving index for: {}, Nbr items to flush: {}",
-        //     self.fieldname, self.write_ptr
-        // );
-
         let mut writer: BufWriter<File>;
 
         if Path::new(&self.filename).exists() {
             writer = BufWriter::new(fs::OpenOptions::new().append(true).open(&self.filename)?);
+            writer.seek(std::io::SeekFrom::End(0))?;
         } else {
             writer = BufWriter::new(File::create(&self.filename)?);
 
@@ -144,30 +143,39 @@ impl TableIndex {
         // Write the index to disk
         let mut buffer: Vec<u8> = Vec::new();
         let mut value_buffer: Vec<u8> = Vec::new();
-        for (key, values) in self.key_list.iter() {
-            // println!("INDEX Key: {key}, Value: {:?}", values);
 
+        let file_pos = writer.stream_position()? as u32;
+
+        self.meta.clear();
+
+        for (key, values) in self.key_list.iter() {
             value_buffer.write_all(&key.field_to_binary())?;
 
             for v in values {
                 value_buffer.write_u32::<BigEndian>(*v)?;
             }
 
+            self.meta
+                .append(key.clone(), file_pos + (buffer.len() as u32))?;
+
             buffer.write_u32::<BigEndian>(value_buffer.len() as u32)?;
             buffer.write_all(&value_buffer)?;
 
             value_buffer.clear();
         }
+
         writer.write_all(&buffer)?;
 
         self.key_list.clear();
         self.write_ptr = 0;
+        self.meta.save()?;
 
         Ok(())
     }
 
     pub fn read(&mut self) -> Result<()> {
-        let start = Instant::now();
+        self.key_list.clear();
+
         let mut reader = BufReader::new(File::open(&self.filename)?);
 
         let mut buffer: Vec<u8> = vec![0; 8];
@@ -177,6 +185,7 @@ impl TableIndex {
         self.header = Header::from_binary(&buffer);
 
         if self.header.is_valid() {
+            let start = Instant::now();
             //--- Read the field defintion
             buffer.resize(2, 0);
             reader.read_exact(&mut buffer)?;
@@ -191,21 +200,18 @@ impl TableIndex {
             let fname = str::from_utf8(&bin_fname)?;
 
             let mut buffer_u32: Vec<u8> = vec![0; 4];
-
             let mut index_block_len: u32;
             while reader.read_exact(&mut buffer_u32).is_ok() {
                 index_block_len = BigEndian::read_u32(&buffer_u32);
                 buffer.resize(index_block_len as usize, 0);
                 reader.read_exact(&mut buffer)?;
 
-                // println!("==== FNAME LEN: {fname}");
                 let field = Field::from_binary_to_field(
                     ftype,
                     fname,
                     buffer[0..get_type_len(ftype) as usize].to_vec(),
                 );
 
-                // println!("****> Index field value: {}", _field);
                 let mut ptr: u32;
                 for byte_ptr in buffer[get_type_len(ftype) as usize..].chunks(4) {
                     ptr = BigEndian::read_u32(byte_ptr);
@@ -216,13 +222,9 @@ impl TableIndex {
                     }
                 }
             }
+            let end = start.elapsed();
+            println!("Index read speed time: {}us", end.as_micros());
         }
-
-        let end = start.elapsed();
-
-        // println!("Index list: {:x?}", &self.key_list);
-
-        println!("Index read speed time: {}us", end.as_micros());
 
         Ok(())
     }
