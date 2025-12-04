@@ -50,32 +50,22 @@ impl DBTable {
         let mut buffer: Vec<u8> = Vec::new();
         let mut reader = BufReader::new(File::open(&self.filename)?);
 
-        buffer.resize(4, 0);
-        reader.read_exact(&mut buffer)?;
-        self.magic_no = BigEndian::read_u32(&buffer);
+        self.magic_no = reader.read_u32::<BigEndian>()?;
 
-        buffer.resize(2, 0);
-        reader.read_exact(&mut buffer)?;
-        self.version = BigEndian::read_u16(&buffer);
+        self.version = reader.read_u16::<BigEndian>()?;
 
-        reader.read_exact(&mut buffer)?;
-        self.options = BigEndian::read_u16(&buffer);
+        self.options = reader.read_u16::<BigEndian>()?;
 
-        reader.read_exact(&mut buffer)?;
-        self.header_size = BigEndian::read_u16(&buffer);
+        self.header_size = reader.read_u16::<BigEndian>()?;
         self.data_ptr = self.header_size as usize + 10;
 
-        reader.read_exact(&mut buffer)?;
-        let nbr_fields = BigEndian::read_u16(&buffer);
+        let nbr_fields: u16 = reader.read_u16::<BigEndian>()?;
 
         self.fields_list.clear();
         for _ in 0..nbr_fields {
-            buffer.resize(2, 0);
-            reader.read_exact(&mut buffer)?;
-            let ftype = BigEndian::read_u16(&buffer);
+            let ftype: u16 = reader.read_u16::<BigEndian>()?;
 
-            reader.read_exact(&mut buffer)?;
-            let fname_len = BigEndian::read_u16(&buffer);
+            let fname_len: u16 = reader.read_u16::<BigEndian>()?;
 
             buffer.resize(fname_len as usize, 0);
             reader.read_exact(&mut buffer)?;
@@ -126,7 +116,7 @@ impl DBTable {
                     buffer[offset..(offset + field_len)].to_vec(),
                 );
 
-                // println!("Field read: {_field}");
+                println!("Field read: {_field}");
 
                 offset += field_len;
             }
