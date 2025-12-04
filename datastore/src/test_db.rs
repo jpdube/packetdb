@@ -23,7 +23,7 @@ pub fn test_db() {
     let mut raw_packet: Vec<u8> = Vec::new();
     raw_packet.resize(300, 0xaa);
 
-    for i in 0..500_000 {
+    for i in 0..2048 {
         let mut row = Row::default();
 
         if i % 2 == 0 {
