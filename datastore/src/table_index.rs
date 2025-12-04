@@ -1,8 +1,8 @@
 use crate::index_meta::IndexMeta;
 use crate::row::Row;
 use crate::schema::Schema;
-use anyhow::Result;
-use byteorder::{BigEndian, ByteOrder, WriteBytesExt};
+use anyhow::{Result, bail};
+use byteorder::{BigEndian, ByteOrder, ReadBytesExt, WriteBytesExt};
 use field::field_type::get_type_len;
 use field::pfield::Field;
 use field::serialize_field::SerializeField;
@@ -43,6 +43,16 @@ struct Header {
     magic_no: u32,
     version: u16,
     options: u16,
+}
+
+impl fmt::Display for Header {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "Index header: MagicNo: {}, Version: {}, Options: {}",
+            self.magic_no, self.version, self.options
+        )
+    }
 }
 
 impl Header {
@@ -184,47 +194,47 @@ impl TableIndex {
         reader.read_exact(&mut buffer)?;
         self.header = Header::from_binary(&buffer);
 
-        if self.header.is_valid() {
-            let start = Instant::now();
-            //--- Read the field defintion
-            buffer.resize(2, 0);
+        if !self.header.is_valid() {
+            bail!("Invalid index header: {}", self.header);
+        }
+
+        let start = Instant::now();
+
+        //--- Read the field defintion
+        let ftype: u16 = reader.read_u16::<BigEndian>()?;
+
+        let fname_len: u16 = reader.read_u16::<BigEndian>()?;
+
+        buffer.resize(fname_len as usize, 0);
+        reader.read_exact(&mut buffer)?;
+        let bin_fname = buffer.clone();
+        let fname = str::from_utf8(&bin_fname)?;
+
+        while let Ok(index_block_len) = reader.read_u32::<BigEndian>() {
+            buffer.resize(index_block_len as usize, 0);
             reader.read_exact(&mut buffer)?;
-            let ftype = BigEndian::read_u16(&buffer);
 
-            reader.read_exact(&mut buffer)?;
-            let fname_len = BigEndian::read_u16(&buffer);
+            let field = Field::from_binary_to_field(
+                ftype,
+                fname,
+                buffer[0..get_type_len(ftype) as usize].to_vec(),
+            );
 
-            buffer.resize(fname_len as usize, 0);
-            reader.read_exact(&mut buffer)?;
-            let bin_fname = buffer.clone();
-            let fname = str::from_utf8(&bin_fname)?;
-
-            let mut buffer_u32: Vec<u8> = vec![0; 4];
-            let mut index_block_len: u32;
-            while reader.read_exact(&mut buffer_u32).is_ok() {
-                index_block_len = BigEndian::read_u32(&buffer_u32);
-                buffer.resize(index_block_len as usize, 0);
-                reader.read_exact(&mut buffer)?;
-
-                let field = Field::from_binary_to_field(
-                    ftype,
-                    fname,
-                    buffer[0..get_type_len(ftype) as usize].to_vec(),
-                );
-
-                let mut ptr: u32;
-                for byte_ptr in buffer[get_type_len(ftype) as usize..].chunks(4) {
-                    ptr = BigEndian::read_u32(byte_ptr);
-                    if let Some(key) = self.key_list.get_mut(&field.clone()) {
-                        key.push(ptr);
-                    } else {
-                        self.key_list.insert(field.clone(), vec![ptr]);
-                    }
+            let mut ptr: u32;
+            for byte_ptr in buffer[get_type_len(ftype) as usize..].chunks(4) {
+                ptr = BigEndian::read_u32(byte_ptr);
+                if let Some(key) = self.key_list.get_mut(&field.clone()) {
+                    key.push(ptr);
+                } else {
+                    self.key_list.insert(field.clone(), vec![ptr]);
                 }
             }
-            let end = start.elapsed();
-            println!("Index read speed time: {}us", end.as_micros());
         }
+
+        let end = start.elapsed();
+        println!("Index read speed time: {}us", end.as_micros());
+
+        self.meta.read()?;
 
         Ok(())
     }
