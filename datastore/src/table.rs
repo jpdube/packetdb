@@ -116,7 +116,7 @@ impl DBTable {
                     buffer[offset..(offset + field_len)].to_vec(),
                 );
 
-                println!("Field read: {_field}");
+                // println!("Field read: {_field}");
 
                 offset += field_len;
             }

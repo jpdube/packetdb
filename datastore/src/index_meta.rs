@@ -67,7 +67,7 @@ impl IndexMeta {
 
                     let field = Field::from_binary_to_field(ftype, fname, buffer_field.to_vec());
 
-                    eprintln!("Reading meta index: {}:{:x}", field, ptr);
+                    // eprintln!("Reading meta index: {}:{:x}", field, ptr);
                     self.ptr_list.push((field, ptr));
                 }
             }
@@ -94,7 +94,7 @@ impl IndexMeta {
         let mut writer: BufWriter<File>;
 
         if Path::new(&self.filename).exists() {
-            eprintln!("In append mode: {}", self.filename);
+            // eprintln!("In append mode: {}", self.filename);
             writer = BufWriter::new(fs::OpenOptions::new().append(true).open(&self.filename)?);
         } else {
             writer = BufWriter::new(File::create(&self.filename)?);
