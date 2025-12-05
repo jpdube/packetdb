@@ -11,6 +11,9 @@ pub fn test_db() {
         vec![
             Schema::new(field_type::IPV4, "ip.src"),
             Schema::new(field_type::IPV4, "ip.dst"),
+            Schema::new(field_type::INT16, "tcp.dport"),
+            Schema::new(field_type::INT16, "tcp.sport"),
+            Schema::new(field_type::STRING, "iface.name"),
         ],
         vec![
             Schema::new(field_type::IPV4, "ip.src"),
@@ -23,7 +26,8 @@ pub fn test_db() {
     let mut raw_packet: Vec<u8> = Vec::new();
     raw_packet.resize(300, 0xaa);
 
-    for i in 0..2048 {
+    let mut j: u16 = 0;
+    for i in 0..5_000_000 {
         let mut row = Row::default();
 
         if i % 2 == 0 {
@@ -35,7 +39,12 @@ pub fn test_db() {
 
         row.add(Field::set_field(FieldType::Int16(443), "tcp.dport"));
 
-        row.add(Field::set_field(FieldType::Int16(31234), "tcp.sport"));
+        if j > 65535 - 1024 {
+            j = 0;
+        } else {
+            j += 1;
+        }
+        row.add(Field::set_field(FieldType::Int16(j + 1024), "tcp.sport"));
 
         row.add(Field::set_field(
             FieldType::String(format!("iface-0{}", i * i)),
@@ -57,5 +66,5 @@ pub fn test_db() {
         Schema::new(field_type::IPV4, "ip.src"),
     );
     ip_src_idx.read().unwrap();
-    // db.read_record().unwrap();
+    db.read_record().unwrap();
 }
