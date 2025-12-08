@@ -2,8 +2,9 @@ use std::collections::{HashMap, HashSet};
 
 use frame::packet::Packet;
 
-use crate::cursor::{Cursor, Record};
+use crate::cursor::Cursor;
 use crate::parse::PqlStatement;
+use crate::record::Record;
 use field::pfield::{Field, FieldType};
 use log::debug;
 
@@ -59,7 +60,7 @@ impl QueryResult {
 
         for field in &self.model.select {
             if let Some(field_value) = pkt.get_field(field.name.clone()) {
-                record.add_field(Field::set_field(field_value.field.clone(), &field.name));
+                record.add(Field::set_field(field_value.field.clone(), &field.name));
 
                 if self.model.has_distinct {
                     distinct_key = format!("{}|{}", distinct_key, field_value);
@@ -68,12 +69,12 @@ impl QueryResult {
         }
 
         let pkt_id = pkt.get_id();
-        record.add_field(Field::set_field(FieldType::Int64(pkt_id), "frame.id"));
+        record.add(Field::set_field(FieldType::Int64(pkt_id), "frame.id"));
 
         if let Some(ts_temp) = pkt.get_field("frame.timestamp".to_string()) {
             let mut ts = ts_temp;
             ts.name = "frame.timestamp".to_string();
-            record.add_field(ts.clone());
+            record.add(ts.clone());
 
             if ts.to_u32() < self.ts_start {
                 self.ts_start = ts.to_u32();
@@ -137,7 +138,7 @@ impl AggregateResult {
                 aggr.as_of(),
             );
 
-            record.add_field(aggr_field);
+            record.add(aggr_field);
         }
 
         self.result.add_record(record.clone());
@@ -200,7 +201,7 @@ impl GroupBy {
                 let aggr_field = Field::set_field(field_value, &field_name);
                 // let aggr_field = Field::set_field_with_name(field_value, field_name);
 
-                record.add_field(aggr_field);
+                record.add(aggr_field);
             }
 
             for aggr in &self.model.aggr_list {
@@ -210,7 +211,7 @@ impl GroupBy {
                     &aggr.as_of().clone(),
                 );
 
-                record.add_field(aggr_field);
+                record.add(aggr_field);
             }
 
             self.result.add_record(record.clone());

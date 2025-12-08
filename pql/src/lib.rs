@@ -6,4 +6,5 @@ pub mod lexer;
 pub mod parse;
 pub mod preparser;
 pub mod query_result;
+pub mod record;
 pub mod token;
