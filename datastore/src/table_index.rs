@@ -1,5 +1,5 @@
 use crate::index_meta::IndexMeta;
-use crate::row::Row;
+use crate::record::Record;
 use crate::schema::Schema;
 use anyhow::{Result, bail};
 use byteorder::{BigEndian, ByteOrder, ReadBytesExt, WriteBytesExt};
@@ -119,8 +119,8 @@ impl TableIndex {
         }
     }
 
-    pub fn append(&mut self, row: Row, ptr: u32) {
-        if let Some(field) = row.get_field(&self.fieldname.name) {
+    pub fn append(&mut self, row: Record, ptr: u32) {
+        if let Some(field) = row.get(&self.fieldname.name) {
             if let Some(key) = self.key_list.get_mut(&field) {
                 key.push(ptr);
             } else {

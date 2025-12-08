@@ -9,7 +9,8 @@ use std::fs;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Read, Seek, Write};
 
-use crate::row::Row;
+// use crate::row::Row;
+use crate::record::Record;
 use crate::schema::Schema;
 use crate::table_index::TableIndex;
 
@@ -116,8 +117,6 @@ impl DBTable {
                     buffer[offset..(offset + field_len)].to_vec(),
                 );
 
-                // println!("Field read: {_field}");
-
                 offset += field_len;
             }
             // println!("---------------------------------");
@@ -164,7 +163,7 @@ impl DBTable {
         Ok(())
     }
 
-    pub fn append(&mut self, data: Vec<Row>) -> Result<()> {
+    pub fn append(&mut self, data: Vec<Record>) -> Result<()> {
         let start = Instant::now();
         let fs = fs::OpenOptions::new().append(true).open(&self.filename)?;
 
@@ -175,7 +174,7 @@ impl DBTable {
         for row in data.clone().into_iter() {
             let ptr = writer.stream_position()?;
             buffer.clear();
-            for f in &row.row {
+            for f in &row.get_fields() {
                 buffer.write_all(&f.field_to_binary())?;
             }
 

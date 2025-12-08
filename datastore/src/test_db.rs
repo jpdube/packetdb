@@ -1,4 +1,4 @@
-use crate::row::Row;
+use crate::record::Record;
 use crate::schema::Schema;
 use crate::table::DBTable;
 use crate::table_index::TableIndex;
@@ -14,6 +14,7 @@ pub fn test_db() {
             Schema::new(field_type::INT16, "tcp.dport"),
             Schema::new(field_type::INT16, "tcp.sport"),
             Schema::new(field_type::STRING, "iface.name"),
+            Schema::new(field_type::BYTE_ARRAY, "raw_packet"),
         ],
         vec![
             Schema::new(field_type::IPV4, "ip.src"),
@@ -22,13 +23,13 @@ pub fn test_db() {
     )
     .unwrap();
 
-    let mut data: Vec<Row> = Vec::new();
+    let mut data: Vec<Record> = Vec::new();
     let mut raw_packet: Vec<u8> = Vec::new();
     raw_packet.resize(300, 0xaa);
 
     let mut j: u16 = 0;
-    for i in 0..5_000_000 {
-        let mut row = Row::default();
+    for i in 0..50_000 {
+        let mut row = Record::default();
 
         if i % 2 == 0 {
             row.add(Field::set_field(FieldType::Ipv4(0xc0a80310, 32), "ip.src"));
