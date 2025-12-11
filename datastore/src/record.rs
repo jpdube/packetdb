@@ -14,13 +14,10 @@ impl Record {
     }
 
     pub fn get(&self, fieldname: &str) -> Option<Field> {
-        for f in &self.field_list {
-            if f.get_name() == fieldname.to_string() {
-                return Some(f.clone());
-            }
-        }
-
-        None
+        self.field_list
+            .iter()
+            .find(|f| f.get_name() == fieldname)
+            .cloned()
     }
 
     pub fn get_fields(&self) -> Vec<Field> {
