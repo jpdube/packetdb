@@ -1,3 +1,4 @@
+use crate::packet_to_db;
 use crate::record::Record;
 use crate::schema::Schema;
 use crate::table::DBTable;
@@ -6,6 +7,10 @@ use field::field_type;
 use field::pfield::{Field, FieldType};
 
 pub fn test_db() {
+    packet_to_db(0, "packet_table");
+}
+
+pub fn _test_db_logic() {
     let mut db = DBTable::new("/opt/pcapdb/new_table");
     db.create_table(
         vec![
