@@ -46,6 +46,17 @@ impl Packet {
         Packet::default()
     }
 
+    pub fn get_bytes(&self) -> Option<Field> {
+        if !self.raw_packet.is_empty() {
+            Some(Field::set_field(
+                field::pfield::FieldType::ByteArray(self.raw_packet.clone()),
+                "packet",
+            ))
+        } else {
+            None
+        }
+    }
+
     pub fn add_layer(&mut self, layer: LayerInfo) {
         self.frame_list.insert(layer.layer_type.clone(), layer);
     }
