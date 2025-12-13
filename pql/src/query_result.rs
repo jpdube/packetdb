@@ -59,7 +59,7 @@ impl QueryResult {
         let mut distinct_key = String::new();
 
         for field in &self.model.select {
-            if let Some(field_value) = pkt.get_field(field.name.clone()) {
+            if let Some(field_value) = pkt.get_field(&field.name) {
                 record.add(Field::set_field(field_value.field.clone(), &field.name));
 
                 if self.model.has_distinct {
@@ -71,7 +71,7 @@ impl QueryResult {
         let pkt_id = pkt.get_id();
         record.add(Field::set_field(FieldType::Int64(pkt_id), "frame.id"));
 
-        if let Some(ts_temp) = pkt.get_field("frame.timestamp".to_string()) {
+        if let Some(ts_temp) = pkt.get_field("frame.timestamp") {
             let mut ts = ts_temp;
             ts.name = "frame.timestamp".to_string();
             record.add(ts.clone());
@@ -170,7 +170,7 @@ impl GroupBy {
         let mut key: Vec<usize> = Vec::new();
 
         for k in &self.model.groupby_fields {
-            if let Some(field_id) = pkt.get_field(k.name.clone()) {
+            if let Some(field_id) = pkt.get_field(&k.name) {
                 key.push(field_id.to_u64() as usize);
             }
         }

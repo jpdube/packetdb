@@ -46,12 +46,12 @@ pub fn packet_to_db(packet_file: u32, table_name: &str) {
 
         let mut row = Record::default();
 
-        row.add(pkt.get_field("frame.timestamp".to_string()).unwrap());
-        row.add(pkt.get_field("frame.inclen".to_string()).unwrap());
-        row.add(pkt.get_field("frame.origlen".to_string()).unwrap());
+        row.add(pkt.get_field("frame.timestamp").unwrap());
+        row.add(pkt.get_field("frame.inclen").unwrap());
+        row.add(pkt.get_field("frame.origlen").unwrap());
         if pkt.has_ipv4() {
-            row.add(pkt.get_field("ip.src".to_string()).unwrap());
-            row.add(pkt.get_field("ip.dst".to_string()).unwrap());
+            row.add(pkt.get_field("ip.src").unwrap());
+            row.add(pkt.get_field("ip.dst").unwrap());
         } else {
             row.add(Field::set_field(
                 field::pfield::FieldType::Ipv4(0, 0),

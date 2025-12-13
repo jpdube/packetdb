@@ -136,16 +136,13 @@ impl<'a> Icmp<'a> {
 }
 
 impl<'a> Layer for Icmp<'a> {
-    fn get_field(&self, field: String) -> Option<Field> {
-        match field.as_str() {
-            "icmp.type" => Some(Field::set_field(FieldType::Int8(self.itype()), &field)),
-            "icmp.code" => Some(Field::set_field(FieldType::Int8(self.code()), &field)),
-            "icmp.identifier" => Some(Field::set_field(
-                FieldType::Int16(self.identifier()),
-                &field,
-            )),
+    fn get_field(&self, field: &str) -> Option<Field> {
+        match field {
+            "icmp.type" => Some(Field::set_field(FieldType::Int8(self.itype()), field)),
+            "icmp.code" => Some(Field::set_field(FieldType::Int8(self.code()), field)),
+            "icmp.identifier" => Some(Field::set_field(FieldType::Int16(self.identifier()), field)),
 
-            "icmp.seq_no" => Some(Field::set_field(FieldType::Int16(self.seq_no()), &field)),
+            "icmp.seq_no" => Some(Field::set_field(FieldType::Int16(self.seq_no()), field)),
             _ => None,
         }
     }

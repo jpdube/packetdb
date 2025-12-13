@@ -168,7 +168,7 @@ impl DbEngine {
             if let Some(pkt) = pcapfile.seek(ptr) {
                 debug!(
                     "ID pkt ID: {}",
-                    pkt.get_field("frame.id".to_string()).unwrap().to_usize()
+                    pkt.get_field("frame.id").unwrap().to_usize()
                 );
                 result.push(pkt);
             }

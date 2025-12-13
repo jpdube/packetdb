@@ -598,25 +598,25 @@ impl<'a> Layer for Dns<'a> {
         "dns".to_string()
     }
 
-    fn get_field(&self, field: String) -> Option<Field> {
-        match field.as_str() {
-            "dns.id" => Some(Field::set_field(FieldType::Int16(self.id()), &field)),
-            "dns.opcode" => Some(Field::set_field(FieldType::Int8(self.opcode()), &field)),
+    fn get_field(&self, field: &str) -> Option<Field> {
+        match field {
+            "dns.id" => Some(Field::set_field(FieldType::Int16(self.id()), field)),
+            "dns.opcode" => Some(Field::set_field(FieldType::Int8(self.opcode()), field)),
             "dns.has_rrsig" => {
                 Some(Field::set_field(
                     FieldType::Bool(self.has_type(DNS_TYPE_RRSIG)),
-                    &field,
+                    field,
                 ))
                 // Some(Field::set_field(FieldType::Bool(self.has_rrsig()), &field))
             }
             "dns.has_aaaa" => Some(Field::set_field(
                 FieldType::Bool(self.has_type(DNS_TYPE_AAAA)),
-                &field,
+                field,
             )),
             // fields::DNS_HAS_AAAA => Some(Field::set_field(FieldType::Bool(self.has_aaaa()), &field)),
             "dns.answer_count" => Some(Field::set_field(
                 FieldType::Int16(self.answer_count()),
-                &field,
+                field,
             )),
             "dns.type_a" => {
                 let mut field_list: Vec<FieldType> = Vec::new();
@@ -631,14 +631,14 @@ impl<'a> Layer for Dns<'a> {
                 }
 
                 if !field_list.is_empty() {
-                    Some(Field::set_field(FieldType::FieldArray(field_list), &field))
+                    Some(Field::set_field(FieldType::FieldArray(field_list), field))
                 } else {
                     None
                 }
             }
             "dns.question_count" => Some(Field::set_field(
                 FieldType::Int16(self.question_count()),
-                &field,
+                field,
             )),
             "dns.answers" => {
                 let mut field_list: Vec<FieldType> = Vec::new();
@@ -647,7 +647,7 @@ impl<'a> Layer for Dns<'a> {
                     field_list.push(FieldType::String(answer.name.clone()));
                 }
 
-                Some(Field::set_field(FieldType::FieldArray(field_list), &field))
+                Some(Field::set_field(FieldType::FieldArray(field_list), field))
             }
             _ => None,
         }

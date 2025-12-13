@@ -225,10 +225,7 @@ impl IndexManager {
 
         while let Some(pkt) = pfile.next() {
             count += 1;
-            ts = pkt
-                .get_field("frame.timestamp".to_string())
-                .unwrap()
-                .to_u32();
+            ts = pkt.get_field("frame.timestamp").unwrap().to_u32();
 
             if !first_index {
                 first_index = true;
@@ -270,13 +267,13 @@ impl IndexManager {
             writer.write_u32::<BigEndian>(pindex).unwrap();
             // proto_stat.add(pindex);
 
-            if let Some(ip_dst) = pkt.get_field("ip.dst".to_string()) {
+            if let Some(ip_dst) = pkt.get_field("ip.dst") {
                 writer.write_u32::<BigEndian>(ip_dst.to_u32()).unwrap();
             } else {
                 writer.write_u32::<BigEndian>(0).unwrap();
             }
 
-            if let Some(ip_src) = pkt.get_field("ip.src".to_string()) {
+            if let Some(ip_src) = pkt.get_field("ip.src") {
                 writer.write_u32::<BigEndian>(ip_src.to_u32()).unwrap();
             } else {
                 writer.write_u32::<BigEndian>(0).unwrap();

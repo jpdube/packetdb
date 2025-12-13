@@ -50,14 +50,14 @@ impl<'a> Layer for IpFrame<'a> {
         "ip".to_string()
     }
 
-    fn get_field(&self, field: String) -> Option<Field> {
-        match field.as_str() {
-            "ip.src" => Some(Field::set_field(FieldType::Ipv4(self.src(), 32), &field)),
-            "ip.dst" => Some(Field::set_field(FieldType::Ipv4(self.dst(), 32), &field)),
-            "ip.tos" => Some(Field::set_field(FieldType::Int8(self.tos()), &field)),
-            "ip.ttl" => Some(Field::set_field(FieldType::Int8(self.ttl()), &field)),
-            "ip.protocol" => Some(Field::set_field(FieldType::Int8(self.proto()), &field)),
-            "ip.hdr_len" => Some(Field::set_field(FieldType::Int8(self.header_len()), &field)),
+    fn get_field(&self, field: &str) -> Option<Field> {
+        match field {
+            "ip.src" => Some(Field::set_field(FieldType::Ipv4(self.src(), 32), field)),
+            "ip.dst" => Some(Field::set_field(FieldType::Ipv4(self.dst(), 32), field)),
+            "ip.tos" => Some(Field::set_field(FieldType::Int8(self.tos()), field)),
+            "ip.ttl" => Some(Field::set_field(FieldType::Int8(self.ttl()), field)),
+            "ip.protocol" => Some(Field::set_field(FieldType::Int8(self.proto()), field)),
+            "ip.hdr_len" => Some(Field::set_field(FieldType::Int8(self.header_len()), field)),
             _ => None,
         }
     }

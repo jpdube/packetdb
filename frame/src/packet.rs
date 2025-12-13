@@ -213,7 +213,7 @@ impl Packet {
     fn process_ipv4(&mut self, vo: usize, ip_header_len: usize) {
         if let Some(ip_layer) = &self.get_layer_bytes(LayerIndex::IPv4) {
             let p = IpFrame::new(ip_layer);
-            if let Some(proto) = p.get_field("ip.protocol".to_string()) {
+            if let Some(proto) = p.get_field("ip.protocol") {
                 match proto.to_u8() {
                     IP_TCP_PROTO => {
                         //--- Add TCP layer
@@ -407,7 +407,7 @@ impl Packet {
         }
     }
 
-    pub fn get_field(&self, field: String) -> Option<Field> {
+    pub fn get_field(&self, field: &str) -> Option<Field> {
         if self.field_type(&field, fields::ETH_BASE) && self.has_layer(LayerIndex::ETH) {
             if let Some(eth_packet) = self.get_eth_packet() {
                 eth_packet.get_field(field)

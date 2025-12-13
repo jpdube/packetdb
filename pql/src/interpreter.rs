@@ -133,7 +133,7 @@ impl Interpreter {
             Expression::Timestamp(t) => Ok(Object::Timestamp(*t)),
             Expression::Label(value) => {
                 // debug!("Label: {}", value);
-                let field_value = pkt.get_field(value.clone()).unwrap();
+                let field_value = pkt.get_field(&value).unwrap();
                 match field_value.field {
                     FieldType::Int8(_) => Ok(Object::Integer(field_value.to_u64())),
                     FieldType::Int16(_) => Ok(Object::Integer(field_value.to_u64())),

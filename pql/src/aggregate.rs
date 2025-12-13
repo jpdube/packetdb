@@ -60,7 +60,7 @@ impl Aggregate {
         let mut result: usize = 0;
 
         for pkt in pkt_list {
-            if let Some(field) = pkt.get_field(field_id.clone()) {
+            if let Some(field) = pkt.get_field(&field_id) {
                 result += field.to_usize();
             }
         }
@@ -72,7 +72,7 @@ impl Aggregate {
         let mut result: usize = 0;
 
         for pkt in pkt_list {
-            if let Some(field) = pkt.get_field(field_id.clone()) {
+            if let Some(field) = pkt.get_field(&field_id) {
                 result += field.to_usize();
             }
         }
@@ -84,7 +84,7 @@ impl Aggregate {
         let mut result: usize = usize::MAX;
 
         for pkt in pkt_list {
-            if let Some(r) = pkt.get_field(field_id.clone())
+            if let Some(r) = pkt.get_field(&field_id)
                 && r.to_usize() < result
             {
                 result = r.to_usize();
@@ -98,7 +98,7 @@ impl Aggregate {
         let mut result: usize = 0;
 
         for pkt in pkt_list {
-            if let Some(r) = pkt.get_field(field_id.clone())
+            if let Some(r) = pkt.get_field(&field_id)
                 && r.to_usize() > result
             {
                 result = r.to_usize();

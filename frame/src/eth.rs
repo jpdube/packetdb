@@ -55,12 +55,12 @@ impl<'a> Layer for EtherFrame<'a> {
         "eth".to_string()
     }
 
-    fn get_field(&self, field: String) -> Option<Field> {
-        match field.as_str() {
-            "eth.src" => Some(Field::set_field(FieldType::MacAddr(self.src()), &field)),
-            "eth.dst" => Some(Field::set_field(FieldType::MacAddr(self.dst()), &field)),
-            "eth.type" => Some(Field::set_field(FieldType::Int16(self.ethertype()), &field)),
-            "eth.vlan" => Some(Field::set_field(FieldType::Int16(self.vlan_id()), &field)),
+    fn get_field(&self, field: &str) -> Option<Field> {
+        match field {
+            "eth.src" => Some(Field::set_field(FieldType::MacAddr(self.src()), field)),
+            "eth.dst" => Some(Field::set_field(FieldType::MacAddr(self.dst()), field)),
+            "eth.type" => Some(Field::set_field(FieldType::Int16(self.ethertype()), field)),
+            "eth.vlan" => Some(Field::set_field(FieldType::Int16(self.vlan_id()), field)),
             _ => None,
         }
     }

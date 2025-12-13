@@ -65,27 +65,18 @@ impl Layer for Arp {
         self.name.clone()
     }
 
-    fn get_field(&self, field: String) -> Option<Field> {
-        match field.as_str() {
-            "arp.hwd_type" => Some(Field::set_field(FieldType::Int16(self.get_htype()), &field)),
-            "arp.proto_type" => Some(Field::set_field(FieldType::Int16(self.get_ptype()), &field)),
-            "arp.hwd_size" => Some(Field::set_field(FieldType::Int8(self.get_hlen()), &field)),
+    fn get_field(&self, field: &str) -> Option<Field> {
+        match field {
+            "arp.hwd_type" => Some(Field::set_field(FieldType::Int16(self.get_htype()), field)),
+            "arp.proto_type" => Some(Field::set_field(FieldType::Int16(self.get_ptype()), field)),
+            "arp.hwd_size" => Some(Field::set_field(FieldType::Int8(self.get_hlen()), field)),
 
-            "arp.opcode" => Some(Field::set_field(
-                FieldType::Int16(self.get_opcode()),
-                &field,
-            )),
-            "arp.sender_mac" => Some(Field::set_field(FieldType::MacAddr(self.get_sha()), &field)),
-            "arp.target_mac" => Some(Field::set_field(FieldType::MacAddr(self.get_tha()), &field)),
+            "arp.opcode" => Some(Field::set_field(FieldType::Int16(self.get_opcode()), field)),
+            "arp.sender_mac" => Some(Field::set_field(FieldType::MacAddr(self.get_sha()), field)),
+            "arp.target_mac" => Some(Field::set_field(FieldType::MacAddr(self.get_tha()), field)),
 
-            "arp.sender_ip" => Some(Field::set_field(
-                FieldType::Ipv4(self.get_spa(), 32),
-                &field,
-            )),
-            "arp.target_ip" => Some(Field::set_field(
-                FieldType::Ipv4(self.get_tpa(), 32),
-                &field,
-            )),
+            "arp.sender_ip" => Some(Field::set_field(FieldType::Ipv4(self.get_spa(), 32), field)),
+            "arp.target_ip" => Some(Field::set_field(FieldType::Ipv4(self.get_tpa(), 32), field)),
 
             _ => None,
         }
