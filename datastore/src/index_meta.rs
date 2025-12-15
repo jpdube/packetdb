@@ -57,8 +57,7 @@ impl IndexMeta {
             let schema = Schema::new(ftype, fname);
 
             if self.is_valid() {
-                let mut buffer_field: Vec<u8> = Vec::new();
-                buffer_field.resize(get_type_len(schema.ftype) as usize, 0);
+                let mut buffer_field: Vec<u8> = vec![0; get_type_len(schema.ftype) as usize];
 
                 let mut ptr: u32;
 
@@ -67,7 +66,6 @@ impl IndexMeta {
 
                     let field = Field::from_binary_to_field(ftype, fname, buffer_field.to_vec());
 
-                    // eprintln!("Reading meta index: {}:{:x}", field, ptr);
                     self.ptr_list.push((field, ptr));
                 }
             }
