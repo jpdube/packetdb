@@ -28,7 +28,6 @@ pub fn _test_db_logic() {
     )
     .unwrap();
 
-    let mut data: Vec<Record> = Vec::new();
     let mut raw_packet: Vec<u8> = Vec::new();
     raw_packet.resize(300, 0xaa);
 
@@ -62,10 +61,10 @@ pub fn _test_db_logic() {
             "raw_packet",
         ));
 
-        data.push(row);
+        db.save(row).unwrap();
     }
 
-    db.append(data).unwrap();
+    db.flush().unwrap();
 
     let mut ip_src_idx = TableIndex::new(
         "/opt/pcapdb/new_table",

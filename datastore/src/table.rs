@@ -2,19 +2,20 @@ use anyhow::Result;
 use field::field_type;
 use field::pfield::Field;
 use field::serialize_field::SerializeField;
-use std::time::Instant;
 
 use byteorder::{BigEndian, ByteOrder, ReadBytesExt, WriteBytesExt};
+use std::collections::VecDeque;
 use std::fs;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Read, Seek, Write};
 
-// use crate::row::Row;
 use crate::record::Record;
 use crate::schema::Schema;
 use crate::table_index::TableIndex;
 
 use rayon::prelude::*;
+
+const BLOCK_SIZE: usize = 4096;
 
 pub struct DBTable {
     filename: String,
@@ -26,6 +27,7 @@ pub struct DBTable {
     header_size: u16,
     data_ptr: usize,
     index_list: Vec<TableIndex>,
+    record_list: VecDeque<Record>,
 }
 
 impl DBTable {
@@ -40,6 +42,7 @@ impl DBTable {
             header_size: 0,
             data_ptr: 0,
             index_list: Vec::new(),
+            record_list: VecDeque::new(),
         }
     }
 
@@ -136,6 +139,7 @@ impl DBTable {
     pub fn create_table(&mut self, fields: Vec<Schema>, index: Vec<Schema>) -> Result<()> {
         self.create_index(index);
         self.fields_list = fields;
+        self.record_list.clear();
 
         self.create()?;
 
@@ -163,30 +167,53 @@ impl DBTable {
         Ok(())
     }
 
-    pub fn append(&mut self, data: Vec<Record>) -> Result<()> {
-        let start = Instant::now();
+    pub fn save(&mut self, record: Record) -> Result<()> {
+        if self.record_list.len() >= 2048 {
+            self.append()?;
+            Ok(())
+        } else {
+            self.record_list.push_back(record);
+            Ok(())
+        }
+    }
+
+    pub fn append(&mut self) -> Result<()> {
         let fs = fs::OpenOptions::new().append(true).open(&self.filename)?;
 
         let mut writer = BufWriter::new(fs);
 
         let mut buffer: Vec<u8> = Vec::new();
         writer.seek(std::io::SeekFrom::End(0))?;
-        for row in data.clone().into_iter() {
+
+        let max_len = if self.record_list.len() < BLOCK_SIZE {
+            self.record_list.len()
+        } else {
+            BLOCK_SIZE
+        };
+
+        for _ in 0..max_len - 1 {
             let ptr = writer.stream_position()?;
             buffer.clear();
-            for f in &row.get_fields() {
-                buffer.write_all(&f.field_to_binary())?;
-            }
+            if let Some(row) = &self.record_list.pop_front() {
+                for f in row.get_fields() {
+                    // for f in &row.get_fields() {
+                    buffer.write_all(&f.field_to_binary())?;
+                }
 
-            writer.write_u16::<BigEndian>(buffer.len() as u16)?;
-            writer.write_all(&buffer)?;
+                writer.write_u16::<BigEndian>(buffer.len() as u16)?;
+                writer.write_all(&buffer)?;
 
-            for idx in &mut self.index_list {
-                idx.append(row.clone(), ptr as u32);
+                for idx in &mut self.index_list {
+                    idx.append(row.clone(), ptr as u32);
+                }
             }
         }
 
-        // Save indexes
+        Ok(())
+    }
+
+    pub fn flush(&mut self) -> Result<()> {
+        self.append()?;
         let result: Vec<Result<(), anyhow::Error>> = self
             .index_list
             .clone()
@@ -195,14 +222,6 @@ impl DBTable {
             .collect();
 
         println!("Save index result: {:?}", result);
-
-        let duration = start.elapsed();
-
-        println!(
-            "Execution time: {:4.2}s per row: {:4.2}us",
-            duration.as_secs_f32(),
-            (duration.as_secs_f32() / data.len() as f32) * 1_000_000.0
-        );
 
         Ok(())
     }

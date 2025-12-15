@@ -37,8 +37,6 @@ pub fn packet_to_db(packet_file: u32, table_name: &str) {
     )
     .unwrap();
 
-    let mut data: Vec<Record> = Vec::new();
-
     let mut count = 0;
     let start = Instant::now();
     while let Some(pkt) = pcap_file.next() {
@@ -64,17 +62,16 @@ pub fn packet_to_db(packet_file: u32, table_name: &str) {
         }
         row.add(pkt.get_bytes().unwrap());
 
-        data.push(row);
+        db.save(row).unwrap();
     }
 
-    let dl = data.len();
-    db.append(data).unwrap();
+    db.flush().unwrap();
 
     let duration = start.elapsed();
     println!(
         "Packet import time: {:4.2}s per row: {:4.2}us",
         duration.as_secs_f32(),
-        (duration.as_secs_f32() / dl as f32) * 1_000_000.0
+        (duration.as_secs_f32() / count as f32) * 1_000_000.0
     );
     println!("Read {} packets", count);
 }
