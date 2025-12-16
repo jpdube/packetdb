@@ -15,7 +15,7 @@ use crate::table_index::TableIndex;
 
 use rayon::prelude::*;
 
-const BLOCK_SIZE: usize = 4096;
+const BLOCK_SIZE: usize = 8192;
 
 pub struct DBTable {
     filename: String,
@@ -167,7 +167,7 @@ impl DBTable {
         Ok(())
     }
 
-    pub fn save(&mut self, record: Record) -> Result<()> {
+    pub fn add_record(&mut self, record: Record) -> Result<()> {
         if self.record_list.len() >= 2048 {
             self.append()?;
             Ok(())
