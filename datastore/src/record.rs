@@ -2,10 +2,21 @@ use field::pfield::Field;
 use serde::Serialize;
 use serde_json::Value;
 use std::collections::BTreeMap;
+use std::fmt;
 
 #[derive(Debug, Default, Serialize, Clone)]
 pub struct Record {
     field_list: Vec<Field>,
+}
+
+impl fmt::Display for Record {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for field in &self.field_list {
+            write!(f, "{field}")?;
+        }
+
+        Ok(())
+    }
 }
 
 impl Record {

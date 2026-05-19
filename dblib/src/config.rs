@@ -11,6 +11,7 @@ lazy_static! {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
+    pub root_path: String,
     pub db_path: String,
     pub index_path: String,
     pub proto_index_path: String,

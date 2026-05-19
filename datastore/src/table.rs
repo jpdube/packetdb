@@ -14,8 +14,10 @@ use crate::schema::Schema;
 use crate::table_index::TableIndex;
 
 use rayon::prelude::*;
+// use std::sync::mpsc::{Receiver, Sender, channel};
+// use std::thread;
 
-const BLOCK_SIZE: usize = 8192;
+const BLOCK_SIZE: usize = 1024;
 
 pub struct DBTable {
     filename: String,
@@ -28,12 +30,15 @@ pub struct DBTable {
     data_ptr: usize,
     index_list: Vec<TableIndex>,
     record_list: VecDeque<Record>,
+    writer: BufWriter<File>,
 }
 
 impl DBTable {
     pub fn new(filename: &str) -> Self {
+        let filename_str = format!("{}.{}", filename, "pdb");
+
         Self {
-            filename: format!("{}.{}", filename, "pdb"),
+            filename: filename_str.clone(),
             table_name: filename.to_string(),
             magic_no: 0xa1b2c3d4,
             version: 1,
@@ -43,7 +48,48 @@ impl DBTable {
             data_ptr: 0,
             index_list: Vec::new(),
             record_list: VecDeque::new(),
+            writer: BufWriter::new(
+                fs::OpenOptions::new()
+                    .append(true)
+                    .open(&filename_str)
+                    .unwrap(),
+            ),
         }
+    }
+
+    pub fn append(&mut self) -> Result<()> {
+        // let fs = fs::OpenOptions::new().append(true).open(&self.filename)?;
+
+        // let mut writer = BufWriter::new(fs);
+
+        let mut buffer: Vec<u8> = Vec::new();
+        self.writer.seek(std::io::SeekFrom::End(0))?;
+
+        let max_len = if self.record_list.len() < BLOCK_SIZE {
+            self.record_list.len()
+        } else {
+            BLOCK_SIZE
+        };
+
+        for _ in 0..max_len - 1 {
+            let ptr = self.writer.stream_position()?;
+            buffer.clear();
+            if let Some(row) = &self.record_list.pop_front() {
+                for f in row.get_fields() {
+                    // for f in &row.get_fields() {
+                    buffer.write_all(&f.field_to_binary())?;
+                }
+
+                self.writer.write_u16::<BigEndian>(buffer.len() as u16)?;
+                self.writer.write_all(&buffer)?;
+
+                for idx in &mut self.index_list {
+                    idx.append(row.clone(), ptr as u32);
+                }
+            }
+        }
+
+        Ok(())
     }
 
     pub fn define_fields(&mut self, fields: Vec<Schema>) {
@@ -122,7 +168,6 @@ impl DBTable {
 
                 offset += field_len;
             }
-            // println!("---------------------------------");
         }
 
         println!("READ {rec_count} Records");
@@ -146,7 +191,7 @@ impl DBTable {
         Ok(())
     }
 
-    pub fn create(&mut self) -> Result<()> {
+    fn create(&mut self) -> Result<()> {
         let mut writer = BufWriter::new(File::create(&self.filename)?);
         let mut buffer: Vec<u8> = Vec::new();
 
@@ -175,41 +220,6 @@ impl DBTable {
             self.record_list.push_back(record);
             Ok(())
         }
-    }
-
-    pub fn append(&mut self) -> Result<()> {
-        let fs = fs::OpenOptions::new().append(true).open(&self.filename)?;
-
-        let mut writer = BufWriter::new(fs);
-
-        let mut buffer: Vec<u8> = Vec::new();
-        writer.seek(std::io::SeekFrom::End(0))?;
-
-        let max_len = if self.record_list.len() < BLOCK_SIZE {
-            self.record_list.len()
-        } else {
-            BLOCK_SIZE
-        };
-
-        for _ in 0..max_len - 1 {
-            let ptr = writer.stream_position()?;
-            buffer.clear();
-            if let Some(row) = &self.record_list.pop_front() {
-                for f in row.get_fields() {
-                    // for f in &row.get_fields() {
-                    buffer.write_all(&f.field_to_binary())?;
-                }
-
-                writer.write_u16::<BigEndian>(buffer.len() as u16)?;
-                writer.write_all(&buffer)?;
-
-                for idx in &mut self.index_list {
-                    idx.append(row.clone(), ptr as u32);
-                }
-            }
-        }
-
-        Ok(())
     }
 
     pub fn flush(&mut self) -> Result<()> {

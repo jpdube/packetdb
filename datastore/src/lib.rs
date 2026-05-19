@@ -5,11 +5,12 @@ pub mod row;
 pub mod schema;
 pub mod table;
 pub mod table_index;
+pub mod table_writer;
 pub mod test_db;
 
 use crate::record::Record;
 use crate::schema::Schema;
-use crate::table::DBTable;
+use crate::table_writer::DBTableWriter;
 use anyhow::{Result, anyhow};
 use dblib::config::CONFIG;
 use field::field_type;
@@ -23,7 +24,7 @@ use std::time::Instant;
 pub fn packet_to_db(packet_file: u32, table_name: &str) -> Result<()> {
     let mut pcap_file = PcapFile::new(packet_file, &CONFIG.db_path);
 
-    let mut db = DBTable::new(&format!("/opt/pcapdb/db/import/{}", table_name));
+    let mut db = DBTableWriter::new(&format!("{}/import/{}", &CONFIG.root_path, table_name));
     db.create_table(
         vec![
             Schema::new(field_type::INT32, "frame.timestamp"),
@@ -108,13 +109,13 @@ pub fn packet_to_db(packet_file: u32, table_name: &str) -> Result<()> {
 
 pub fn mass_import_packet() -> Result<()> {
     if let Ok(files_list) = get_packet_files() {
-        let result: Vec<Result<(), anyhow::Error>> = files_list
+        let _result: Vec<Result<(), anyhow::Error>> = files_list
             .clone()
             .into_par_iter()
             .map(|pkt_file| packet_to_db(pkt_file, &format!("packet_{}", pkt_file)))
             .collect();
 
-        println!("Save index result: {:?}", result);
+        // println!("Save index result: {:?}", result);
 
         // for f in files_list {
         //     eprintln!("Importing packet: {f}");
