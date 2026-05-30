@@ -32,15 +32,15 @@ pub fn packet_to_db(packet_file: u32, table_name: &str) -> Result<()> {
             Schema::new(field_type::INT32, "frame.origlen"),
             Schema::new(field_type::IPV4, "ip.src"),
             Schema::new(field_type::IPV4, "ip.dst"),
-            Schema::new(field_type::BYTE_ARRAY, "frame.packet"),
+            // Schema::new(field_type::BYTE_ARRAY, "frame.packet"),
         ],
         vec![
             Schema::new(field_type::IPV4, "ip.src"),
             Schema::new(field_type::INT16, "ip.dst"),
             Schema::new(field_type::INT16, "frame.timestamp"),
         ],
-    )
-    .unwrap();
+    )?;
+    // .unwrap();
 
     let mut count = 0;
     let start = Instant::now();
@@ -89,7 +89,7 @@ pub fn packet_to_db(packet_file: u32, table_name: &str) -> Result<()> {
             ));
         }
 
-        row.add(pkt.get_bytes().unwrap());
+        // row.add(pkt.get_bytes().unwrap());
 
         db.add_record(row)?;
     }
