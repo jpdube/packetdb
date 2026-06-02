@@ -25,7 +25,7 @@ pub struct IndexMeta {
 }
 
 impl IndexMeta {
-    pub fn new(name: &str, field: Schema) -> Self {
+    pub fn new(name: &str, field: &Schema) -> Self {
         Self {
             magic_no: MAGIC_NO,
             version: VERSION,

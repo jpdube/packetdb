@@ -115,7 +115,7 @@ impl TableIndex {
             key_list: HashMap::new(),
             write_ptr: 0,
             header: Header::new(),
-            meta: IndexMeta::new(filename, fieldname.clone()),
+            meta: IndexMeta::new(filename, &fieldname),
         }
     }
 
