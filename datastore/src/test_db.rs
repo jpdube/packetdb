@@ -69,7 +69,7 @@ pub fn _test_db_logic() {
 
     let mut ip_src_idx = TableIndex::new(
         "/opt/pcapdb/new_table",
-        Schema::new(field_type::IPV4, "ip.src"),
+        &Schema::new(field_type::IPV4, "ip.src"),
     );
     ip_src_idx.read().unwrap();
     db.read_record().unwrap();

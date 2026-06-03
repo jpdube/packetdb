@@ -176,7 +176,7 @@ impl DBTable {
 
     fn create_index(&mut self, index: Vec<Schema>) {
         for idx in index {
-            let tbl = TableIndex::new(&self.table_name, idx);
+            let tbl = TableIndex::new(&self.table_name, &idx);
             self.index_list.push(tbl);
         }
     }
