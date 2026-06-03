@@ -108,7 +108,7 @@ impl fmt::Display for TableIndex {
 }
 
 impl TableIndex {
-    pub fn new(filename: &str, fieldname: Schema) -> Self {
+    pub fn new(filename: &str, fieldname: &Schema) -> Self {
         Self {
             filename: format!("{}_{}.idx", filename, fieldname.name),
             fieldname: fieldname.clone(),
