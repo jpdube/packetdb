@@ -35,7 +35,8 @@ pub struct Packet {
     arp_packet: Option<Arp>,
     pub file_id: u32,
     pub pkt_ptr: u32,
-    header: [u8; 16],
+    header: Vec<u8>,
+    // header: [u8; 16],
     little_endian: bool,
 
     frame_list: IndexMap<LayerIndex, LayerInfo>,
@@ -140,7 +141,8 @@ impl Packet {
     pub fn set_packet(
         &mut self,
         packet: Vec<u8>,
-        header: [u8; 16],
+        header: Vec<u8>,
+        // header: [u8; 16],
         file_id: u32,
         pkt_ptr: u32,
         little_endian: bool,
@@ -150,7 +152,7 @@ impl Packet {
         self.add_layer(LayerInfo {
             layer_type: LayerIndex::FRAME,
             start_pos: 0,
-            end_pos: header.len(),
+            end_pos: self.header.len(),
         });
 
         if packet.len() < self.get_frame_packet().unwrap().inc_len() as usize {

@@ -87,7 +87,7 @@ impl<'a> SeekPacket<'a> {
         let mut pkt = Packet::new();
         pkt.set_packet(
             self.data.clone(),
-            pheader,
+            pheader.to_vec(),
             self.plist.file_id,
             self.plist.pkt_ptr[self.index],
             little_endian,

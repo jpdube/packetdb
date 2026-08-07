@@ -128,6 +128,8 @@ pub fn mass_import_packet() -> Result<()> {
 
 fn get_packet_files() -> Result<Vec<u32>> {
     let pcap_path = &CONFIG.db_path.to_string();
+    println!("Reading file: {}", pcap_path);
+
     let paths = fs::read_dir(pcap_path).unwrap();
 
     let mut file_id_list: Vec<u32> = Vec::new();
