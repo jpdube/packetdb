@@ -3,13 +3,15 @@ use field::serialize_field::SerializeField;
 
 use byteorder::{BigEndian, WriteBytesExt};
 use std::collections::VecDeque;
-use std::fs;
 use std::fs::File;
 use std::io::{BufWriter, Seek, Write};
 
 use crate::record::Record;
 use crate::schema::Schema;
 use crate::table_index::TableIndex;
+
+// use memmap2::MmapMut;
+use std::fs::OpenOptions;
 
 use rayon::prelude::*;
 
@@ -24,14 +26,38 @@ pub struct DBTableWriter {
     fields_list: Vec<Schema>,
     index_list: Vec<TableIndex>,
     record_list: VecDeque<Record>,
+    // writer: MmapMut,
     writer: BufWriter<File>,
 }
 
 impl DBTableWriter {
     pub fn new(filename: &str) -> Self {
         let filename_str = format!("{}.{}", filename, "pdb");
+        println!("Opening: {}", filename_str);
+        // let file = OpenOptions::new()
+        //     .read(true)
+        //     .write(true)
+        //     .create(true)
+        //     // .truncate(true)
+        //     .open(&filename_str)
+        //     .unwrap();
+        //
+        // Set the file size
+        // file.set_len(100 * (1024 * 1024)).unwrap();
 
-        Self {
+        // SAFETY: We have exclusive access to the file
+        // let mmap = unsafe { MmapMut::map_mut(&file).unwrap() };
+
+        let writer = BufWriter::with_capacity(
+            1024 * 1024,
+            OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&filename_str)
+                .unwrap(),
+        );
+
+        let _self = Self {
             filename: filename_str.clone(),
             table_name: filename.to_string(),
             magic_no: 0xa1b2c3d4,
@@ -40,19 +66,25 @@ impl DBTableWriter {
             fields_list: Vec::new(),
             index_list: Vec::new(),
             record_list: VecDeque::new(),
-            writer: BufWriter::with_capacity(
-                1024 * 1024,
-                fs::OpenOptions::new()
-                    .create(true)
-                    .append(true)
-                    .open(&filename_str)
-                    .unwrap(),
-            ),
-        }
+            writer: writer,
+            // writer: mmap,
+            // writer: BufWriter::with_capacity(
+            //     1024 * 1024,
+            //     fs::OpenOptions::new()
+            //         .create(true)
+            //         .append(true)
+            //         .open(&filename_str)
+            //         .unwrap(),
+            // ),
+        };
+
+        _self
     }
 
     pub fn append(&mut self) -> Result<()> {
         let mut buffer: Vec<u8> = Vec::new();
+        let mut record: Vec<u8> = Vec::new();
+
         self.writer.seek(std::io::SeekFrom::End(0))?;
 
         let max_len = if self.record_list.len() < BLOCK_SIZE {
@@ -69,8 +101,13 @@ impl DBTableWriter {
                     buffer.write_all(&f.field_to_binary())?;
                 }
 
-                self.writer.write_u16::<BigEndian>(buffer.len() as u16)?;
-                self.writer.write_all(&buffer)?;
+                record.write_u16::<BigEndian>(buffer.len() as u16)?;
+                record.write_all(&buffer)?;
+                // self.writer.write_u16::<BigEndian>(buffer.len() as u16)?;
+                // self.writer.write_all(&buffer)?;
+
+                // self.writer.write_u16::<BigEndian>(buffer.len() as u16)?;
+                // self.writer.write_all(&buffer)?;
 
                 for idx in &mut self.index_list {
                     idx.append(row.clone(), ptr as u32);
@@ -78,9 +115,42 @@ impl DBTableWriter {
             }
         }
 
+        self.writer.write_all(&record)?;
+
         Ok(())
     }
 
+    // pub fn append(&mut self) -> Result<()> {
+    //     let mut buffer: Vec<u8> = Vec::new();
+    //     self.writer.seek(std::io::SeekFrom::End(0))?;
+
+    //     let max_len = if self.record_list.len() < BLOCK_SIZE {
+    //         self.record_list.len()
+    //     } else {
+    //         BLOCK_SIZE
+    //     };
+
+    //     self.writer[0] = 1;
+
+    //     for _ in 0..max_len - 1 {
+    //         let ptr = self.writer.stream_position()?;
+    //         buffer.clear();
+    //         if let Some(row) = &self.record_list.pop_front() {
+    //             for f in row.get_fields() {
+    //                 buffer.write_all(&f.field_to_binary())?;
+    //             }
+
+    //             self.writer.write_u16::<BigEndian>(buffer.len() as u16)?;
+    //             self.writer.write_all(&buffer)?;
+
+    //             for idx in &mut self.index_list {
+    //                 idx.append(row.clone(), ptr as u32);
+    //             }
+    //         }
+    //     }
+
+    //     Ok(())
+    // }
     pub fn add_record(&mut self, record: Record) -> Result<()> {
         if self.record_list.len() >= 2048 {
             self.append()?;
