@@ -312,52 +312,64 @@ impl IndexManager {
         }
         if pkt.has_arp() {
             index += LayerIndex::ARP as u32;
+            return index;
+        }
+        if pkt.has_icmp() {
+            index += LayerIndex::ICMP as u32;
+            return index;
         }
         if pkt.has_ipv4() {
             index += LayerIndex::IPv4 as u32;
         }
         if pkt.has_tcp() {
             index += LayerIndex::TCP as u32;
-        }
-        if pkt.has_https() {
-            index += LayerIndex::HTTPS as u32;
-            return index;
-        }
-        if pkt.has_icmp() {
-            index += LayerIndex::ICMP as u32;
+            if pkt.has_https() {
+                index += LayerIndex::HTTPS as u32;
+                return index;
+            }
+            if pkt.has_ssh() {
+                index += LayerIndex::SSH as u32;
+                return index;
+            }
+            if pkt.has_telnet() {
+                index += LayerIndex::TELNET as u32;
+                return index;
+            }
+            if pkt.has_http() {
+                index += LayerIndex::HTTP as u32;
+                return index;
+            }
+            if pkt.has_rdp() {
+                index += LayerIndex::RDP as u32;
+                return index;
+            }
+            if pkt.has_smtp() {
+                index += LayerIndex::SMTP as u32;
+                return index;
+            }
+            if pkt.has_smb() {
+                index += LayerIndex::SMB as u32;
+                return index;
+            }
+            if pkt.has_snmp() {
+                index += LayerIndex::SMTP as u32;
+                return index;
+            }
         }
         if pkt.has_udp() {
             index += LayerIndex::UDP as u32;
-        }
-        if pkt.has_dns() {
-            index += LayerIndex::DNS as u32;
-        }
-        if pkt.has_dhcp() {
-            index += LayerIndex::DHCP as u32;
-        }
-        if pkt.has_ssh() {
-            index += LayerIndex::SSH as u32;
-        }
-        if pkt.has_telnet() {
-            index += LayerIndex::TELNET as u32;
-        }
-        if pkt.has_http() {
-            index += LayerIndex::HTTP as u32;
-        }
-        if pkt.has_rdp() {
-            index += LayerIndex::RDP as u32;
-        }
-        if pkt.has_ntp() {
-            index += LayerIndex::NTP as u32;
-        }
-        if pkt.has_smb() {
-            index += LayerIndex::SMB as u32;
-        }
-        if pkt.has_smtp() {
-            index += LayerIndex::SMTP as u32;
-        }
-        if pkt.has_snmp() {
-            index += LayerIndex::SMTP as u32;
+            if pkt.has_dns() {
+                index += LayerIndex::DNS as u32;
+                return index;
+            }
+            if pkt.has_dhcp() {
+                index += LayerIndex::DHCP as u32;
+                return index;
+            }
+            if pkt.has_ntp() {
+                index += LayerIndex::NTP as u32;
+                return index;
+            }
         }
         index
     }
