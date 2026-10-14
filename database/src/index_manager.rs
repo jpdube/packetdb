@@ -5,8 +5,9 @@ use byteorder::{BigEndian, ByteOrder, WriteBytesExt};
 use dblib::config::CONFIG;
 use field::ipv4_address::IPv4;
 use frame::layer_index::LayerIndex;
-use frame::packet::Packet;
+// use frame::packet::Packet;
 use log::{error, info};
+use pcap::packet_decode::PacketDecode;
 use pcap::packet_ptr::PacketPtr;
 use pcap::pcapfile::PcapFile;
 use pql::parse::PqlStatement;
@@ -239,6 +240,8 @@ impl IndexManager {
             if pindex >= LayerIndex::ARP as u32 {
                 if pindex & (LayerIndex::ARP as u32) == LayerIndex::ARP as u32 {
                     proto_idx_mgr.add(LayerIndex::ARP as u32, pkt.pkt_ptr);
+                } else if pindex & (LayerIndex::HTTPS as u32) == LayerIndex::HTTPS as u32 {
+                    proto_idx_mgr.add(LayerIndex::HTTPS as u32, pkt.pkt_ptr);
                 } else if pindex & (LayerIndex::DNS as u32) == LayerIndex::DNS as u32 {
                     proto_idx_mgr.add(LayerIndex::DNS as u32, pkt.pkt_ptr);
                 } else if pindex & (LayerIndex::DHCP as u32) == LayerIndex::DHCP as u32 {
@@ -247,8 +250,6 @@ impl IndexManager {
                     proto_idx_mgr.add(LayerIndex::ICMP as u32, pkt.pkt_ptr);
                 } else if pindex & (LayerIndex::SSH as u32) == LayerIndex::SSH as u32 {
                     proto_idx_mgr.add(LayerIndex::SSH as u32, pkt.pkt_ptr);
-                } else if pindex & (LayerIndex::HTTPS as u32) == LayerIndex::HTTPS as u32 {
-                    proto_idx_mgr.add(LayerIndex::HTTPS as u32, pkt.pkt_ptr);
                 } else if pindex & (LayerIndex::HTTP as u32) == LayerIndex::HTTP as u32 {
                     proto_idx_mgr.add(LayerIndex::HTTP as u32, pkt.pkt_ptr);
                 } else if pindex & (LayerIndex::TELNET as u32) == LayerIndex::TELNET as u32 {
@@ -302,59 +303,61 @@ impl IndexManager {
         mindex
     }
 
-    fn build_index(&self, pkt: &Packet) -> u32 {
+    fn build_index(&self, pkt: &PacketDecode) -> u32 {
+        // fn build_index(&self, pkt: &Packet) -> u32 {
         let mut index: u32 = 0;
 
         if pkt.has_ethernet() {
-            index += LayerIndex::ETH as u32
+            index += LayerIndex::ETH as u32;
         }
         if pkt.has_arp() {
-            index += LayerIndex::ARP as u32
+            index += LayerIndex::ARP as u32;
         }
         if pkt.has_ipv4() {
-            index += LayerIndex::IPv4 as u32
-        }
-        if pkt.has_icmp() {
-            index += LayerIndex::ICMP as u32
-        }
-        if pkt.has_udp() {
-            index += LayerIndex::UDP as u32
+            index += LayerIndex::IPv4 as u32;
         }
         if pkt.has_tcp() {
-            index += LayerIndex::TCP as u32
+            index += LayerIndex::TCP as u32;
         }
         if pkt.has_https() {
-            index += LayerIndex::HTTPS as u32
+            index += LayerIndex::HTTPS as u32;
+            return index;
+        }
+        if pkt.has_icmp() {
+            index += LayerIndex::ICMP as u32;
+        }
+        if pkt.has_udp() {
+            index += LayerIndex::UDP as u32;
         }
         if pkt.has_dns() {
-            index += LayerIndex::DNS as u32
+            index += LayerIndex::DNS as u32;
         }
         if pkt.has_dhcp() {
-            index += LayerIndex::DHCP as u32
+            index += LayerIndex::DHCP as u32;
         }
         if pkt.has_ssh() {
-            index += LayerIndex::SSH as u32
+            index += LayerIndex::SSH as u32;
         }
         if pkt.has_telnet() {
-            index += LayerIndex::TELNET as u32
+            index += LayerIndex::TELNET as u32;
         }
         if pkt.has_http() {
-            index += LayerIndex::HTTP as u32
+            index += LayerIndex::HTTP as u32;
         }
         if pkt.has_rdp() {
-            index += LayerIndex::RDP as u32
+            index += LayerIndex::RDP as u32;
         }
         if pkt.has_ntp() {
-            index += LayerIndex::NTP as u32
+            index += LayerIndex::NTP as u32;
         }
         if pkt.has_smb() {
-            index += LayerIndex::SMB as u32
+            index += LayerIndex::SMB as u32;
         }
         if pkt.has_smtp() {
-            index += LayerIndex::SMTP as u32
+            index += LayerIndex::SMTP as u32;
         }
         if pkt.has_snmp() {
-            index += LayerIndex::SMTP as u32
+            index += LayerIndex::SMTP as u32;
         }
         index
     }

@@ -4,10 +4,10 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-field = {path = "../field/" }
-frame = {path = "../frame/" }
-pcap = {path = "../pcap/"}
-dblib = {path = "../dblib/"}
+field = { path = "../field/" }
+frame = { path = "../frame/" }
+dblib = { path = "../dblib/" }
+pcap = { path = "../pcap/" }
 
 byteorder = "1.5.0"
 anyhow = "1.0.75"
