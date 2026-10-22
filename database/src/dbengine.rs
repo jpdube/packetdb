@@ -137,7 +137,7 @@ impl DbEngine {
             LayerIndex::SMTP,
             LayerIndex::IMAP,
             LayerIndex::POP3,
-            LayerIndex::SMTP,
+            LayerIndex::SNMP,
             LayerIndex::FTP,
             LayerIndex::NTP,
             LayerIndex::RTP,
