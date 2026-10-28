@@ -1,4 +1,5 @@
-use byteorder::{BigEndian, ByteOrder, LittleEndian};
+use crate::{eth, frame};
+use byteorder::{BigEndian, ByteOrder};
 use field::pfield::{Field, FieldType};
 
 pub struct PacketDecode {
@@ -33,9 +34,9 @@ impl PacketDecode {
         slf
     }
 
-    pub fn has_vlan(&self) -> bool {
-        BigEndian::read_u16(&self.packet[12..14]) == 0x8100
-    }
+    // pub fn has_vlan(&self) -> bool {
+    //     BigEndian::read_u16(&self.packet[12..14]) == 0x8100
+    // }
 
     pub fn get_field(&self, field_name: &str) -> Option<Field> {
         if let Some(fields) = split_field_name(field_name) {
@@ -43,8 +44,9 @@ impl PacketDecode {
             // println!("Fields: {}:{}", prefix, field);
 
             match prefix {
-                "frame" => return self.get_frame(field),
-                "eth" => return self.get_eth(field),
+                //"frame" => return self.get_frame(field),
+                "frame" => return frame::get_frame(&self.header, field, self.little_endian),
+                "eth" => return eth::get_eth(&self.packet, field),
                 "ip" => return self.get_ipv4(field),
                 _ => return None,
             };
@@ -84,95 +86,41 @@ impl PacketDecode {
         }
     }
 
-    pub fn get_frame(&self, field_name: &str) -> Option<Field> {
-        match field_name {
-            "timestamp" => {
-                return Some(Field::set_field(
-                    FieldType::Int32(if self.little_endian {
-                        LittleEndian::read_u32(&self.header[0..4])
-                    } else {
-                        BigEndian::read_u32(&self.header[0..4])
-                    }),
-                    field_name,
-                ));
-            }
-            "ts_offset" => {
-                return Some(Field::set_field(
-                    FieldType::Int32(if self.little_endian {
-                        LittleEndian::read_u32(&self.header[4..8])
-                    } else {
-                        BigEndian::read_u32(&self.header[4..8])
-                    }),
-                    field_name,
-                ));
-            }
-
-            "inc_len" => {
-                return Some(Field::set_field(
-                    FieldType::Int32(if self.little_endian {
-                        LittleEndian::read_u32(&self.header[8..12])
-                    } else {
-                        BigEndian::read_u32(&self.header[8..12])
-                    }),
-                    field_name,
-                ));
-            }
-
-            "orig_len" => {
-                return Some(Field::set_field(
-                    FieldType::Int32(if self.little_endian {
-                        LittleEndian::read_u32(&self.header[12..16])
-                    } else {
-                        BigEndian::read_u32(&self.header[12..16])
-                    }),
-                    field_name,
-                ));
-            }
-            "has_ipv4" => {
-                return Some(Field::set_field(
-                    FieldType::Bool(self.has_ipv4()),
-                    field_name,
-                ));
-            }
-            _ => None,
-        }
-    }
-
-    pub fn get_eth(&self, field_name: &str) -> Option<Field> {
-        match field_name {
-            "src" => {
-                return Some(Field::set_field(
-                    FieldType::MacAddr(BigEndian::read_u48(&self.packet[0..6])),
-                    field_name,
-                ));
-            }
-            "dst" => {
-                return Some(Field::set_field(
-                    FieldType::MacAddr(BigEndian::read_u48(&self.packet[6..12])),
-                    field_name,
-                ));
-            }
-            "type" => {
-                return Some(Field::set_field(
-                    FieldType::Int16(self.ethertype()),
-                    field_name,
-                ));
-            }
-            "vlan" => {
-                let vlan: u16 = if self.has_vlan() {
-                    BigEndian::read_u16(&self.packet[14..16])
-                } else {
-                    1
-                };
-
-                return Some(Field::set_field(FieldType::Int16(vlan), field_name));
-            }
-            _ => return None,
-        };
-    }
-
+    // pub fn get_eth(&self, field_name: &str) -> Option<Field> {
+    //     match field_name {
+    //         "src" => {
+    //             return Some(Field::set_field(
+    //                 FieldType::MacAddr(BigEndian::read_u48(&self.packet[0..6])),
+    //                 field_name,
+    //             ));
+    //         }
+    //         "dst" => {
+    //             return Some(Field::set_field(
+    //                 FieldType::MacAddr(BigEndian::read_u48(&self.packet[6..12])),
+    //                 field_name,
+    //             ));
+    //         }
+    //         "type" => {
+    //             return Some(Field::set_field(
+    //                 FieldType::Int16(self.ethertype()),
+    //                 field_name,
+    //             ));
+    //         }
+    //         "vlan" => {
+    //             let vlan: u16 = if self.has_vlan() {
+    //                 BigEndian::read_u16(&self.packet[14..16])
+    //             } else {
+    //                 1
+    //             };
+    //
+    //             return Some(Field::set_field(FieldType::Int16(vlan), field_name));
+    //         }
+    //         _ => return None,
+    //     };
+    // }
+    //
     pub fn has_ethernet(&self) -> bool {
-        let eth_type: u16 = if self.has_vlan() {
+        let eth_type: u16 = if eth::has_vlan(&self.packet) {
             BigEndian::read_u16(&self.packet[16..18])
         } else {
             BigEndian::read_u16(&self.packet[12..14])
@@ -182,20 +130,22 @@ impl PacketDecode {
     }
 
     pub fn ethertype(&self) -> u16 {
-        if self.has_vlan() {
+        if eth::has_vlan(&self.packet) {
             BigEndian::read_u16(&self.packet[16..18])
         } else {
             BigEndian::read_u16(&self.packet[12..14])
         }
     }
     pub fn has_ipv4(&self) -> bool {
-        let eth_type: u16 = if self.has_vlan() {
-            BigEndian::read_u16(&self.packet[16..18])
-        } else {
-            BigEndian::read_u16(&self.packet[12..14])
-        };
-
-        eth_type == 0x0800
+        eth::has_ipv4(&self.packet)
+        // let eth_type: u16 = if eth::has_vlan(&self.packet) {
+        //     // let eth_type: u16 = if self.has_vlan() {
+        //     BigEndian::read_u16(&self.packet[16..18])
+        // } else {
+        //     BigEndian::read_u16(&self.packet[12..14])
+        // };
+        //
+        // eth_type == 0x0800
     }
 
     pub fn ip_proto(&self) -> u8 {
@@ -248,25 +198,29 @@ impl PacketDecode {
     }
 
     pub fn has_https(&self) -> bool {
-        self.has_ipv4() && self.has_tcp() && self.tcp_sport() == 443 || self.tcp_dport() == 443
+        eth::has_ipv4(&self.packet) && self.has_tcp() && self.tcp_sport() == 443
+            || self.tcp_dport() == 443
     }
 
     pub fn has_http(&self) -> bool {
         let ports = [80 as u16, 8080 as u16];
-        self.has_ipv4() && self.has_tcp() && ports.contains(&self.tcp_sport())
+        eth::has_ipv4(&self.packet) && self.has_tcp() && ports.contains(&self.tcp_sport())
             || ports.contains(&self.tcp_dport())
     }
 
     pub fn has_ssh(&self) -> bool {
-        self.has_ipv4() && self.has_tcp() && self.tcp_sport() == 22 || self.tcp_dport() == 22
+        eth::has_ipv4(&self.packet) && self.has_tcp() && self.tcp_sport() == 22
+            || self.tcp_dport() == 22
     }
 
     pub fn has_telnet(&self) -> bool {
-        self.has_ipv4() && self.has_tcp() && self.tcp_sport() == 23 || self.tcp_dport() == 23
+        eth::has_ipv4(&self.packet) && self.has_tcp() && self.tcp_sport() == 23
+            || self.tcp_dport() == 23
     }
 
     pub fn has_rdp(&self) -> bool {
-        self.has_ipv4() && self.has_tcp() && self.tcp_sport() == 3389 || self.tcp_dport() == 3389
+        eth::has_ipv4(&self.packet) && self.has_tcp() && self.tcp_sport() == 3389
+            || self.tcp_dport() == 3389
     }
 
     pub fn has_ntp(&self) -> bool {

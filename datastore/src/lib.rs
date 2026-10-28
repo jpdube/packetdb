@@ -68,6 +68,7 @@ pub fn packet_to_db(packet_file: u32, table_name: &str) -> Result<()> {
         }
 
         if pkt.has_ipv4() {
+            // if pkt.has_ipv4() {
             if let Some(field_ipsrc) = pkt.get_field("ip.src") {
                 row.add(field_ipsrc);
             } else {
