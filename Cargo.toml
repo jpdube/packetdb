@@ -28,8 +28,8 @@ chrono = "0.4.38"
 argon2 = { version = "0.5", features = ["std"] }
 
 
-[build]
-rustflags = ["-Z", "threads=8"]
+# [build]
+# rustflags = ["-Z", "threads=8"]
 
 [profile.dev]
 debug = "line-tables-only"
