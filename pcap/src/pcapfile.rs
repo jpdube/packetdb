@@ -4,7 +4,6 @@ use frame::packet::Packet;
 use crate::packet_decode::PacketDecode;
 use std::fs::File;
 use std::io::{BufReader, Read, Seek, SeekFrom};
-use std::time::Instant;
 
 const HEADER_BE: u32 = 0xa1b2c3d4;
 const HEADER_LE: u32 = 0xd4c3b2a1;
@@ -78,7 +77,7 @@ impl PcapFile {
         data.resize(psize, 0);
         self.file.read_exact(&mut data).unwrap();
 
-        let start = Instant::now();
+        // let start = Instant::now();
         let pkt = PacketDecode::new(
             Box::new(pheader),
             data.into_boxed_slice(),
@@ -94,7 +93,7 @@ impl PcapFile {
         //     self.pkt_ptr,
         //     little_endian,
         // );
-        let duration = start.elapsed();
+        // let duration = start.elapsed();
         // println!("Packet processing time: {}ns", duration.as_nanos());
 
         self.pkt_ptr += 16 + (psize as u32);
