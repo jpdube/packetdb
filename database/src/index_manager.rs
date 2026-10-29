@@ -405,7 +405,7 @@ impl IndexManager {
                     .map(|pkt| self.index_file(pkt))
                     .collect();
 
-                self.create_master(result);
+                self.create_master(&result);
             }
             Err(msg) => error!("Error index files: {}", msg),
         }
@@ -431,7 +431,7 @@ impl IndexManager {
             .unwrap();
     }
 
-    pub fn create_master(&self, master_index: Vec<MasterIndex>) {
+    pub fn create_master(&self, master_index: &Vec<MasterIndex>) {
         let index_file = format!("{}/master.pidx", CONFIG.master_index_path);
         println!("Master index file: {}", index_file);
         let mut writer = BufWriter::new(File::create(index_file).unwrap());
