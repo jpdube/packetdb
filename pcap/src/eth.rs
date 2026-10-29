@@ -3,6 +3,12 @@ use field::pfield::{Field, FieldType};
 
 pub fn get_eth(packet: &Box<[u8]>, field_name: &str) -> Option<Field> {
     match field_name {
+        "has_ipv4" => {
+            return Some(Field::set_field(
+                FieldType::Bool(has_ipv4(&packet)),
+                field_name,
+            ));
+        }
         "src" => {
             return Some(Field::set_field(
                 FieldType::MacAddr(BigEndian::read_u48(&packet[0..6])),
@@ -30,12 +36,6 @@ pub fn get_eth(packet: &Box<[u8]>, field_name: &str) -> Option<Field> {
 
             return Some(Field::set_field(FieldType::Int16(vlan), field_name));
         }
-        "has_ipv4" => {
-            return Some(Field::set_field(
-                FieldType::Bool(has_ipv4(&packet)),
-                field_name,
-            ));
-        }
         _ => return None,
     };
 }
@@ -53,8 +53,7 @@ pub fn ethertype(packet: &Box<[u8]>) -> u16 {
 }
 
 pub fn has_ipv4(packet: &Box<[u8]>) -> bool {
-    let eth_type: u16 = if has_vlan(&packet) {
-        // let eth_type: u16 = if self.has_vlan() {
+    let eth_type: u16 = if BigEndian::read_u16(&packet[12..14]) == 0x8100 {
         BigEndian::read_u16(&packet[16..18])
     } else {
         BigEndian::read_u16(&packet[12..14])
