@@ -34,10 +34,6 @@ impl PacketDecode {
         slf
     }
 
-    // pub fn has_vlan(&self) -> bool {
-    //     BigEndian::read_u16(&self.packet[12..14]) == 0x8100
-    // }
-
     pub fn get_field(&self, field_name: &str) -> Option<Field> {
         if let Some(fields) = split_field_name(field_name) {
             let (prefix, field) = fields;
@@ -427,7 +423,11 @@ mod tests {
             false,
         );
 
-        assert_eq!(pd.has_vlan(), true, "Has vlan");
+        assert_eq!(
+            pd.get_field("eth.has_vlan").unwrap().to_bool(),
+            true,
+            "Has vlan"
+        );
     }
 
     #[test]

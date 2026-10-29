@@ -1,7 +1,7 @@
 use byteorder::{BigEndian, ByteOrder, LittleEndian};
 use field::pfield::{Field, FieldType};
 
-pub fn get_frame(header: &Box<[u8]>, field_name: &str, little_endian: bool) -> Option<Field> {
+pub fn get_frame(header: &[u8], field_name: &str, little_endian: bool) -> Option<Field> {
     // println!("FRAME: timestamp: {}", field_name);
     match field_name {
         "timestamp" => {
