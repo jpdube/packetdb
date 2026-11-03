@@ -3,8 +3,9 @@ use std::fmt::Display;
 
 use crate::parse::{Expression, Operator, PqlStatement};
 use field::ipv4_address::IPv4;
-use field::pfield::FieldType;
-use frame::packet::Packet;
+use field::pfield::{Field, FieldType};
+use frame::net_field;
+use frame::packet_decode::PacketDecode;
 use pcap::packet_ptr::PacketPtr;
 use pcap::seek_packet::SeekPacket;
 use regex::Regex;
@@ -94,11 +95,15 @@ impl Interpreter {
         Self { model }
     }
 
-    pub fn run_pgm_seek(&self, packet_list: &PacketPtr, top_limit: usize) -> (usize, Vec<Packet>) {
+    pub fn run_pgm_seek(
+        &self,
+        packet_list: &PacketPtr,
+        top_limit: usize,
+    ) -> (usize, Vec<PacketDecode>) {
         let mut seek_pkt = SeekPacket::new(packet_list);
         let mut counter: usize = 0;
         // let mut packet_ptr: Vec<Record> = Vec::new();
-        let mut result: Vec<Packet> = Vec::new();
+        let mut result: Vec<PacketDecode> = Vec::new();
         let mut nbr_searched: usize = 0;
 
         while let Some(pkt) = seek_pkt.next() {
@@ -119,12 +124,16 @@ impl Interpreter {
         (nbr_searched, result)
     }
 
-    pub fn eval(&self, pkt: &Packet) -> bool {
+    pub fn eval(&self, pkt: &PacketDecode) -> bool {
         let result = self.eval_expression(&self.model.filter, pkt).unwrap();
         result == TRUE
     }
 
-    fn eval_expression(&self, expression: &Expression, pkt: &Packet) -> Result<Object, EvalError> {
+    fn eval_expression(
+        &self,
+        expression: &Expression,
+        pkt: &PacketDecode,
+    ) -> Result<Object, EvalError> {
         match expression {
             Expression::Integer(i) => Ok(Object::Integer(*i as u64)),
             Expression::ArrayLong(values) => Ok(Object::LongArray(values.clone())),
@@ -132,8 +141,18 @@ impl Interpreter {
             Expression::String(s) => Ok(Object::String(s.clone())),
             Expression::Timestamp(t) => Ok(Object::Timestamp(*t)),
             Expression::Label(value) => {
-                // debug!("Label: {}", value);
-                let field_value = pkt.get_field(value).unwrap();
+                // println!(
+                //     "Label: {}:{:x}",
+                //     value,
+                //     net_field::string_to_int(value).unwrap()
+                // );
+
+                let mut field_value = Field::set_field(FieldType::Bool(false), 0);
+                if let Some(f) = net_field::string_to_int(value) {
+                    // println!("f: {:x}", f);
+                    // println!("RAW: {:x?}", pkt.packet);
+                    field_value = pkt.get_field(f).unwrap();
+                }
                 match field_value.field {
                     FieldType::Int8(_) => Ok(Object::Integer(field_value.to_u64())),
                     FieldType::Int16(_) => Ok(Object::Integer(field_value.to_u64())),
@@ -145,7 +164,7 @@ impl Interpreter {
                 }
             }
             Expression::LabelByte(field, offset, len) => Ok(Object::ByteArray(pkt.get_field_byte(
-                field.clone(),
+                net_field::string_to_int(&field).unwrap(),
                 *offset,
                 *len,
             ))),

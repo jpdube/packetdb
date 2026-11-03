@@ -1,26 +1,31 @@
-use crate::{eth, frame};
+use crate::{
+    arp::Arp, dhcp::Dhcp, dns::Dns, eth::EtherFrame, frame::Frame, ip::IpFrame, layer::Layer,
+    net_field, tcp::Tcp, udp::UdpFrame,
+};
 use byteorder::{BigEndian, ByteOrder};
-use field::pfield::{Field, FieldType};
+use field::pfield::Field;
 
+#[derive(Clone)]
 pub struct PacketDecode {
     header: Box<[u8]>,
-    packet: Box<[u8]>,
+    pub packet: Box<[u8]>,
     offset: usize,
     pub file_id: u32,
     pub pkt_ptr: u32,
-    little_endian: bool,
+    ip_offset: usize,
 }
 
 impl PacketDecode {
-    pub fn new(
-        header: Box<[u8]>,
-        packet: Box<[u8]>,
-        file_id: u32,
-        pkt_ptr: u32,
-        little_endian: bool,
-    ) -> Self {
+    pub fn new(header: Box<[u8]>, packet: Box<[u8]>, file_id: u32, pkt_ptr: u32) -> Self {
         let eth_type = BigEndian::read_u16(&packet[12..14]);
         let offset: usize = if eth_type == 0x8100 { 18 } else { 14 };
+        let eth = EtherFrame::new(&packet[0..offset]);
+
+        let mut ip_offset: usize = 0;
+        if eth.has_ipv4() {
+            ip_offset = ((packet[offset] & 0x0f) * 4) as usize;
+            // println!("Has IPV4: {}", ip_offset);
+        }
 
         let slf = PacketDecode {
             packet,
@@ -28,270 +33,261 @@ impl PacketDecode {
             offset,
             file_id,
             pkt_ptr,
-            little_endian,
+            ip_offset,
         };
 
         slf
     }
 
-    pub fn get_field(&self, field_name: &str) -> Option<Field> {
-        if let Some(fields) = split_field_name(field_name) {
-            let (prefix, field) = fields;
-            // println!("Fields: {}:{}", prefix, field);
+    pub fn get_field_byte(&self, _field_id: u32, _offset: usize, _len: usize) -> Vec<u8> {
+        let v: Vec<u8> = vec![1, 2, 3];
 
-            match prefix {
-                //"frame" => return self.get_frame(field),
-                "frame" => return frame::get_frame(&self.header, field, self.little_endian),
-                "eth" => return eth::get_eth(&self.packet, field),
-                "ip" => return self.get_ipv4(field),
-                _ => return None,
-            };
+        v
+    }
+
+    pub fn get_field(&self, field_id: u32) -> Option<Field> {
+        match field_id & net_field::SECTION_MASK {
+            net_field::FRAME_BASE => {
+                let frame = Frame::new(&self.header, self.file_id, self.pkt_ptr);
+                return frame.get_field(field_id);
+            }
+            net_field::ETH_BASE => {
+                return self.eth().get_field(field_id);
+            }
+            net_field::ARP_BASE => {
+                if self.eth().has_arp() {
+                    let arp = Arp::new(&self.packet[self.offset..]);
+                    return arp.get_field(field_id);
+                }
+
+                return None;
+            }
+            net_field::IPV4_BASE => {
+                if let Some(ip) = self.ip() {
+                    return ip.get_field(field_id);
+                } else {
+                    return None;
+                }
+            }
+            net_field::TCP_BASE => {
+                if let Some(ip) = self.ip()
+                    && ip.has_tcp()
+                {
+                    return self.tcp().get_field(field_id);
+                }
+
+                return None;
+            }
+            net_field::UDP_BASE => {
+                if let Some(ip) = self.ip()
+                    && ip.has_udp()
+                {
+                    return self.udp().get_field(field_id);
+                }
+
+                return None;
+            }
+            net_field::DNS_BASE => {
+                if let Some(ip) = self.ip()
+                    && ip.has_udp()
+                {
+                    if self.udp().is_dns() {
+                        let payload = self.udp().payload();
+                        let dns = Dns::new(&payload);
+                        return dns.get_field(field_id);
+                    }
+                }
+
+                return None;
+            }
+            net_field::DHCP_BASE => {
+                if let Some(ip) = self.ip()
+                    && ip.has_udp()
+                {
+                    if self.udp().is_dhcp() {
+                        let payload = self.udp().payload();
+                        let dhcp = Dhcp::new(&payload);
+                        return dhcp.get_field(field_id);
+                    }
+                }
+
+                return None;
+            }
+            _ => return None,
+        };
+    }
+
+    pub fn get_id(&self) -> u64 {
+        Frame::new(&self.header, self.file_id, self.pkt_ptr).get_id()
+    }
+
+    fn eth(&self) -> EtherFrame<'_> {
+        EtherFrame::new(&self.packet[0..self.offset])
+    }
+
+    fn ip(&self) -> Option<IpFrame<'_>> {
+        if self.eth().has_ipv4() {
+            let ip = IpFrame::new(&self.packet[self.offset..self.offset + self.ip_offset]);
+
+            return Some(ip);
         }
-
         None
     }
 
-    pub fn get_ipv4(&self, field_name: &str) -> Option<Field> {
-        match field_name {
-            "src" => {
-                return Some(Field::set_field(
-                    FieldType::Ipv4(self.ipv4_src(), 32),
-                    field_name,
-                ));
-            }
-            "dst" => {
-                return Some(Field::set_field(
-                    FieldType::Ipv4(self.ipv4_dst(), 32),
-                    field_name,
-                ));
-            }
-            "proto" => {
-                return Some(Field::set_field(
-                    FieldType::Int8(self.ip_proto()),
-                    field_name,
-                ));
-            }
-            "hdr_len" => {
-                return Some(Field::set_field(
-                    FieldType::Int8(self.ip_hdr_len()),
-                    field_name,
-                ));
-            }
-
-            _ => None,
-        }
+    fn tcp(&self) -> Tcp<'_> {
+        Tcp::new(&self.packet[self.ip_offset + self.offset..])
     }
 
-    // pub fn get_eth(&self, field_name: &str) -> Option<Field> {
-    //     match field_name {
-    //         "src" => {
-    //             return Some(Field::set_field(
-    //                 FieldType::MacAddr(BigEndian::read_u48(&self.packet[0..6])),
-    //                 field_name,
-    //             ));
-    //         }
-    //         "dst" => {
-    //             return Some(Field::set_field(
-    //                 FieldType::MacAddr(BigEndian::read_u48(&self.packet[6..12])),
-    //                 field_name,
-    //             ));
-    //         }
-    //         "type" => {
-    //             return Some(Field::set_field(
-    //                 FieldType::Int16(self.ethertype()),
-    //                 field_name,
-    //             ));
-    //         }
-    //         "vlan" => {
-    //             let vlan: u16 = if self.has_vlan() {
-    //                 BigEndian::read_u16(&self.packet[14..16])
-    //             } else {
-    //                 1
-    //             };
-    //
-    //             return Some(Field::set_field(FieldType::Int16(vlan), field_name));
-    //         }
-    //         _ => return None,
-    //     };
-    // }
-    //
+    fn udp(&self) -> UdpFrame<'_> {
+        UdpFrame::new(&self.packet[self.ip_offset + self.offset..])
+    }
+
     pub fn has_ethernet(&self) -> bool {
-        let eth_type: u16 = if eth::has_vlan(&self.packet) {
-            BigEndian::read_u16(&self.packet[16..18])
-        } else {
-            BigEndian::read_u16(&self.packet[12..14])
-        };
-
-        eth_type == 0x0800 || eth_type == 0x8100 || eth_type == 0x86dd
-    }
-
-    pub fn ethertype(&self) -> u16 {
-        if eth::has_vlan(&self.packet) {
-            BigEndian::read_u16(&self.packet[16..18])
-        } else {
-            BigEndian::read_u16(&self.packet[12..14])
-        }
-    }
-    pub fn has_ipv4(&self) -> bool {
-        eth::has_ipv4(&self.packet)
-        // let eth_type: u16 = if eth::has_vlan(&self.packet) {
-        //     // let eth_type: u16 = if self.has_vlan() {
-        //     BigEndian::read_u16(&self.packet[16..18])
-        // } else {
-        //     BigEndian::read_u16(&self.packet[12..14])
-        // };
-        //
-        // eth_type == 0x0800
-    }
-
-    pub fn ip_proto(&self) -> u8 {
-        self.packet[self.offset + 9]
+        self.eth().ethertype() == 0x0800
     }
 
     pub fn has_tcp(&self) -> bool {
-        self.ip_proto() == 0x06
+        if let Some(ip) = self.ip() {
+            return ip.has_tcp();
+        }
+
+        false
     }
 
     pub fn has_udp(&self) -> bool {
-        self.ip_proto() == 0x11
+        if let Some(ip) = self.ip() {
+            return ip.has_udp();
+        }
+
+        false
     }
 
     pub fn has_arp(&self) -> bool {
-        self.ethertype() == 0x0806
+        self.eth().has_arp()
     }
 
     pub fn has_icmp(&self) -> bool {
-        self.ip_proto() == 0x01
-    }
-
-    pub fn icmp_type(&self) -> u8 {
-        if self.has_icmp() {
-            self.packet[self.ip_offset()]
-        } else {
-            0
+        if let Some(ip) = self.ip()
+            && ip.has_icmp()
+        {
+            return true;
         }
+
+        false
     }
 
-    pub fn has_icmp_ping_request(&self) -> bool {
-        self.ip_proto() == 0x01 && self.icmp_type() == 0x08
-    }
-
-    pub fn has_icmp_ping_reply(&self) -> bool {
-        self.ip_proto() == 0x01 && self.icmp_type() == 0x00
-    }
-
-    pub fn has_icmp_dest_unreachable(&self) -> bool {
-        self.ip_proto() == 0x01 && self.icmp_type() == 0x03
+    pub fn has_ipv4(&self) -> bool {
+        self.eth().has_ipv4()
     }
 
     pub fn has_dns(&self) -> bool {
-        self.has_udp() && (self.udp_sport() == 53 || self.udp_dport() == 53)
+        if let Some(ip) = self.ip()
+            && ip.has_udp()
+        {
+            return self.udp().is_dns();
+        }
+
+        false
     }
 
     pub fn has_dhcp(&self) -> bool {
-        let ports = [67 as u16, 68 as u16];
-        self.has_udp() && (ports.contains(&self.udp_sport()) || ports.contains(&self.udp_dport()))
+        if let Some(ip) = self.ip()
+            && ip.has_udp()
+        {
+            return self.udp().is_dhcp();
+        }
+
+        false
     }
 
     pub fn has_https(&self) -> bool {
-        eth::has_ipv4(&self.packet) && self.has_tcp() && self.tcp_sport() == 443
-            || self.tcp_dport() == 443
+        if let Some(ip) = self.ip()
+            && ip.has_tcp()
+        {
+            return self.tcp().is_https();
+        }
+
+        false
     }
 
     pub fn has_http(&self) -> bool {
-        let ports = [80 as u16, 8080 as u16];
-        eth::has_ipv4(&self.packet) && self.has_tcp() && ports.contains(&self.tcp_sport())
-            || ports.contains(&self.tcp_dport())
+        if let Some(ip) = self.ip()
+            && ip.has_tcp()
+        {
+            return self.tcp().is_http();
+        }
+
+        false
     }
 
     pub fn has_ssh(&self) -> bool {
-        eth::has_ipv4(&self.packet) && self.has_tcp() && self.tcp_sport() == 22
-            || self.tcp_dport() == 22
+        if let Some(ip) = self.ip()
+            && ip.has_tcp()
+        {
+            return self.tcp().is_ssh();
+        }
+
+        false
     }
 
     pub fn has_telnet(&self) -> bool {
-        eth::has_ipv4(&self.packet) && self.has_tcp() && self.tcp_sport() == 23
-            || self.tcp_dport() == 23
+        if let Some(ip) = self.ip()
+            && ip.has_tcp()
+        {
+            return self.tcp().is_telnet();
+        }
+
+        false
     }
 
     pub fn has_rdp(&self) -> bool {
-        eth::has_ipv4(&self.packet) && self.has_tcp() && self.tcp_sport() == 3389
-            || self.tcp_dport() == 3389
+        if let Some(ip) = self.ip()
+            && ip.has_tcp()
+        {
+            return self.tcp().is_rdp();
+        }
+
+        false
     }
 
     pub fn has_ntp(&self) -> bool {
-        self.has_udp() && (self.udp_sport() == 123 || self.udp_dport() == 123)
+        if let Some(ip) = self.ip()
+            && ip.has_udp()
+        {
+            return self.udp().is_ntp();
+        }
+
+        false
     }
 
     pub fn has_smtp(&self) -> bool {
-        self.has_tcp() && (self.tcp_dport() == 25 || self.tcp_sport() == 25)
+        if let Some(ip) = self.ip()
+            && ip.has_tcp()
+        {
+            return self.tcp().is_smtp();
+        }
+
+        false
     }
 
     pub fn has_snmp(&self) -> bool {
-        let ports = [161 as u16, 162 as u16];
-        self.has_tcp() && (ports.contains(&self.tcp_sport()) || ports.contains(&self.tcp_dport()))
+        if let Some(ip) = self.ip()
+            && ip.has_tcp()
+        {
+            return self.tcp().is_snmp();
+        }
+
+        false
     }
 
     pub fn has_smb(&self) -> bool {
-        self.has_tcp() && (self.tcp_dport() == 445 || self.tcp_sport() == 446)
-    }
-
-    pub fn ipv4_src(&self) -> u32 {
-        BigEndian::read_u32(&self.packet[self.offset + 12..self.offset + 16])
-    }
-
-    pub fn ipv4_dst(&self) -> u32 {
-        BigEndian::read_u32(&self.packet[self.offset + 16..self.offset + 20])
-    }
-
-    pub fn ip_hdr_len(&self) -> u8 {
-        self.packet[self.offset] & 0x0f
-    }
-
-    fn ip_offset(&self) -> usize {
-        self.offset + (self.ip_hdr_len() as usize * 4)
-    }
-
-    pub fn tcp_sport(&self) -> u16 {
-        if self.has_tcp() {
-            BigEndian::read_u16(&self.packet[self.ip_offset()..self.ip_offset() + 2])
-        } else {
-            0
+        if let Some(ip) = self.ip()
+            && ip.has_tcp()
+        {
+            return self.tcp().is_smb();
         }
-    }
 
-    pub fn tcp_dport(&self) -> u16 {
-        if self.has_tcp() {
-            BigEndian::read_u16(&self.packet[self.ip_offset() + 2..self.ip_offset() + 4])
-        } else {
-            0
-        }
-    }
-
-    pub fn udp_sport(&self) -> u16 {
-        if self.has_udp() {
-            BigEndian::read_u16(&self.packet[self.ip_offset()..self.ip_offset() + 2])
-        } else {
-            0
-        }
-    }
-
-    pub fn udp_dport(&self) -> u16 {
-        if self.has_udp() {
-            BigEndian::read_u16(&self.packet[self.ip_offset() + 2..self.ip_offset() + 4])
-        } else {
-            0
-        }
-    }
-}
-
-fn split_field_name(field_name: &str) -> Option<(&str, &str)> {
-    let parts: Vec<&str> = field_name.split(".").collect();
-
-    if parts.len() == 2 {
-        return Some((parts[0], parts[1]));
-    } else {
-        return None;
+        false
     }
 }
 
@@ -424,8 +420,8 @@ mod tests {
         );
 
         assert_eq!(
-            pd.get_field("eth.has_vlan").unwrap().to_bool(),
-            true,
+            pd.get_field(net_field::ETH_VLAN_ID).unwrap().to_bool(),
+            > 1,
             "Has vlan"
         );
     }

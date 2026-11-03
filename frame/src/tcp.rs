@@ -1,6 +1,7 @@
 use crate::layer::Layer;
 use crate::packet_display::PacketDisplay;
 
+use crate::net_field;
 use byteorder::{BigEndian, ByteOrder};
 use field::pfield::{Field, FieldType};
 
@@ -221,71 +222,100 @@ impl<'a> Tcp<'a> {
         self.sport() == 25 || self.dport() == 25
     }
 
+    pub fn is_snmp(&self) -> bool {
+        let ports = [161 as u16, 162 as u16];
+        ports.contains(&self.sport()) || ports.contains(&self.dport())
+    }
+
     pub fn is_smb(&self) -> bool {
         self.sport() == 445 || self.dport() == 445 || self.sport() == 139 || self.dport() == 139
     }
 }
 
 impl<'a> Layer for Tcp<'a> {
-    fn get_field(&self, field: &str) -> Option<Field> {
+    fn get_field(&self, field: u32) -> Option<Field> {
         match field {
-            "tcp.proto_name" => Some(Field::set_field(
+            net_field::TCP_PROTO_NAME => Some(Field::set_field(
                 FieldType::String(String::from("TCP Level 4")),
                 field,
             )),
-            "tcp.sport" => Some(Field::set_field(FieldType::Int16(self.sport()), field)),
-            "tcp.dport" => Some(Field::set_field(FieldType::Int16(self.dport()), field)),
-            "tcp.ackno" => Some(Field::set_field(FieldType::Int32(self.ack_no()), field)),
-            "tcp.seqno" => Some(Field::set_field(FieldType::Int32(self.seq_no()), field)),
-            "tcp.flags_ack" => Some(Field::set_field(FieldType::Bool(self.flag_ack()), field)),
-            "tcp.flags_push" => Some(Field::set_field(FieldType::Bool(self.flag_push()), field)),
+            net_field::TCP_SRC_PORT => {
+                Some(Field::set_field(FieldType::Int16(self.sport()), field))
+            }
+            net_field::TCP_DEST_PORT => {
+                Some(Field::set_field(FieldType::Int16(self.dport()), field))
+            }
+            net_field::TCP_ACK_NO => Some(Field::set_field(FieldType::Int32(self.ack_no()), field)),
+            net_field::TCP_SEQ_NO => Some(Field::set_field(FieldType::Int32(self.seq_no()), field)),
+            net_field::TCP_FLAGS_ACK => {
+                Some(Field::set_field(FieldType::Bool(self.flag_ack()), field))
+            }
+            net_field::TCP_FLAGS_PUSH => {
+                Some(Field::set_field(FieldType::Bool(self.flag_push()), field))
+            }
 
-            "tcp.flags_syn" => Some(Field::set_field(FieldType::Bool(self.flag_syn()), field)),
-            "tcp.flags_reset" => Some(Field::set_field(FieldType::Bool(self.flag_rst()), field)),
-            "tcp.flags_fin" => Some(Field::set_field(FieldType::Bool(self.flag_fin()), field)),
-            "tcp.flags_urgent" => Some(Field::set_field(FieldType::Bool(self.flag_urg()), field)),
-            "tcp.flags_winsize" => Some(Field::set_field(FieldType::Int16(self.win_size()), field)),
-            "tcp.hdr_len" => Some(Field::set_field(FieldType::Int8(self.hdr_len()), field)),
-            "tcp.payload_len" => Some(Field::set_field(
+            net_field::TCP_FLAGS_SYN => {
+                Some(Field::set_field(FieldType::Bool(self.flag_syn()), field))
+            }
+            net_field::TCP_FLAGS_RESET => {
+                Some(Field::set_field(FieldType::Bool(self.flag_rst()), field))
+            }
+            net_field::TCP_FLAGS_FIN => {
+                Some(Field::set_field(FieldType::Bool(self.flag_fin()), field))
+            }
+            net_field::TCP_FLAGS_URG => {
+                Some(Field::set_field(FieldType::Bool(self.flag_urg()), field))
+            }
+            net_field::TCP_WIN_SIZE => {
+                Some(Field::set_field(FieldType::Int16(self.win_size()), field))
+            }
+            net_field::TCP_HDR_LEN => {
+                Some(Field::set_field(FieldType::Int8(self.hdr_len()), field))
+            }
+            net_field::TCP_PAYLOAD_LEN => Some(Field::set_field(
                 FieldType::Int16(self.payload_len()),
                 field,
             )),
 
-            "tcp.options_wscale" => Some(Field::set_field(
+            net_field::TCP_OPTIONS_WIN_SCALE => Some(Field::set_field(
                 FieldType::Int8(self.options.winscale),
                 field,
             )),
 
-            "tcp.options_wscale_mult" => Some(Field::set_field(
+            net_field::TCP_OPTIONS_WIN_SCALE_MUL => Some(Field::set_field(
                 FieldType::Int16(self.options.win_multiplier),
                 field,
             )),
 
-            "tcp.options_sack" => Some(Field::set_field(FieldType::Bool(self.options.sack), field)),
+            net_field::TCP_OPTIONS_SACK => {
+                Some(Field::set_field(FieldType::Bool(self.options.sack), field))
+            }
 
-            "tcp.options_sack_count" => Some(Field::set_field(
+            net_field::TCP_OPTIONS_SACK_COUNT => Some(Field::set_field(
                 FieldType::Int16(self.options.sack_list.len() as u16),
                 field,
             )),
 
-            "tcp.options_scale_le" => Some(Field::set_field(
+            net_field::TCP_OPTIONS_SCALE_LE => Some(Field::set_field(
                 FieldType::Int32(self.options.sack_list[0].left),
                 field,
             )),
 
-            "tcp.options_scale_re" => Some(Field::set_field(
+            net_field::TCP_OPTIONS_SCALE_RE => Some(Field::set_field(
                 FieldType::Int32(self.options.sack_list[0].right),
                 field,
             )),
 
-            "tcp.options_mss" => Some(Field::set_field(FieldType::Int16(self.options.mss), field)),
+            net_field::TCP_OPTIONS_MSS => {
+                Some(Field::set_field(FieldType::Int16(self.options.mss), field))
+            }
 
-            "tcp.options_timestamp" => Some(Field::set_field(
+            net_field::TCP_OPTIONS_TIMESTAMP => Some(Field::set_field(
                 FieldType::Int32(self.options.timestamp.tsval),
                 field,
             )),
 
-            "tcp.options_timestamp_tsecr" => Some(Field::set_field(
+            net_field::TCP_OPTIONS_TIMESTAMP_TSECR => Some(Field::set_field(
                 FieldType::Int32(self.options.timestamp.tsecr),
                 field,
             )),

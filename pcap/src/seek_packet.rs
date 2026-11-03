@@ -1,6 +1,6 @@
 use byteorder::BigEndian;
 use byteorder::{ByteOrder, LittleEndian};
-use frame::packet::Packet;
+use frame::packet_decode::PacketDecode;
 use std::fs::File;
 use std::io::BufReader;
 use std::io::prelude::*;
@@ -46,7 +46,7 @@ impl<'a> SeekPacket<'a> {
     }
 
     #[allow(clippy::should_implement_trait)]
-    pub fn next(&mut self) -> Option<Packet> {
+    pub fn next(&mut self) -> Option<PacketDecode> {
         if self.index >= self.plist.pkt_ptr.len() || self.plist.pkt_ptr.is_empty() {
             return None;
         }
@@ -62,15 +62,12 @@ impl<'a> SeekPacket<'a> {
 
         //--- Must determine what to do when psize is zero. The file pointer will
         //--- not advance and we will spin on our self
-        let mut little_endian = true;
         match self.magic_no {
             HEADER_LE => {
                 self.psize = LittleEndian::read_u32(&pheader[12..16]) as usize;
-                little_endian = true;
             }
             HEADER_BE => {
                 self.psize = BigEndian::read_u32(&pheader[12..16]) as usize;
-                little_endian = false;
             }
             _ => self.psize = 0,
         }
@@ -84,21 +81,20 @@ impl<'a> SeekPacket<'a> {
 
         self.relative_ptr = self.file.stream_position().unwrap();
 
-        let mut pkt = Packet::new();
-        pkt.set_packet(
-            self.data.clone(),
-            pheader.to_vec(),
+        let pkt = PacketDecode::new(
+            Box::new(pheader),
+            self.data.clone().into_boxed_slice(),
             self.plist.file_id,
             self.plist.pkt_ptr[self.index],
-            little_endian,
         );
+
         self.index += 1;
 
         Some(pkt)
     }
 
-    pub fn next_chunk(&mut self, count: usize) -> Option<Vec<Packet>> {
-        let mut result: Vec<Packet> = Vec::new();
+    pub fn next_chunk(&mut self, count: usize) -> Option<Vec<PacketDecode>> {
+        let mut result: Vec<PacketDecode> = Vec::new();
 
         while let Some(pkt) = self.next() {
             if result.len() < count {

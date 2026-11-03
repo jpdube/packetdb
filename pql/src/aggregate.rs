@@ -1,6 +1,6 @@
 use std::fmt;
 
-use frame::packet::Packet;
+use frame::{net_field, packet_decode::PacketDecode};
 
 #[derive(Debug, Clone)]
 pub enum Aggregate {
@@ -13,7 +13,7 @@ pub enum Aggregate {
 }
 
 impl Aggregate {
-    pub fn compute(&self, pkt_list: &Vec<Packet>) -> usize {
+    pub fn compute(&self, pkt_list: &Vec<PacketDecode>) -> usize {
         match &self {
             Self::Count(_) => self.count(pkt_list),
             Self::Avg(field_id, _) => self.avg(field_id.clone(), pkt_list),
@@ -46,62 +46,71 @@ impl Aggregate {
         }
     }
 
-    fn count(&self, pkt_list: &[Packet]) -> usize {
+    fn count(&self, pkt_list: &[PacketDecode]) -> usize {
         pkt_list.len()
     }
 
-    fn bandwidth(&self, _field_id: String, _pkt_list: &Vec<Packet>) -> usize {
+    fn bandwidth(&self, _field_id: String, _pkt_list: &Vec<PacketDecode>) -> usize {
         let result: usize = 0;
 
         result
     }
 
-    fn sum(&self, field_id: String, pkt_list: &Vec<Packet>) -> usize {
+    fn sum(&self, field_id: String, pkt_list: &Vec<PacketDecode>) -> usize {
         let mut result: usize = 0;
 
+        // let mut net_field: u32 = 0;
         for pkt in pkt_list {
-            if let Some(field) = pkt.get_field(&field_id) {
-                result += field.to_usize();
+            if let Some(net_field) = net_field::string_to_int(&field_id) {
+                if let Some(field) = pkt.get_field(net_field) {
+                    result += field.to_usize();
+                }
             }
         }
 
         result
     }
 
-    fn avg(&self, field_id: String, pkt_list: &Vec<Packet>) -> usize {
+    fn avg(&self, field_id: String, pkt_list: &Vec<PacketDecode>) -> usize {
         let mut result: usize = 0;
 
         for pkt in pkt_list {
-            if let Some(field) = pkt.get_field(&field_id) {
-                result += field.to_usize();
+            if let Some(net_field) = net_field::string_to_int(&field_id) {
+                if let Some(field) = pkt.get_field(net_field) {
+                    result += field.to_usize();
+                }
             }
         }
 
         result / pkt_list.len()
     }
 
-    fn min(&self, field_id: String, pkt_list: &Vec<Packet>) -> usize {
+    fn min(&self, field_id: String, pkt_list: &Vec<PacketDecode>) -> usize {
         let mut result: usize = usize::MAX;
 
         for pkt in pkt_list {
-            if let Some(r) = pkt.get_field(&field_id)
-                && r.to_usize() < result
-            {
-                result = r.to_usize();
+            if let Some(net_field) = net_field::string_to_int(&field_id) {
+                if let Some(r) = pkt.get_field(net_field)
+                    && r.to_usize() < result
+                {
+                    result = r.to_usize();
+                }
             }
         }
 
         result
     }
 
-    fn max(&self, field_id: String, pkt_list: &Vec<Packet>) -> usize {
+    fn max(&self, field_id: String, pkt_list: &Vec<PacketDecode>) -> usize {
         let mut result: usize = 0;
 
         for pkt in pkt_list {
-            if let Some(r) = pkt.get_field(&field_id)
-                && r.to_usize() > result
-            {
-                result = r.to_usize();
+            if let Some(net_field) = net_field::string_to_int(&field_id) {
+                if let Some(r) = pkt.get_field(net_field)
+                    && r.to_usize() > result
+                {
+                    result = r.to_usize();
+                }
             }
         }
 

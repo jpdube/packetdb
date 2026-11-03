@@ -9,8 +9,8 @@ use chrono::{Local, TimeZone};
 use field::ipv4_address::{IPv4, from_string_to_ip};
 use field::mac_address::MacAddr;
 use frame::constant::NetConstant;
-use frame::fields::is_field_valid;
 use frame::layer_index::LayerIndex;
+use frame::net_field;
 
 use log::debug;
 use std::collections::HashSet;
@@ -92,6 +92,7 @@ pub enum PktFieldType {
 #[derive(Clone, Debug)]
 pub struct SelectField {
     pub name: String,
+    pub id: u32,
     // pub ftype: PktFieldType,
 }
 
@@ -394,9 +395,12 @@ impl Parse {
                     println!("AGGREGATE: {:?}", aggr);
                     self.query.aggr_list.push(aggr);
                 } else if let Some(sfield) = self.expect(Keyword::Identifier) {
-                    if is_field_valid(&sfield.value) {
+                    if let Some(field_id) = net_field::string_to_int(&sfield.value) {
                         debug!("FIELD: {} valid", sfield.value);
-                        self.query.select.push(SelectField { name: sfield.value });
+                        self.query.select.push(SelectField {
+                            name: sfield.value,
+                            id: field_id,
+                        });
                     } else {
                         debug!("FIELD: {} NOT valid", sfield.value);
                         self.error_list.push(ErrorMsg {
@@ -405,6 +409,17 @@ impl Parse {
                             column: sfield.column,
                         });
                     }
+                    // if is_field_valid(&sfield.value) {
+                    //     debug!("FIELD: {} valid", sfield.value);
+                    //     self.query.select.push(SelectField { name: sfield.value });
+                    // } else {
+                    //     debug!("FIELD: {} NOT valid", sfield.value);
+                    //     self.error_list.push(ErrorMsg {
+                    //         message: format!("Invalid field: {}", sfield.value),
+                    //         line: sfield.line,
+                    //         column: sfield.column,
+                    //     });
+                    // }
                 }
                 if self.peek(Keyword::Comma) {
                     self.accept(Keyword::Comma);
@@ -486,9 +501,10 @@ impl Parse {
 
                 loop {
                     if let Some(sfield) = self.expect(Keyword::Identifier) {
-                        self.query
-                            .groupby_fields
-                            .push(SelectField { name: sfield.value });
+                        self.query.groupby_fields.push(SelectField {
+                            name: sfield.value,
+                            id: 0,
+                        });
                     }
                     if self.peek(Keyword::Comma) {
                         self.accept(Keyword::Comma);
@@ -830,6 +846,10 @@ impl Parse {
                     self.field_type.insert(LayerIndex::DHCP);
                     Some(Expression::Integer(NetConstant::DhcpClient as u32))
                 }
+                "ARP" => {
+                    self.field_type.insert(LayerIndex::ARP);
+                    Some(Expression::Integer(NetConstant::EthArp as u32))
+                }
                 _ => {
                     self.error_list.push(ErrorMsg {
                         message: "Invalid constant".to_string(),
@@ -995,6 +1015,7 @@ impl Parse {
         if let Some(tok) = self.accept(Keyword::Identifier) {
             self.query.filter_fields.push(SelectField {
                 name: tok.value.clone(),
+                id: 0,
             });
             if self.peek(Keyword::IndexStart) {
                 return self.parse_label_byte(tok);

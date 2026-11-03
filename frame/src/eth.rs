@@ -1,4 +1,5 @@
 use crate::layer::Layer;
+use crate::net_field;
 use crate::packet_display::PacketDisplay;
 use field::mac_address::MacAddr;
 use field::pfield::{Field, FieldType};
@@ -7,8 +8,9 @@ use byteorder::{BigEndian, ByteOrder};
 
 const ETHER_8021Q: u16 = 0x8100;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct EtherFrame<'a> {
+    // raw_packet: &'a [u8],
     raw_packet: &'a [u8],
 }
 
@@ -45,6 +47,14 @@ impl<'a> EtherFrame<'a> {
         }
     }
 
+    pub fn has_arp(&self) -> bool {
+        self.ethertype() == 0x0806
+    }
+
+    pub fn has_ipv4(&self) -> bool {
+        self.ethertype() == 0x0800
+    }
+
     pub fn payload_range(&self, offset: usize, len: usize) -> Vec<u8> {
         self.raw_packet[offset..offset + len].to_vec()
     }
@@ -55,12 +65,22 @@ impl<'a> Layer for EtherFrame<'a> {
         "eth".to_string()
     }
 
-    fn get_field(&self, field: &str) -> Option<Field> {
+    fn get_field(&self, field: u32) -> Option<Field> {
         match field {
-            "eth.src" => Some(Field::set_field(FieldType::MacAddr(self.src()), field)),
-            "eth.dst" => Some(Field::set_field(FieldType::MacAddr(self.dst()), field)),
-            "eth.type" => Some(Field::set_field(FieldType::Int16(self.ethertype()), field)),
-            "eth.vlan" => Some(Field::set_field(FieldType::Int16(self.vlan_id()), field)),
+            net_field::ETH_SRC_MAC => Some(Field::set_field(FieldType::MacAddr(self.src()), field)),
+            net_field::ETH_DST_MAC => Some(Field::set_field(FieldType::MacAddr(self.dst()), field)),
+            net_field::ETH_PROTO => {
+                Some(Field::set_field(FieldType::Int16(self.ethertype()), field))
+            }
+            net_field::ETH_VLAN_ID => {
+                Some(Field::set_field(FieldType::Int16(self.vlan_id()), field))
+            }
+            net_field::ETH_HAS_ARP => {
+                Some(Field::set_field(FieldType::Bool(self.has_arp()), field))
+            }
+            net_field::ETH_HAS_IPV4 => {
+                Some(Field::set_field(FieldType::Bool(self.has_ipv4()), field))
+            }
             _ => None,
         }
     }

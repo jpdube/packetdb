@@ -1,3 +1,4 @@
+use crate::net_field;
 use crate::layer::Layer;
 use crate::packet_display::PacketDisplay;
 use byteorder::{BigEndian, ByteOrder};
@@ -43,6 +44,18 @@ impl<'a> IpFrame<'a> {
     pub fn proto(&self) -> u8 {
         self.ip_packet[9]
     }
+
+    pub fn has_icmp(&self) -> bool {
+        self.proto() == 0x01
+    }
+
+    pub fn has_tcp(&self) -> bool {
+        self.proto() == 0x06
+    }
+
+    pub fn has_udp(&self) -> bool {
+        self.proto() == 0x11
+    }
 }
 
 impl<'a> Layer for IpFrame<'a> {
@@ -50,14 +63,21 @@ impl<'a> Layer for IpFrame<'a> {
         "ip".to_string()
     }
 
-    fn get_field(&self, field: &str) -> Option<Field> {
+    fn get_field(&self, field: u32) -> Option<Field> {
         match field {
-            "ip.src" => Some(Field::set_field(FieldType::Ipv4(self.src(), 32), field)),
-            "ip.dst" => Some(Field::set_field(FieldType::Ipv4(self.dst(), 32), field)),
-            "ip.tos" => Some(Field::set_field(FieldType::Int8(self.tos()), field)),
-            "ip.ttl" => Some(Field::set_field(FieldType::Int8(self.ttl()), field)),
-            "ip.protocol" => Some(Field::set_field(FieldType::Int8(self.proto()), field)),
-            "ip.hdr_len" => Some(Field::set_field(FieldType::Int8(self.header_len()), field)),
+            net_field::IPV4_SRC_ADDR => Some(Field::set_field(FieldType::Ipv4(self.src(), 32), field)),
+            net_field::IPV4_DST_ADDR => Some(Field::set_field(FieldType::Ipv4(self.dst(), 32), field)),
+            net_field::IPV4_TOS => Some(Field::set_field(FieldType::Int8(self.tos()), field)),
+            net_field::IPV4_TTL => Some(Field::set_field(FieldType::Int8(self.ttl()), field)),
+            net_field::IPV4_PROTOCOL => Some(Field::set_field(FieldType::Int8(self.proto()), field)),
+            net_field::IPV4_HEADER_LEN => {
+                Some(Field::set_field(FieldType::Int8(self.header_len()), field))
+            }
+            net_field::IPV4_HAS_TCP => Some(Field::set_field(FieldType::Bool(self.has_tcp()), field)),
+            net_field::IPV4_HAS_UDP => Some(Field::set_field(FieldType::Bool(self.has_udp()), field)),
+            net_field::IPV4_HAS_ICMP => {
+                Some(Field::set_field(FieldType::Bool(self.has_icmp()), field))
+            }
             _ => None,
         }
     }

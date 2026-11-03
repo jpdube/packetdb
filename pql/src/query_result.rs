@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use frame::packet::Packet;
+use frame::{net_field, packet_decode::PacketDecode};
 
 use crate::cursor::Cursor;
 use crate::parse::PqlStatement;
@@ -43,7 +43,7 @@ impl QueryResult {
         }
     }
 
-    pub fn add(&mut self, pkt: Packet) {
+    pub fn add(&mut self, pkt: PacketDecode) {
         if self.model.has_groupby() {
             self.groupby.add(pkt.clone());
         } else if self.model.has_aggregate() && !self.model.has_groupby() {
@@ -59,8 +59,11 @@ impl QueryResult {
         let mut distinct_key = String::new();
 
         for field in &self.model.select {
-            if let Some(field_value) = pkt.get_field(&field.name) {
-                record.add(Field::set_field(field_value.field.clone(), &field.name));
+            if let Some(field_value) = pkt.get_field(field.id) {
+                record.add(Field::set_field_with_name(
+                    field_value.field.clone(),
+                    &field.name,
+                ));
 
                 if self.model.has_distinct {
                     distinct_key = format!("{}|{}", distinct_key, field_value);
@@ -68,12 +71,14 @@ impl QueryResult {
             }
         }
 
-        let pkt_id = pkt.get_id();
-        record.add(Field::set_field(FieldType::Int64(pkt_id), "frame.id"));
+        record.add(Field::set_field_with_name(
+            FieldType::Int64(pkt.clone().get_id()),
+            "frame.id",
+        ));
 
-        if let Some(ts_temp) = pkt.get_field("frame.timestamp") {
+        if let Some(ts_temp) = pkt.get_field(net_field::FRAME_TIMESTAMP) {
             let mut ts = ts_temp;
-            ts.name = "frame.timestamp".to_string();
+            ts.field_name = "frame.timestamp".to_string();
             record.add(ts.clone());
 
             if ts.to_u32() < self.ts_start {
@@ -109,7 +114,7 @@ impl QueryResult {
 
 pub struct AggregateResult {
     model: PqlStatement,
-    pkt_list: Vec<Packet>,
+    pkt_list: Vec<PacketDecode>,
     result: Cursor,
 }
 
@@ -122,7 +127,7 @@ impl AggregateResult {
         }
     }
 
-    pub fn add(&mut self, packet: Packet) {
+    pub fn add(&mut self, packet: PacketDecode) {
         self.pkt_list.push(packet);
     }
 
@@ -133,7 +138,7 @@ impl AggregateResult {
     pub fn get_result(&mut self) -> Cursor {
         let mut record = Record::default();
         for aggr in &self.model.aggr_list {
-            let aggr_field = Field::set_field(
+            let aggr_field = Field::set_field_with_name(
                 FieldType::Int64(aggr.compute(&self.pkt_list) as u64),
                 aggr.as_of(),
             );
@@ -149,7 +154,7 @@ impl AggregateResult {
 
 pub struct GroupBy {
     model: PqlStatement,
-    grp_result: HashMap<Vec<usize>, Vec<Packet>>,
+    grp_result: HashMap<Vec<usize>, Vec<PacketDecode>>,
     result: Cursor,
 }
 
@@ -166,11 +171,11 @@ impl GroupBy {
         self.grp_result.keys().len() >= self.model.top
     }
 
-    pub fn add(&mut self, pkt: Packet) {
+    pub fn add(&mut self, pkt: PacketDecode) {
         let mut key: Vec<usize> = Vec::new();
 
         for k in &self.model.groupby_fields {
-            if let Some(field_id) = pkt.get_field(&k.name) {
+            if let Some(field_id) = pkt.get_field(k.id) {
                 key.push(field_id.to_u64() as usize);
             }
         }
@@ -178,7 +183,7 @@ impl GroupBy {
         if let Some(aggr_key) = self.grp_result.get_mut(&key) {
             aggr_key.push(pkt);
         } else {
-            let grp_vec: Vec<Packet> = vec![pkt];
+            let grp_vec: Vec<PacketDecode> = vec![pkt];
             self.grp_result.insert(key, grp_vec);
         }
     }
@@ -198,14 +203,13 @@ impl GroupBy {
                     FieldType::Int64(*gfield as u64)
                 };
 
-                let aggr_field = Field::set_field(field_value, &field_name);
-                // let aggr_field = Field::set_field_with_name(field_value, field_name);
+                let aggr_field = Field::set_field_with_name(field_value, &field_name);
 
                 record.add(aggr_field);
             }
 
             for aggr in &self.model.aggr_list {
-                let aggr_field = Field::set_field(
+                let aggr_field = Field::set_field_with_name(
                     // let aggr_field = Field::set_field_with_name(
                     FieldType::Int32(aggr.compute(grp) as u32),
                     &aggr.as_of().clone(),

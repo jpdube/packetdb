@@ -1,4 +1,5 @@
 use crate::layer::Layer;
+use crate::net_field;
 use byteorder::{BigEndian, ByteOrder};
 use std::fmt;
 use std::str;
@@ -506,35 +507,35 @@ impl<'a> Dhcp<'a> {
         self.get_name(BOOT_FILE_OFFSET)
     }
 
-    pub fn ip_lease_time(&self, field: &str) -> Option<Field> {
+    pub fn ip_lease_time(&self, field: u32) -> Option<Field> {
         self.ip_addr_lease_time
             .as_ref()
             .map(|ip_lease| Field::set_field(FieldType::TimeValue(ip_lease.value()), field))
     }
 
-    pub fn rebinding_time(&self, field: &str) -> Option<Field> {
+    pub fn rebinding_time(&self, field: u32) -> Option<Field> {
         self.rebinding_time
             .as_ref()
             .map(|rebind_time| Field::set_field(FieldType::TimeValue(rebind_time.value()), field))
     }
 
-    pub fn renewal_time(&self, field: &str) -> Option<Field> {
+    pub fn renewal_time(&self, field: u32) -> Option<Field> {
         self.renewal_time
             .as_ref()
             .map(|renewal_time| Field::set_field(FieldType::TimeValue(renewal_time.value()), field))
     }
 
-    pub fn domain_name(&self, field: &str) -> Option<Field> {
+    pub fn domain_name(&self, field: u32) -> Option<Field> {
         self.domain_name
             .as_ref()
             .map(|domain_name| Field::set_field(FieldType::String(domain_name.value()), field))
     }
 
-    pub fn client_ip(&self, field: &str) -> Option<Field> {
+    pub fn client_ip(&self, field: u32) -> Option<Field> {
         Some(Field::set_field(FieldType::Ipv4(self.ciaddr(), 32), field))
     }
 
-    pub fn domain_servers(&self, field: &str) -> Option<Field> {
+    pub fn domain_servers(&self, field: u32) -> Option<Field> {
         if let Some(iplt) = &self.dns_server {
             let mut field_list: Vec<FieldType> = Vec::new();
 
@@ -548,85 +549,85 @@ impl<'a> Dhcp<'a> {
         }
     }
 
-    pub fn router(&self, field: &str) -> Option<Field> {
+    pub fn router(&self, field: u32) -> Option<Field> {
         self.router
             .as_ref()
             .map(|router| Field::set_field(FieldType::Ipv4(router.value(), 32), field))
     }
 
-    pub fn subnet_mask(&self, field: &str) -> Option<Field> {
+    pub fn subnet_mask(&self, field: u32) -> Option<Field> {
         self.subnet_mask
             .as_ref()
             .map(|mask| Field::set_field(FieldType::Ipv4(mask.value(), 32), field))
     }
 
-    pub fn server_id(&self, field: &str) -> Option<Field> {
+    pub fn server_id(&self, field: u32) -> Option<Field> {
         self.server_id
             .as_ref()
             .map(|srv| Field::set_field(FieldType::Ipv4(srv.value(), 32), field))
     }
 
-    pub fn requested_id(&self, field: &str) -> Option<Field> {
+    pub fn requested_id(&self, field: u32) -> Option<Field> {
         self.requested_ip_addr
             .as_ref()
             .map(|req_ip| Field::set_field(FieldType::Ipv4(req_ip.value(), 32), field))
     }
 
-    pub fn client_id_hwnd_type(&self, field: &str) -> Option<Field> {
+    pub fn client_id_hwnd_type(&self, field: u32) -> Option<Field> {
         self.client_id
             .as_ref()
             .map(|client_id| Field::set_field(FieldType::Int8(client_id.hwnd_type()), field))
     }
 
-    pub fn client_id_mac_addr(&self, field: &str) -> Option<Field> {
+    pub fn client_id_mac_addr(&self, field: u32) -> Option<Field> {
         self.client_id
             .as_ref()
             .map(|client_id| Field::set_field(FieldType::MacAddr(client_id.mac_addr()), field))
     }
 
-    pub fn hostname(&self, field: &str) -> Option<Field> {
+    pub fn hostname(&self, field: u32) -> Option<Field> {
         self.hostname
             .as_ref()
             .map(|hostname| Field::set_field(FieldType::String(hostname.value()), field))
     }
 
-    pub fn client_fqdn_flags(&self, field: &str) -> Option<Field> {
+    pub fn client_fqdn_flags(&self, field: u32) -> Option<Field> {
         self.client_fqdn
             .as_ref()
             .map(|client_id| Field::set_field(FieldType::Int8(client_id.flags()), field))
     }
 
-    pub fn client_fqdn_a_result(&self, field: &str) -> Option<Field> {
+    pub fn client_fqdn_a_result(&self, field: u32) -> Option<Field> {
         self.client_fqdn
             .as_ref()
             .map(|client_id| Field::set_field(FieldType::Int8(client_id.a_rr_result()), field))
     }
 
-    pub fn client_fqdn_ptr_rr_result(&self, field: &str) -> Option<Field> {
+    pub fn client_fqdn_ptr_rr_result(&self, field: u32) -> Option<Field> {
         self.client_fqdn.as_ref().map(|client_fqdn| {
             Field::set_field(FieldType::Int8(client_fqdn.ptr_rr_result()), field)
         })
     }
 
-    pub fn client_fqdn_name(&self, field: &str) -> Option<Field> {
+    pub fn client_fqdn_name(&self, field: u32) -> Option<Field> {
         self.client_fqdn.as_ref().map(|client_fqdn| {
             Field::set_field(FieldType::String(client_fqdn.client_name()), field)
         })
     }
 
-    pub fn vendor_class_id(&self, field: &str) -> Option<Field> {
+    pub fn vendor_class_id(&self, field: u32) -> Option<Field> {
         self.vendor_class_id
             .as_ref()
             .map(|vendor| Field::set_field(FieldType::String(vendor.value()), field))
     }
 
-    pub fn vendor_info(&self, field: &str) -> Option<Field> {
+    pub fn vendor_info(&self, field: u32) -> Option<Field> {
         self.vendor_info
             .as_ref()
             .map(|vendor| Field::set_field(FieldType::ByteArray(vendor.value()), field))
     }
 
-    pub fn param_req_list(&self, field: &str) -> Option<Field> {
+    pub fn param_req_list(&self, field: u32) -> Option<Field> {
         self.param_req_list
             .as_ref()
             .map(|params| Field::set_field(FieldType::ByteArray(params.value()), field))
@@ -770,30 +771,30 @@ impl<'a> Layer for Dhcp<'a> {
         "dhcp".to_string()
     }
 
-    fn get_field(&self, field: &str) -> Option<Field> {
+    fn get_field(&self, field: u32) -> Option<Field> {
         match field {
-            "dhcp.opcode" => Some(Field::set_field(FieldType::Int8(self.op()), field)),
-            "dhcp.xid" => Some(Field::set_field(FieldType::Int32(self.xid()), field)),
-            "dhcp.client_ip" => self.client_ip(field),
-            "dhcp.ip_lease_time" => self.ip_lease_time(field),
-            "dhcp.rebinding_time" => self.rebinding_time(field),
-            "dhcp.renewal_time" => self.renewal_time(field),
-            "dhcp.domain_name" => self.domain_name(field),
-            "dhcp.domain_srv" => self.domain_servers(field),
-            "dhcp.router" => self.router(field),
-            "dhcp.subnet_mask" => self.subnet_mask(field),
-            "dhcp.served_id" => self.server_id(field),
-            "dhcp.request_ip" => self.requested_id(field),
-            "dhcp.client_hwnd_type" => self.client_id_hwnd_type(field),
-            "dhcp.client_mac" => self.client_id_mac_addr(field),
-            "dhcp.hostname" => self.hostname(field),
-            "dhcp.client_fqdn_flags" => self.client_fqdn_flags(field),
-            "dhcp.client_fqdn_a_result" => self.client_fqdn_a_result(field),
-            "dhcp.client_fqdn_ptr_result" => self.client_fqdn_ptr_rr_result(field),
-            "dhcp.client_fqdn_name" => self.client_fqdn_name(field),
-            "dhcp.vendor_id" => self.vendor_class_id(field),
-            "dhcp.vendor_info" => self.vendor_info(field),
-            "dhcp.params_req_list" => self.param_req_list(field),
+            net_field::DHCP_OPCODE => Some(Field::set_field(FieldType::Int8(self.op()), field)),
+            net_field::DHCP_XID => Some(Field::set_field(FieldType::Int32(self.xid()), field)),
+            net_field::DHCP_CLIENT_IP => self.client_ip(field),
+            net_field::DHCP_IP_LEASE_TIME => self.ip_lease_time(field),
+            net_field::DHCP_REBINDING_TIME => self.rebinding_time(field),
+            net_field::DHCP_RENEWAL_TIME => self.renewal_time(field),
+            net_field::DHCP_DOMAIN_NAME => self.domain_name(field),
+            net_field::DHCP_DOMAIN_SRV => self.domain_servers(field),
+            net_field::DHCP_ROUTER => self.router(field),
+            net_field::DHCP_SUBNET_MASK => self.subnet_mask(field),
+            net_field::DHCP_SERVER_ID => self.server_id(field),
+            net_field::DHCP_REQUESTED_IP => self.requested_id(field),
+            net_field::DHCP_HWND_TYPE => self.client_id_hwnd_type(field),
+            net_field::DHCP_CLIENT_ID_MAC => self.client_id_mac_addr(field),
+            net_field::DHCP_HOSTNAME => self.hostname(field),
+            net_field::DHCP_CLIENT_FQDN_FLAGS => self.client_fqdn_flags(field),
+            net_field::DHCP_CLIENT_FQDN_A_RESULT => self.client_fqdn_a_result(field),
+            net_field::DHCP_CLIENT_FQDN_PTR_RESULT => self.client_fqdn_ptr_rr_result(field),
+            net_field::DHCP_CLIENT_FQDN_NAME => self.client_fqdn_name(field),
+            net_field::DHCP_VENDOR_CLASS_ID => self.vendor_class_id(field),
+            net_field::DHCP_VENDOR_INFO => self.vendor_info(field),
+            net_field::DHCP_PARAMS_REQ_LIST => self.param_req_list(field),
 
             _ => None,
         }

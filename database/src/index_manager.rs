@@ -5,9 +5,10 @@ use byteorder::{BigEndian, ByteOrder, WriteBytesExt};
 use dblib::config::CONFIG;
 use field::ipv4_address::IPv4;
 use frame::layer_index::LayerIndex;
+use frame::net_field;
 // use frame::packet::Packet;
+use frame::packet_decode::PacketDecode;
 use log::{error, info};
-use pcap::packet_decode::PacketDecode;
 use pcap::packet_ptr::PacketPtr;
 use pcap::pcapfile::PcapFile;
 use pql::parse::PqlStatement;
@@ -22,38 +23,6 @@ use std::io::Read;
 use std::path::Path;
 use std::time::Instant;
 use std::{f64, fmt};
-
-// #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-// pub enum IndexField {
-//     Ethernet = 0x01,
-//     Ip = 0x02,
-//     IpV6 = 0x04,
-//     Udp = 0x08,
-//     Tcp = 0x10,
-//     Arp = 0x20,
-//     Icmp = 0x40,
-//     Dns = 0x80,
-//     Dhcp = 0x100,
-//     Https = 0x200,
-//     Http = 0x400,
-//     Ssh = 0x800,
-//     Telnet = 0x1000,
-//     Smtp = 0x2000,
-//     Imap = 0x4000,
-//     Imaps = 0x8000,
-//     Pop3 = 0x10_000,
-//     Pop3s = 0x20_000,
-//     Snmp = 0x40_000,
-//     Ftp = 0x80_000,
-//     Ntp = 0x100_000,
-//     Rtp = 0x200_000,
-//     RtpC = 0x400_000,
-//     Sip = 0x800_000,
-//     SipTls = 0x1_000_000,
-//     Bgp = 0x2_000_000,
-//     Smb = 0x4_000_000,
-//     Rdp = 0x8_000_000,
-// }
 
 const STAT_SQL: &str =
     "INSERT INTO proto_stats (file_id, proto, count) values (:file_id, :proto, :count)";
@@ -218,7 +187,6 @@ impl IndexManager {
         let mut mindex = MasterIndex::default();
         let mut first_index = false;
         let mut ts: u32 = 0;
-        // let mut proto_stat = ProtoStat::new(filename);
 
         let start = Instant::now();
         let mut count = 0;
@@ -226,7 +194,7 @@ impl IndexManager {
 
         while let Some(pkt) = pfile.next() {
             count += 1;
-            ts = pkt.get_field("frame.timestamp").unwrap().to_u32();
+            ts = pkt.get_field(net_field::FRAME_TIMESTAMP).unwrap().to_u32();
 
             if !first_index {
                 first_index = true;
@@ -268,13 +236,13 @@ impl IndexManager {
             writer.write_u32::<BigEndian>(pindex).unwrap();
             // proto_stat.add(pindex);
 
-            if let Some(ip_dst) = pkt.get_field("ip.dst") {
+            if let Some(ip_dst) = pkt.get_field(net_field::IPV4_DST_ADDR) {
                 writer.write_u32::<BigEndian>(ip_dst.to_u32()).unwrap();
             } else {
                 writer.write_u32::<BigEndian>(0).unwrap();
             }
 
-            if let Some(ip_src) = pkt.get_field("ip.src") {
+            if let Some(ip_src) = pkt.get_field(net_field::IPV4_SRC_ADDR) {
                 writer.write_u32::<BigEndian>(ip_src.to_u32()).unwrap();
             } else {
                 writer.write_u32::<BigEndian>(0).unwrap();
@@ -292,11 +260,6 @@ impl IndexManager {
             (duration.as_secs_f64() / count as f64) * 1_000_000.0
         );
 
-        // match proto_stat.save() {
-        //     Ok(_) => {}
-        //     Err(err) => eprintln!("Error computing protocol stats: {}", err),
-        // }
-
         mindex.end_timestamp = ts;
         mindex.file_ptr = filename;
 
@@ -304,7 +267,6 @@ impl IndexManager {
     }
 
     fn build_index(&self, pkt: &PacketDecode) -> u32 {
-        // fn build_index(&self, pkt: &Packet) -> u32 {
         let mut index: u32 = 0;
 
         if pkt.has_ethernet() {
@@ -397,7 +359,6 @@ impl IndexManager {
 
     pub fn create_index(&self) {
         file_manager::clean_indexes();
-        // remove_dir_contents(&CONFIG.index_path).unwrap();
         match self.get_packet_files() {
             Ok(files_list) => {
                 let result: Vec<MasterIndex> = (files_list)

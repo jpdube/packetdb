@@ -1,8 +1,8 @@
-use dyn_clone::DynClone;
+// use dyn_clone::DynClone;
 use field::pfield::Field;
 
-pub trait Layer: DynClone {
+pub trait Layer {
     fn get_name(&self) -> String;
-    fn get_field(&self, field_name: &str) -> Option<Field>;
+    fn get_field(&self, field_name: u32) -> Option<Field>;
     fn get_field_bytes(&self, _field_name: String) -> Option<Vec<u8>>;
 }

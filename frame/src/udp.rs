@@ -1,4 +1,5 @@
 use crate::layer::Layer;
+use crate::net_field;
 use crate::packet_display::PacketDisplay;
 use byteorder::{BigEndian, ByteOrder};
 use field::pfield::{Field, FieldType};
@@ -60,12 +61,26 @@ impl<'a> UdpFrame<'a> {
 }
 
 impl<'a> Layer for UdpFrame<'a> {
-    fn get_field(&self, field: &str) -> Option<Field> {
+    fn get_field(&self, field: u32) -> Option<Field> {
         match field {
-            "udp.sport" => Some(Field::set_field(FieldType::Int16(self.sport()), field)),
-            "udp.dport" => Some(Field::set_field(FieldType::Int16(self.dport()), field)),
-            "udp.length" => Some(Field::set_field(FieldType::Int16(self.length()), field)),
-            "udp.checksum" => Some(Field::set_field(FieldType::Int16(self.checksum()), field)),
+            net_field::UDP_SRC_PORT => {
+                Some(Field::set_field(FieldType::Int16(self.sport()), field))
+            }
+            net_field::UDP_DEST_PORT => {
+                Some(Field::set_field(FieldType::Int16(self.dport()), field))
+            }
+            net_field::UDP_LEN => Some(Field::set_field(FieldType::Int16(self.length()), field)),
+            net_field::UDP_CHEKCSUM => {
+                Some(Field::set_field(FieldType::Int16(self.checksum()), field))
+            }
+            net_field::UDP_HAS_DNS => Some(Field::set_field(FieldType::Bool(self.is_dns()), field)),
+            net_field::UDP_HAS_DHCP => {
+                Some(Field::set_field(FieldType::Bool(self.is_dhcp()), field))
+            }
+            net_field::UDP_HAS_NTP => Some(Field::set_field(FieldType::Bool(self.is_ntp()), field)),
+            net_field::UDP_HAS_SNMP => {
+                Some(Field::set_field(FieldType::Bool(self.is_snmp()), field))
+            }
             _ => None,
         }
     }

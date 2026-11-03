@@ -15,6 +15,7 @@ use anyhow::{Result, anyhow};
 use dblib::config::CONFIG;
 use field::field_type;
 use field::pfield::Field;
+use frame::net_field;
 use pcap::pcapfile::PcapFile;
 use rayon::prelude::*;
 use std::fs;
@@ -49,19 +50,19 @@ pub fn packet_to_db(packet_file: u32, table_name: &str) -> Result<()> {
 
         let mut row = Record::default();
 
-        if let Some(field_ts) = pkt.get_field("frame.timestamp") {
+        if let Some(field_ts) = pkt.get_field(net_field::FRAME_TIMESTAMP) {
             row.add(field_ts);
         } else {
             return Err(anyhow!(format!("Field not found: {}", "frame.timestamp")));
         }
 
-        if let Some(field_inclen) = pkt.get_field("frame.inclen") {
+        if let Some(field_inclen) = pkt.get_field(net_field::FRAME_INC_LEN) {
             row.add(field_inclen);
         } else {
             return Err(anyhow!(format!("Field not found: {}", "frame.inclen")));
         }
 
-        if let Some(field_origlen) = pkt.get_field("frame.origlen") {
+        if let Some(field_origlen) = pkt.get_field(net_field::FRAME_ORIG_LEN) {
             row.add(field_origlen);
         } else {
             return Err(anyhow!(format!("Field not found: {}", "frame.origlen")));
@@ -69,12 +70,12 @@ pub fn packet_to_db(packet_file: u32, table_name: &str) -> Result<()> {
 
         if pkt.has_ipv4() {
             // if pkt.has_ipv4() {
-            if let Some(field_ipsrc) = pkt.get_field("ip.src") {
+            if let Some(field_ipsrc) = pkt.get_field(net_field::IPV4_SRC_ADDR) {
                 row.add(field_ipsrc);
             } else {
                 return Err(anyhow!(format!("Field not found: {}", "ip.ip_src")));
             }
-            if let Some(field_ipdst) = pkt.get_field("ip.dst") {
+            if let Some(field_ipdst) = pkt.get_field(net_field::IPV4_DST_ADDR) {
                 row.add(field_ipdst);
             } else {
                 return Err(anyhow!(format!("Field not found: {}", "ip.ip_dst")));
@@ -82,11 +83,11 @@ pub fn packet_to_db(packet_file: u32, table_name: &str) -> Result<()> {
         } else {
             row.add(Field::set_field(
                 field::pfield::FieldType::Ipv4(0, 0),
-                "ip.src",
+                net_field::IPV4_SRC_ADDR,
             ));
             row.add(Field::set_field(
                 field::pfield::FieldType::Ipv4(0, 0),
-                "ip.dst",
+                net_field::IPV4_DST_ADDR,
             ));
         }
 

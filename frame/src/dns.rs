@@ -1,4 +1,5 @@
 use crate::layer::Layer;
+use crate::net_field;
 use crate::print_hex::print_hex;
 use ::chrono::prelude::*;
 use byteorder::{BigEndian, ByteOrder};
@@ -598,27 +599,27 @@ impl<'a> Layer for Dns<'a> {
         "dns".to_string()
     }
 
-    fn get_field(&self, field: &str) -> Option<Field> {
+    fn get_field(&self, field: u32) -> Option<Field> {
         match field {
-            "dns.id" => Some(Field::set_field(FieldType::Int16(self.id()), field)),
-            "dns.opcode" => Some(Field::set_field(FieldType::Int8(self.opcode()), field)),
-            "dns.has_rrsig" => {
+            net_field::DNS_ID => Some(Field::set_field(FieldType::Int16(self.id()), field)),
+            net_field::DNS_OPCODE => Some(Field::set_field(FieldType::Int8(self.opcode()), field)),
+            net_field::DNS_HAS_RRSIG => {
                 Some(Field::set_field(
                     FieldType::Bool(self.has_type(DNS_TYPE_RRSIG)),
                     field,
                 ))
                 // Some(Field::set_field(FieldType::Bool(self.has_rrsig()), &field))
             }
-            "dns.has_aaaa" => Some(Field::set_field(
+            net_field::DNS_HAS_AAAA => Some(Field::set_field(
                 FieldType::Bool(self.has_type(DNS_TYPE_AAAA)),
                 field,
             )),
             // fields::DNS_HAS_AAAA => Some(Field::set_field(FieldType::Bool(self.has_aaaa()), &field)),
-            "dns.answer_count" => Some(Field::set_field(
+            net_field::DNS_ANSWER_COUNT => Some(Field::set_field(
                 FieldType::Int16(self.answer_count()),
                 field,
             )),
-            "dns.type_a" => {
+            net_field::DNS_TYPE_A => {
                 let mut field_list: Vec<FieldType> = Vec::new();
 
                 if !self.has_type(DNS_TYPE_A) {
@@ -636,11 +637,11 @@ impl<'a> Layer for Dns<'a> {
                     None
                 }
             }
-            "dns.question_count" => Some(Field::set_field(
+            net_field::DNS_QUESTION_COUNT => Some(Field::set_field(
                 FieldType::Int16(self.question_count()),
                 field,
             )),
-            "dns.answers" => {
+            net_field::DNS_ANSWERS => {
                 let mut field_list: Vec<FieldType> = Vec::new();
 
                 for answer in &self.answer_list {

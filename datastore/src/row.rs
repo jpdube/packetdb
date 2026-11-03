@@ -12,7 +12,7 @@ impl Row {
 
     pub fn get_field(&self, fieldname: &str) -> Option<Field> {
         for r in &self.row {
-            if r.name == fieldname {
+            if r.field_id == fieldname {
                 return Some(r.clone());
             }
         }

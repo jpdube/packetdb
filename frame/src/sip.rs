@@ -1,4 +1,5 @@
 use crate::layer::Layer;
+use crate::net_field;
 use crate::packet_display::PacketDisplay;
 use field::pfield::{Field, FieldType};
 
@@ -59,14 +60,18 @@ impl<'a> Sip<'a> {
 }
 
 impl<'a> Layer for Sip<'a> {
-    fn get_field(&self, field: &str) -> Option<Field> {
+    fn get_field(&self, field: u32) -> Option<Field> {
         match field {
-            "method" => Some(Field::set_field(FieldType::String(self.method()), field)),
-            "request_uri" => Some(Field::set_field(
+            net_field::SIP_METHOD => {
+                Some(Field::set_field(FieldType::String(self.method()), field))
+            }
+            net_field::SIP_REQUEST_URI => Some(Field::set_field(
                 FieldType::String(self.request_uri()),
                 field,
             )),
-            "version" => Some(Field::set_field(FieldType::String(self.version()), field)),
+            net_field::SIP_VERSION => {
+                Some(Field::set_field(FieldType::String(self.version()), field))
+            }
             _ => None,
         }
     }

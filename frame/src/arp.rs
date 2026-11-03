@@ -1,6 +1,7 @@
 use byteorder::{BigEndian, ByteOrder};
 
 use crate::layer::Layer;
+use crate::net_field;
 use crate::packet_display::PacketDisplay;
 use field::ipv4_address::IPv4;
 use field::mac_address::MacAddr;
@@ -12,16 +13,19 @@ use field::pfield::{Field, FieldType};
 *
 */
 
-#[derive(Debug, Clone, Default)]
-pub struct Arp {
-    raw_packet: Vec<u8>,
-    name: String,
+#[derive(Debug, Clone)]
+pub struct Arp<'a> {
+    raw_packet: &'a [u8],
+    // name: String,
 }
 
-impl Arp {
-    pub fn set_packet(&mut self, packet: Vec<u8>) {
-        self.raw_packet = packet.clone();
+impl<'a> Arp<'a> {
+    pub fn new(packet: &'a [u8]) -> Self {
+        Self { raw_packet: packet }
     }
+    // pub fn set_packet(&mut self, packet: Vec<u8>) {
+    //     self.raw_packet = packet.clone();
+    // }
 
     pub fn get_htype(&self) -> u16 {
         BigEndian::read_u16(&self.raw_packet[0..2])
@@ -60,23 +64,34 @@ impl Arp {
     }
 }
 
-impl Layer for Arp {
+impl<'a> Layer for Arp<'a> {
     fn get_name(&self) -> String {
-        self.name.clone()
+        "arp".to_string()
+        // self.name.clone()
     }
 
-    fn get_field(&self, field: &str) -> Option<Field> {
+    fn get_field(&self, field: u32) -> Option<Field> {
         match field {
-            "arp.hwd_type" => Some(Field::set_field(FieldType::Int16(self.get_htype()), field)),
-            "arp.proto_type" => Some(Field::set_field(FieldType::Int16(self.get_ptype()), field)),
-            "arp.hwd_size" => Some(Field::set_field(FieldType::Int8(self.get_hlen()), field)),
+            net_field::ARP_HTYPE => {
+                Some(Field::set_field(FieldType::Int16(self.get_htype()), field))
+            }
+            net_field::ETH_PROTO => {
+                Some(Field::set_field(FieldType::Int16(self.get_ptype()), field))
+            }
+            net_field::ARP_HLEN => Some(Field::set_field(FieldType::Int8(self.get_hlen()), field)),
 
-            "arp.opcode" => Some(Field::set_field(FieldType::Int16(self.get_opcode()), field)),
-            "arp.sender_mac" => Some(Field::set_field(FieldType::MacAddr(self.get_sha()), field)),
-            "arp.target_mac" => Some(Field::set_field(FieldType::MacAddr(self.get_tha()), field)),
+            net_field::ARP_OPCODE => {
+                Some(Field::set_field(FieldType::Int16(self.get_opcode()), field))
+            }
+            net_field::ARP_SHA => Some(Field::set_field(FieldType::MacAddr(self.get_sha()), field)),
+            net_field::ARP_THA => Some(Field::set_field(FieldType::MacAddr(self.get_tha()), field)),
 
-            "arp.sender_ip" => Some(Field::set_field(FieldType::Ipv4(self.get_spa(), 32), field)),
-            "arp.target_ip" => Some(Field::set_field(FieldType::Ipv4(self.get_tpa(), 32), field)),
+            net_field::ARP_SPA => {
+                Some(Field::set_field(FieldType::Ipv4(self.get_spa(), 32), field))
+            }
+            net_field::ARP_TPA => {
+                Some(Field::set_field(FieldType::Ipv4(self.get_tpa(), 32), field))
+            }
 
             _ => None,
         }
@@ -87,7 +102,7 @@ impl Layer for Arp {
     }
 }
 
-impl PacketDisplay for Arp {
+impl<'a> PacketDisplay for Arp<'a> {
     fn summary(&self) -> String {
         format!(
             "Eth -> SHA: {}, SPA: {} THA: {} TPA: {}\n",

@@ -53,7 +53,8 @@ impl fmt::Display for FieldType {
 #[derive(Debug, Serialize, Clone, PartialEq, Eq, Hash)]
 pub struct Field {
     pub field: FieldType,
-    pub name: String,
+    pub field_id: u32,
+    pub field_name: String,
 }
 
 impl fmt::Display for Field {
@@ -66,7 +67,7 @@ impl SerializeField for Field {
     fn from_binary_to_field(
         // &self,
         field_type: u16,
-        field_name: &str,
+        field_name: u32,
         value: Vec<u8>,
     ) -> Self {
         let ret_field_type: FieldType;
@@ -101,7 +102,8 @@ impl SerializeField for Field {
 
         Self {
             field: ret_field_type,
-            name: field_name.to_string(),
+            field_id: field_name,
+            field_name: String::new(),
         }
     }
 
@@ -110,10 +112,11 @@ impl SerializeField for Field {
 
         result.write_u16::<BigEndian>(self.get_int_type()).unwrap();
         result.write_u16::<BigEndian>(self.get_type_len()).unwrap();
-        result
-            .write_u16::<BigEndian>(self.name.len() as u16)
-            .unwrap();
-        result.write_all(&self.name.clone().into_bytes()).unwrap();
+        // result
+        //     .write_u16::<BigEndian>(self.name.len() as u16)
+        //     .unwrap();
+        result.write_u32::<BigEndian>(self.field_id).unwrap();
+        // result.write_all(&self.name.clone().into_bytes()).unwrap();
 
         result
     }
@@ -175,15 +178,27 @@ impl SerializeField for Field {
 }
 
 impl Field {
-    pub fn set_field(field_type: FieldType, field_id: &str) -> Self {
+    pub fn set_field(field_type: FieldType, field_id: u32) -> Self {
         Self {
             field: field_type,
-            name: field_id.to_string(),
+            field_id,
+            field_name: String::new(),
+        }
+    }
+    pub fn set_field_with_name(field_type: FieldType, field_name: &str) -> Self {
+        Self {
+            field: field_type,
+            field_id: 0,
+            field_name: field_name.to_string(),
         }
     }
 
     pub fn get_name(&self) -> String {
-        self.name.clone()
+        if !self.field_name.is_empty() {
+            self.field_name.clone()
+        } else {
+            format!("{}", "field has no name")
+        }
     }
 
     pub fn get_type_len(&self) -> u16 {

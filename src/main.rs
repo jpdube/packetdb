@@ -4,7 +4,7 @@ pub mod jwebtoken;
 use crate::api_server::web_main;
 use database::dbengine::DbEngine;
 use database::init_db::InitDb;
-use datastore::test_db::test_db;
+// use datastore::test_db::test_db;
 use dblib::config::CONFIG;
 use log::info;
 use sniffer::capture::capture;
@@ -58,7 +58,7 @@ fn process_params() {
     }
 
     if args.testdb {
-        test_db();
+        // test_db();
         process::exit(0);
     }
 

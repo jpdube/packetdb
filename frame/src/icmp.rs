@@ -1,4 +1,5 @@
 use crate::layer::Layer;
+use crate::net_field;
 use crate::packet_display::PacketDisplay;
 use field::pfield::{Field, FieldType};
 
@@ -136,13 +137,17 @@ impl<'a> Icmp<'a> {
 }
 
 impl<'a> Layer for Icmp<'a> {
-    fn get_field(&self, field: &str) -> Option<Field> {
+    fn get_field(&self, field: u32) -> Option<Field> {
         match field {
-            "icmp.type" => Some(Field::set_field(FieldType::Int8(self.itype()), field)),
-            "icmp.code" => Some(Field::set_field(FieldType::Int8(self.code()), field)),
-            "icmp.identifier" => Some(Field::set_field(FieldType::Int16(self.identifier()), field)),
+            net_field::ICMP_TYPE => Some(Field::set_field(FieldType::Int8(self.itype()), field)),
+            net_field::ICMP_CODE => Some(Field::set_field(FieldType::Int8(self.code()), field)),
+            net_field::ICMP_IDENTIFIER => {
+                Some(Field::set_field(FieldType::Int16(self.identifier()), field))
+            }
 
-            "icmp.seq_no" => Some(Field::set_field(FieldType::Int16(self.seq_no()), field)),
+            net_field::ICMP_SEQ_NO => {
+                Some(Field::set_field(FieldType::Int16(self.seq_no()), field))
+            }
             _ => None,
         }
     }

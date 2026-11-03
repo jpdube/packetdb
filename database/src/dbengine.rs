@@ -3,7 +3,8 @@ use crate::index_manager::IndexManager;
 use crate::proto_index::ProtoIndex;
 use dblib::config::CONFIG;
 use frame::layer_index::LayerIndex;
-use frame::packet::Packet;
+use frame::net_field;
+use frame::packet_decode::PacketDecode;
 use pcap::packet_ptr::PacketPtr;
 use pcap::pcapfile::PcapFile;
 use pql::cursor::Cursor;
@@ -37,7 +38,6 @@ impl DbEngine {
         let mut parse = Parse::new();
 
         self.exec_plan.start("Start search");
-        // if let Ok(expr) = parse.parse_select(query) {
         match parse.parse_select(query) {
             Ok(expr) => {
                 debug!("--> Select query: {:?}", expr.search_type);
@@ -156,8 +156,8 @@ impl DbEngine {
         None
     }
 
-    fn get_id_packets(&self, id_list: Vec<u64>) -> Vec<Packet> {
-        let mut result: Vec<Packet> = Vec::new();
+    fn get_id_packets(&self, id_list: Vec<u64>) -> Vec<PacketDecode> {
+        let mut result: Vec<PacketDecode> = Vec::new();
 
         for id in id_list {
             let file_id: u32 = (id >> 32) as u32;
@@ -168,43 +168,14 @@ impl DbEngine {
             if let Some(pkt) = pcapfile.seek(ptr) {
                 debug!(
                     "ID pkt ID: {}",
-                    pkt.get_field("frame.id").unwrap().to_usize()
+                    pkt.get_field(net_field::FRAME_ID).unwrap().to_usize()
                 );
                 result.push(pkt);
             }
         }
-        // debug!("ID seek result: {:#?}", result);
 
         result
     }
-
-    // fn chunk_size(&self, expr: &PqlStatement) -> usize {
-    //     let ix_manager = IndexManager::default();
-    //     let search_proto = ix_manager.build_search_index(&expr.search_type);
-    //     let proto_stat = ProtoStat::new(0);
-
-    //     let avg_file = proto_stat.get_count_stats(search_proto);
-
-    //     let mut chunk_size: usize = 1;
-
-    //     if avg_file != 0 {
-    //         chunk_size = ((&expr.top + &expr.offset) / avg_file) + 1;
-    //         println!(
-    //             "Chunk size raw: Proto: {search_proto}, top: {}, Avg: {avg_file}, chunk: {chunk_size}",
-    //             &expr.top
-    //         );
-
-    //         if chunk_size == 0 {
-    //             chunk_size = 1;
-    //         }
-
-    //         if chunk_size > 8 {
-    //             chunk_size = 8;
-    //         }
-    //     }
-
-    //     chunk_size
-    // }
 
     fn get_proto_files(&self, proto_id: u32) -> Result<Vec<u32>> {
         let paths = fs::read_dir(format!("{}/{:x}", &CONFIG.proto_index_path, proto_id))?;

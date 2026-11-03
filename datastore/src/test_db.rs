@@ -37,27 +37,42 @@ pub fn _test_db_logic() {
         let mut row = Record::default();
 
         if i % 2 == 0 {
-            row.add(Field::set_field(FieldType::Ipv4(0xc0a80310, 32), "ip.src"));
+            row.add(Field::set_field_with_name(
+                FieldType::Ipv4(0xc0a80310, 32),
+                "ip.src",
+            ));
         } else {
-            row.add(Field::set_field(FieldType::Ipv4(0xc0a801aa, 32), "ip.src"));
+            row.add(Field::set_field_with_name(
+                FieldType::Ipv4(0xc0a801aa, 32),
+                "ip.src",
+            ));
         }
-        row.add(Field::set_field(FieldType::Ipv4(0xc0a802b1, 32), "ip.dst"));
+        row.add(Field::set_field_with_name(
+            FieldType::Ipv4(0xc0a802b1, 32),
+            "ip.dst",
+        ));
 
-        row.add(Field::set_field(FieldType::Int16(443), "tcp.dport"));
+        row.add(Field::set_field_with_name(
+            FieldType::Int16(443),
+            "tcp.dport",
+        ));
 
         if j > 65535 - 1024 {
             j = 0;
         } else {
             j += 1;
         }
-        row.add(Field::set_field(FieldType::Int16(j + 1024), "tcp.sport"));
+        row.add(Field::set_field_with_name(
+            FieldType::Int16(j + 1024),
+            "tcp.sport",
+        ));
 
-        row.add(Field::set_field(
+        row.add(Field::set_field_with_name(
             FieldType::String(format!("iface-0{}", i * i)),
             "iface.name",
         ));
 
-        row.add(Field::set_field(
+        row.add(Field::set_field_with_name(
             FieldType::ByteArray(raw_packet.clone()),
             "raw_packet",
         ));
